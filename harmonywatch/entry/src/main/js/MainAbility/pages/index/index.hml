@@ -1,0 +1,247 @@
+<!-- Lite if bindings must return booleans; strings/numbers are not coerced. -->
+<div class="page" onclick="ackRest">
+  <div class="screen" if="{{!!error}}">
+    <text class="h2">{{error}}</text>
+    <text class="note">{{pending}}</text>
+  </div>
+
+  <!-- touch lock: the only screen while it is on -->
+  <div class="screen" if="{{touchLocked}}">
+    <text class="h2">{{words.lock}}</text>
+    <text class="note">{{title}}</text>
+    <text class="digits" if="{{!!lockDigits}}">{{lockDigits}}</text>
+    <input class="roundSmall" type="button" value="{{words.holdUnlock}}" onlongpress="unlockPage" />
+  </div>
+
+  <!-- confirmations, one panel at a time (Lite has no dialogs) -->
+  <div class="screen" if="{{!touchLocked && confirm}}">
+    <text class="h2">{{words.finishQ}}</text>
+    <input class="wide accent" type="button" value="{{words.save}}" onclick="save" />
+    <input class="wide" type="button" value="{{words.discard}}" onclick="confirmDiscard" />
+    <input class="wide" type="button" value="{{words.cancel}}" onclick="cancelDiscard" />
+  </div>
+  <div class="screen" if="{{!touchLocked && !confirm && skipConfirm}}">
+    <text class="h2">{{words.skipQ}}</text>
+    <input class="wide" type="button" value="{{words.skipSet}}" onclick="skipConfirmed" />
+    <input class="wide" type="button" value="{{words.cancel}}" onclick="cancelSkip" />
+  </div>
+  <div class="screen" if="{{!touchLocked && !confirm && !skipConfirm && asking}}">
+    <text class="h2">{{words.allDoneQ}}</text>
+    <input class="wide" type="button" value="{{words.resume}}" onclick="keepGoing" />
+    <input class="wide" type="button" value="{{words.finish}}" onclick="askFinish" />
+  </div>
+
+  <div class="body" if="{{!error && !touchLocked && !confirm && !skipConfirm && !asking}}">
+    <!-- loading -->
+    <div class="screen" if="{{screen === 'loading'}}">
+      <text class="logo">openGym</text>
+      <text class="note">{{line}}</text>
+    </div>
+
+    <!-- idle -->
+    <div class="screen" if="{{screen === 'idle'}}" onlongpress="openDebug">
+      <text class="logo">openGym</text>
+      <div class="col" if="{{routines.length > 0}}">
+        <text class="h2 todayTitle" if="{{!!todayName}}">{{todayName}}</text>
+        <div class="roundWrap startWrap" if="{{!!todayName}}">
+          <input class="round startRound" type="button" value="▶" onclick="startToday" />
+          <text class="cap">{{words.start}}</text>
+        </div>
+        <list class="routineList"><list-item class="routineItem" for="{{others}}"><input class="rowbtn" type="button" value="{{$item.name}}" onclick="startOther($idx)" /></list-item></list>
+      </div>
+      <div class="col idleEmpty" if="{{!routines.length}}">
+        <text class="h2">{{idleTitle}}</text>
+        <text class="note idleHint">{{idleHint}}</text>
+      </div>
+      <text class="note small" if="{{!!pending}}">{{pending}}</text>
+      <input class="link" type="button" value="{{words.heart}}" onclick="toggleSensor" />
+    </div>
+
+    <!-- debug (2 s press on idle) -->
+    <div class="screen" if="{{screen === 'debug'}}" onclick="closeDebug">
+      <text class="cap">debug</text>
+      <text class="note small" for="{{debugLines}}">{{$item.text}}</text>
+    </div>
+
+    <!-- weigh-in -->
+    <div class="screen" if="{{screen === 'weigh'}}">
+      <text class="h2">{{words.quickCheckin}}</text>
+      <div class="weighRow">
+        <text class="part" style="color: {{bwWholeColor}}; background-color: {{bwWholeBg}}; border-radius: 10px" onclick="pickPart('whole')">{{bwWhole}}</text>
+        <text class="sep">.</text>
+        <text class="part" style="color: {{bwTenthColor}}; background-color: {{bwTenthBg}}; border-radius: 10px" onclick="pickPart('tenth')">{{bwTenth}}</text>
+        <text class="unit">{{unit}}</text>
+      </div>
+      <div class="row">
+        <input class="edgeBtn" type="button" value="−" onclick="weighStep(-1)" />
+        <input class="edgeBtn" type="button" value="+" onclick="weighStep(1)" />
+      </div>
+      <input class="wide accent" type="button" value="{{words.saveStart}}" onclick="weighSave" />
+      <input class="link" type="button" value="{{words.noWeight}}" onclick="weighSkip" />
+      <input class="link" type="button" value="{{words.cancel}}" onclick="weighCancel" />
+    </div>
+
+    <!-- 3-2-1 -->
+    <div class="screen" if="{{screen === 'countdown'}}">
+      <stack class="ringWrap">
+        <progress class="ring" type="arc" percent="{{ringPercent}}" />
+        <div class="ringText" onclick="startNow"><text class="bigDigits">{{digits}}</text></div>
+      </stack>
+      <div class="row">
+        <input class="edgeBtn" type="button" value="✕" onclick="cancelCountdown" />
+      </div>
+      <text class="cap">{{words.start}}</text>
+    </div>
+
+    <!-- one exercise, swipe to the neighbours -->
+    <div class="screen exerciseScreen" if="{{screen === 'exercise'}}" onswipe="onSwipe">
+      <div class="head">
+        <text class="name">{{exName}}</text>
+        <div class="headerStatus">
+          <text class="hr" if="{{!!hr}}">{{hr}}</text>
+          <text class="hrWait" if="{{!!hrWaiting}}">{{hrWaiting}}</text>
+          <text class="sync" if="{{!!offline}}">{{offlineMark}}</text>
+        </div>
+      </div>
+      <div class="tags" if="{{warmup || left || right || superset}}">
+        <text class="tag tagWarm" if="{{warmup}}">{{words.warmup}}</text>
+        <text class="tag tagCyan" if="{{left}}">{{words.left}}</text>
+        <text class="tag tagCyan" if="{{right}}">{{words.right}}</text>
+        <text class="tag tagPurple" if="{{superset}}">{{words.superset}}</text>
+      </div>
+      <text class="note" if="{{cardio && !noSet}}">{{words.cardio}}</text>
+      <div class="tileWide" if="{{timed && !cardio && !noSet}}" onclick="edit('seconds')">
+        <div class="numLine largeLine"><text class="tnum largeNumber" style="font-size: {{secondsFont}}px; width: {{secondsWidth}}px">{{seconds}}</text><text class="tunit">s</text></div>
+        <text class="tlabel">{{words.hold}}</text>
+      </div>
+      <div class="tiles" if="{{!timed && !cardio && !noSet}}">
+        <div class="tile" if="{{!bodyweight}}" onclick="edit('weight')">
+          <div class="numLine"><text class="tnum weightNumber" style="font-size: {{weightFont}}px; width: {{weightWidth}}px">{{weight}}</text><text class="tunit">{{unit}}</text></div>
+          <text class="tlabel">{{words.weight}}</text>
+        </div>
+        <div class="tile" if="{{bodyweight}}" onclick="edit('reps')">
+          <div class="numLine"><text class="tnum" style="font-size: {{repsFont}}px">{{reps}}</text></div>
+          <text class="tlabel">{{words.reps}}</text>
+        </div>
+        <div class="tile" if="{{!bodyweight}}" onclick="edit('reps')">
+          <div class="numLine"><text class="tnum" style="font-size: {{repsFont}}px">{{reps}}</text></div>
+          <text class="tlabel">{{words.reps}}</text>
+        </div>
+        <div class="chip" if="{{bodyweight}}" onclick="edit('weight')">
+          <text class="chiptext">{{added ? added + ' ' + unit : words.bodyweight}}</text>
+        </div>
+      </div>
+      <text class="note small" if="{{!!last && !noSet}}">{{last}}</text>
+      <div class="noSet" if="{{noSet}}"><text class="icon">{{noSetIcon}}</text><text class="note">{{noSetText}}</text></div>
+      <div class="primary" if="{{!noSet}}">
+        <div class="sideRail">
+          <image class="clip" src="{{clipSrc}}" if="{{!!clipSrc}}" />
+          <div class="effort" if="{{!!effortName}}" onclick="edit('effort')">
+            <text class="effortName">{{effortName}}</text>
+            <text class="effortValue" style="color: {{effortColor}}">{{effortText}}</text>
+          </div>
+          <text class="extras" if="{{!!extras}}">{{extras}}</text>
+        </div>
+        <div class="roundWrap">
+          <input class="round" type="button" value="{{timed ? '▶' : '✓'}}" onclick="done" onlongpress="askSkip" />
+          <text class="cap">{{timed ? words.startHold : words.done}}</text>
+        </div>
+        <div class="sideRail">
+          <text class="pageCount">{{pageNo}} / {{pageCount}}</text>
+          <div class="actionBtn" onclick="finishPage"><text class="actionText">{{words.finish}}</text></div>
+          <div class="actionBtn" onclick="lockPage"><text class="actionText">{{words.lock}}</text></div>
+        </div>
+      </div>
+      <div class="dots">
+        <div class="dotbox" for="{{dots}}" onclick="pickDot($idx)">
+          <div class="dot" style="width: {{$item.size}}px; height: {{$item.size}}px; border-radius: {{$item.size}}px; background-color: {{$item.fill}}; opacity: {{$item.opacity}}; border-width: {{$item.border}}px; border-color: {{$item.borderColor}}"></div>
+        </div>
+      </div>
+      <div class="row" if="{{noSet}}">
+        <input class="link" type="button" value="{{words.finish}}" onclick="finishPage" />
+        <input class="link" type="button" value="{{words.lock}}" onclick="lockPage" />
+      </div>
+    </div>
+
+    <!-- one number, the whole screen -->
+    <div class="screen" if="{{screen === 'edit'}}">
+      <text class="cap">{{editTitle}}</text>
+      <div class="editValue"><text class="bignum">{{editValue}}</text><text class="unit" if="{{!!editSuffix}}">{{editSuffix}}</text></div>
+      <div class="row">
+        <input class="edgeBtn" type="button" value="−" onclick="editStepBy(-1)" />
+        <input class="edgeBtn" type="button" value="+" onclick="editStepBy(1)" />
+      </div>
+      <text class="note small" if="{{!!editStep}}">{{editStep}}</text>
+      <input class="wide accent" type="button" value="{{words.done}}" onclick="editDone" />
+    </div>
+
+    <!-- rest -->
+    <div class="screen" if="{{screen === 'rest'}}">
+      <stack class="ringWrap">
+        <progress class="ring" type="arc" percent="{{ringPercent}}" if="{{restRing}}" />
+        <div class="ringText">
+          <text class="ringCap">{{words.rest}}</text>
+          <text class="ringDigits">{{digits}}</text>
+          <!-- Conditional nodes are not drawn inside this stack, so both stay unconditional
+               and empty strings simply render nothing. -->
+          <text class="ringNote">{{nextText}}</text>
+          <text class="ringNote">{{offline}}</text>
+        </div>
+      </stack>
+      <div class="row">
+        <input class="edgeBtn" type="button" value="+15s" onclick="restMore" />
+        <input class="edgeBtn" type="button" value="{{words.skip}}" onclick="restSkip" />
+        <input class="edgeBtn" type="button" value="{{words.lock}}" onclick="lockPage" />
+      </div>
+    </div>
+
+    <!-- a timed set running -->
+    <div class="screen" if="{{screen === 'hold'}}">
+      <stack class="ringWrap">
+        <progress class="ring cyanRing" type="arc" percent="{{ringPercent}}" />
+        <div class="ringText">
+          <text class="ringCap">{{holdName}}</text>
+          <text class="ringDigits">{{digits}}</text>
+          <text class="ringNote">{{words.hold}}</text>
+        </div>
+      </stack>
+      <div class="row">
+        <input class="edgeBtn" type="button" value="■" onclick="complete" />
+        <input class="edgeBtn" type="button" value="{{words.lock}}" onclick="lockPage" />
+      </div>
+    </div>
+
+    <!-- the end of the workout -->
+    <div class="screen" if="{{screen === 'finish'}}">
+      <text class="h2">{{workoutName}}</text>
+      <div class="roundWrap">
+        <input class="round" type="button" value="⚑" onclick="discard" />
+        <text class="cap">{{words.finish}}</text>
+      </div>
+      <text class="note small">{{setsLine}}</text>
+      <text class="note small" if="{{!!offline}}">{{offline}}</text>
+      <div class="row">
+        <input class="wide accent" type="button" value="{{words.save}}" onclick="save" />
+        <input class="wide" type="button" value="{{words.discard}}" onclick="discard" />
+      </div>
+      <input class="link" type="button" value="{{words.resume}}" onclick="resume" />
+      <input class="link" type="button" value="{{words.lock}}" onclick="lockPage" />
+    </div>
+
+    <!-- saved -->
+    <div class="screen" if="{{screen === 'summary'}}">
+      <text class="h2 accentText summaryTitle">{{savedTitle}}</text>
+      <text class="note summaryName">{{summaryName}}</text>
+      <list class="summaryList">
+        <list-item class="stat" for="{{stats}}">
+          <text class="statLabel">{{$item.label}}</text>
+          <text class="statValue" style="color: {{$item.color}}">{{$item.value}}</text>
+        </list-item>
+        <list-item class="summaryItem" if="{{records.length > 0}}"><text class="cap">{{words.records}}</text></list-item>
+        <list-item class="summaryItem" for="{{records}}"><text class="note">{{$item.name}}</text></list-item>
+        <list-item class="summaryItem" if="{{!!offline}}"><text class="note">{{offline}}</text></list-item>
+      </list>
+      <input class="wide accent" type="button" value="{{words.done}}" onclick="closeSummary" />
+    </div>
+  </div>
+</div>

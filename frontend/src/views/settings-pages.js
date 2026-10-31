@@ -17,6 +17,7 @@ export const PAGES = {
   equipment: { title: 'Equipment', icon: 'kettlebell', tint: 'var(--indigo)' },
   look: { title: 'Look & Home', icon: 'palette', tint: 'var(--purple)' },
   coach: { title: 'AI Coach', icon: 'sparkles', tint: 'var(--green)' },
+  huaweiWatch: { title: 'HUAWEI FIT', icon: 'watch', tint: 'var(--grey)' },
   watch: { title: 'Apple Watch', icon: 'watch', tint: 'var(--grey)' },
   data: { title: 'Data & backup', icon: 'folder', tint: 'var(--blue)' },
   about: { title: 'About & updates', icon: 'info', tint: 'var(--grey)' },
@@ -31,7 +32,7 @@ export const PAGES = {
 export const PAGE_IDS = Object.keys(PAGES)
 
 // The root, top to bottom. Whether a row shows is pageVisible's call.
-export const ROOT_GROUPS = [['workout', 'alerts', 'reminders'], ['plan', 'units', 'equipment'], ['look', 'coach', 'watch'], ['data', 'about']]
+export const ROOT_GROUPS = [['workout', 'alerts', 'reminders'], ['plan', 'units', 'equipment'], ['look', 'coach', 'watch', 'huaweiWatch'], ['data', 'about']]
 
 /**
  * Whether a page exists for this device and profile. Reminders need a push server (signed in) or
@@ -42,6 +43,7 @@ export function pageVisible(page, ctx) {
   if (page === 'reminders') return !!(ctx.user || ctx.mobile)
   if (page === 'coach') return !!ctx.mobile
   // The iPhone app only: the watch app ships inside it.
+  if (page === 'huaweiWatch') return !!ctx.mobile && !!ctx.android
   if (page === 'watch') return !!ctx.ios
   // The phone app only: a browser cannot watch where you are with the page closed.
   if (page === 'gym' || page === 'gym-edit') return !!ctx.mobile

@@ -333,9 +333,11 @@ let pluginP = null
 // Inside an object: a Capacitor plugin proxy answers `then`, so a promise must never resolve with
 // the bare proxy (lib/rest-alert.js, the Coach hang #42).
 const watchPlugin = () => pluginP || (pluginP = (async () => {
-  if (!MOBILE || (await nativePlatform()) !== 'ios') return null
+  if (!MOBILE) return null
+  const platform = await nativePlatform()
+  if (platform !== 'ios' && platform !== 'android') return null
   const { registerPlugin } = await import('@capacitor/core')
-  return { WatchBridge: registerPlugin('WatchBridge') }
+  return { WatchBridge: registerPlugin(platform === 'android' ? 'HuaweiWatch' : 'WatchBridge') }
 })().catch(() => null))
 
 let getStateRef = null
@@ -489,7 +491,7 @@ export async function startWatchSync ({ useStore, useUI }) {
   const p = await watchPlugin()
   if (!p) return () => {}
   getStateRef = () => useStore.getState()
-  let lastSent = null, lastClips = null, tm = null
+  let lastSent = null, lastClips = null, clipsInFlight = null, tm = null
   // The ready sessions only change with the plan, the log or the day: built again only then.
   let readyKey = null, ready = null
   const readyFor = S => {
@@ -513,8 +515,10 @@ export async function startWatchSync ({ useStore, useUI }) {
   }
   await checkLink()
   // Apple Health on the watch follows the phone's own Apple Health switch (Settings → Data).
+  const huawei = MOBILE && (await nativePlatform()) === 'android'
   let healthOn = false, offHealth = () => {}
   try {
+    if (huawei) throw new Error('Independent watch sensor consent')
     const hs = await import('./health-sync.js')
     healthOn = !!(await hs.loadHealth())?.on
     offHealth = hs.onHealthChange(h => { if (!!h?.on !== healthOn) { healthOn = !!h?.on; schedule() } })
@@ -542,14 +546,17 @@ export async function startWatchSync ({ useStore, useUI }) {
         if (r && r.sent) lastSent = json
       }
       // The workout's animations, once per workout and exercise (the native side remembers).
-      const clips = prefs.enabled ? clipsFor(S) : []
+      const clips = prefs.enabled && prefs.show.clip !== false ? clipsFor(S, huawei ? {} : undefined) : []
       const key = S.active ? S.active.id + '|' + clips.map(c => c.exId).join(',') : ''
-      if (clips.length && key !== lastClips) {
-        await p.WatchBridge.sendClips({ wid: S.active.id, clips })
-        lastClips = key
-      } else if (!S.active && lastClips) {
+      if (clips.length && key !== lastClips && key !== clipsInFlight) {
+        clipsInFlight = key
+        try {
+          await p.WatchBridge.sendClips({ wid: S.active.id, clips })
+          lastClips = key
+        } finally { if (clipsInFlight === key) clipsInFlight = null }
+      } else if (!S.active && (lastClips || clipsInFlight)) {
         // The workout is over: animations still on their way to the watch are not wanted any more.
-        lastClips = null
+        lastClips = null; clipsInFlight = null
         await p.WatchBridge.dropClips?.()
       }
     } catch { /* no watch, or not now: the next change tries again */ }
@@ -561,7 +568,7 @@ export async function startWatchSync ({ useStore, useUI }) {
     if (s.S === prev.S) return
     schedule()
     // A workout started on the phone: the watch app opens with it (HealthKit's startWatchApp).
-    if (linked && shouldOpenOnWatch(prev.S?.active, s.S?.active)) Promise.resolve().then(() => p.WatchBridge.openOnWatch({ type: plannedType(s.S.active.entries) || undefined })).catch(() => {})
+    if (!huawei && linked && shouldOpenOnWatch(prev.S?.active, s.S?.active)) Promise.resolve().then(() => p.WatchBridge.openOnWatch({ type: plannedType(s.S.active.entries) || undefined })).catch(() => {})
   })
   // The rest as the watch needs it changes when it starts, stops or is paused, not every second.
   const restOf = t => (t ? `${t.endsAt}|${!!t.paused}|${!!t.ready}` : '')
@@ -570,21 +577,22 @@ export async function startWatchSync ({ useStore, useUI }) {
   // The watch speaks the app's language, not its own system's: told again when it changes (the
   // exercise names in the snapshot change with it too).
   let offLang = () => {}
-  try { offLang = onLangChange(() => schedule()) } catch { /* a test without i18n */ }
+  try { offLang = onLangChange(() => { readyKey = null; schedule() }) } catch { /* a test without i18n */ }
   const sub = await p.WatchBridge.addListener('watchEvent', () => { drainWatchEvents() })
   // The link itself changed (the session finished activating after launch, a watch was paired, the
   // app was installed on it): asked again, and the snapshot sent when there is a watch now.
   // Sent again even when unchanged: a reinstalled watch app starts with nothing.
-  const subLink = await Promise.resolve(p.WatchBridge.addListener('watchState', () => { checkLink().then(() => { lastSent = null; schedule() }) })).catch(() => null)
+  const subLink = await Promise.resolve(p.WatchBridge.addListener('watchState', () => { checkLink().then(() => { lastSent = null; lastClips = null; schedule() }) })).catch(() => null)
   const onVisible = () => { if (document.visibilityState === 'visible') { drainWatchEvents(); checkLink().then(() => schedule()) } }
   document.addEventListener('visibilitychange', onVisible)
   // Asked once more now that the listeners are there: the link may have come up (watchState) while
   // the first answer above was on its way, and that event had no one to hear it. Without this the
   // watch heard nothing until the app went to the background and came back.
   if (!linked) await checkLink()
+  const retry = huawei ? setInterval(() => { checkLink().then(() => { schedule(); drainWatchEvents() }) }, 15000) : null
   schedule()
   drainWatchEvents()
-  return () => { offStore(); offUI(); offPrefs(); offHealth(); offLang(); sub?.remove?.(); subLink?.remove?.(); document.removeEventListener('visibilitychange', onVisible); clearTimeout(tm) }
+  return () => { clearInterval(retry); offStore(); offUI(); offPrefs(); offHealth(); offLang(); sub?.remove?.(); subLink?.remove?.(); document.removeEventListener('visibilitychange', onVisible); clearTimeout(tm) }
 }
 
 // Test seams.

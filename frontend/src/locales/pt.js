@@ -2292,6 +2292,7 @@ export default {
   // --- #551 device link from the phone ---
   'This app can’t confirm with a passkey. Make the code in a browser signed in to this profile, or add a password there first.': 'Esta app não consegue confirmar com uma passkey. Cria o código num navegador com este perfil, ou adiciona lá uma palavra-passe primeiro.',
   // --- Settings → Apple Watch ---
+  'HUAWEI FIT': 'HUAWEI FIT',
   'Apple Watch': 'Apple Watch',
   'Weight': 'Peso',
   'Send workouts to the watch': 'Enviar treinos para o relógio',

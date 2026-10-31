@@ -1,0 +1,66 @@
+{
+  "app": {
+    "bundleName": "host.msknet.opengym.fit",
+    "vendor": "openGym",
+    "version": {
+      "code": 1000000,
+      "name": "1.0.0"
+    }
+  },
+  "deviceConfig": {},
+  "module": {
+    "deviceType": [
+      "liteWearable"
+    ],
+    "distro": {
+      "deliveryWithInstall": true,
+      "moduleName": "entry",
+      "moduleType": "entry"
+    },
+    "abilities": [
+      {
+        "name": ".MainAbility",
+        "srcLanguage": "js",
+        "srcPath": "MainAbility",
+        "icon": "$media:icon",
+        "description": "$string:MainAbility_desc",
+        "label": "$string:MainAbility_label",
+        "type": "page"
+      }
+    ],
+    "js": [
+      {
+        "pages": [
+          "pages/index/index"
+        ],
+        "name": ".MainAbility",
+        "window": {
+          "designWidth": 408,
+          "autoDesignWidth": false
+        }
+      }
+    ],
+    "reqPermissions": [
+      {
+        "name": "ohos.permission.VIBRATE",
+        "reason": "用于训练休息结束时的振动提醒",
+        "usedScene": {
+          "ability": [
+            ".MainAbility"
+          ],
+          "when": "inuse"
+        }
+      },
+      {
+        "name": "ohos.permission.READ_HEALTH_DATA",
+        "reason": "用于训练时读取和显示心率",
+        "usedScene": {
+          "ability": [
+            ".MainAbility"
+          ],
+          "when": "inuse"
+        }
+      }
+    ]
+  }
+}

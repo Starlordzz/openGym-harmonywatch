@@ -7,9 +7,12 @@ android {
         buildConfig = true
     }
     defaultConfig {
-        applicationId "ch.duartesantos.opengym"
+        applicationId project.findProperty("personalApplicationId") ?: "ch.duartesantos.opengym"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
+        // Public application identity from Huawei developer console; pass -PhuaweiAppId=... locally.
+        // Keep the numeric-looking App ID a string in PackageManager metadata.
+        resValue "string", "huawei_app_id", project.findProperty("huaweiAppId") ?: ""
         versionCode 28
         versionName "1.4.3"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -35,7 +38,7 @@ android {
             // Test build installs side-by-side with the real app: its own applicationId, so both
             // can live on one device. The name/icon label is overridden by the debug resource
             // overlay in src/debug/res. The release build (the "real" app) is untouched.
-            applicationIdSuffix ".test"
+            applicationIdSuffix project.hasProperty("personalApplicationId") ? "" : ".test"
         }
     }
     // Where the app is installed from. "sideload" is the APK on GitHub and opengym.ch: it checks
@@ -65,6 +68,7 @@ repositories {
 }
 
 dependencies {
+    implementation "com.huawei.hms:wearengine:5.0.2.306"
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"

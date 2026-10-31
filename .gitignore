@@ -48,3 +48,14 @@ assets/tee/
 assets/bmc-cover*
 # scripts/pdf/render-samples.mjs output (npm run pdf:check)
 frontend/pdf-samples/
+
+# Huawei platform offline documentation and application materials
+docs/huawei/
+docs/*WEAR_ENGINE*
+docs/*ACTIONS*
+docs/*SETUP*
+docs/*HEALTH*
+docs/*BACKGROUND*
+docs/*FEASIBILITY*
+docs/*REPORT*
+scripts/harmony/download-huawei-docs.py

@@ -1,0 +1,39 @@
+/node_modules
+/oh_modules
+/local.properties
+/.idea
+**/build
+/.hvigor
+.cxx
+/.clangd
+/.clang-format
+/.clang-tidy
+**/.test
+/.appanalyzer
+# Local signing material: never commit keys or profiles.
+*.p12
+*.p7b
+*.csr
+*.cer
+*.jks
+*.keystore
+signing-config.json
+
+# DevEco manual signing writes passwords into this local file.
+/build-profile.json5
+/artifacts/
+
+# Previewer bundle seeded with the demo snapshot (scripts/harmony/demo-snapshot.mjs --bundle).
+/.demo/
+
+# Generated per-installation public peer identity.
+/entry/src/main/js/*/common/peer.js
+
+# Local certificates, profiles and device registration details.
+/signing/
+/.cache/
+*.bin
+*-tmp.*
+phone-debug-identity.json
+watch-debug-identity.json
+

@@ -1,0 +1,14 @@
+.idea/
+.gradle/
+build/
+.hvigor/
+node_modules/
+local.properties
+*.p12
+*.p7b
+*.cer
+*.csr
+*.jks
+*.keystore
+signing-config.json
+entry/src/main/js/default/common/peer.js
