@@ -16,21 +16,42 @@ export default function HuaweiWatchSettings() {
   const [fingerprint, setFingerprint] = useState(import.meta.env.VITE_HUAWEI_WATCH_FINGERPRINT || '')
   const [message, setMessage] = useState('请先在华为运动健康中配对，再打开手表上的 openGym。')
   const [busy, setBusy] = useState(false)
+  const [restNotifications, setRestNotifications] = useState(false)
+  const [exact, setExact] = useState(false)
   const [prefs, setPrefs] = useState(readWatchPrefs)
   const update = patch => setPrefs(writeWatchPrefs(patch))
   useEffect(() => {
     bridge.status().then(s => {
       if (s.bundleName) setBundle(s.bundleName)
       if (s.fingerprint) setFingerprint(s.fingerprint)
+      setRestNotifications(!!s.restNotifications); setExact(!!s.restNotificationExact)
+      if (s.restNotificationError) setMessage(s.restNotificationError)
     }).catch(e => setMessage(String(e.message || e)))
   }, [])
   const connect = async () => {
     setBusy(true)
     try {
       await bridge.configure({ bundleName, fingerprint })
-      await bridge.connect()
+      const s = await bridge.connect()
+      if (s) { setRestNotifications(!!s.restNotifications); setExact(!!s.restNotificationExact) }
       setMessage('已注册通信。请打开手表上的 openGym，等待计划同步。')
     } catch (e) { setMessage(String(e.message || e)) }
+    finally { setBusy(false) }
+  }
+  const notifyRest = async enabled => {
+    if (busy) return
+    setBusy(true)
+    try {
+      const s = await bridge.setRestNotifications({ enabled })
+      setRestNotifications(!!s.restNotifications); setExact(!!s.restNotificationExact)
+      setMessage(enabled ? '通知授权已开启。请保持手机与手表连接，并确认手表允许通知响铃或振动。' : '已关闭休息系统通知。')
+    } catch (e) { setMessage(String(e.message || e)) }
+    finally { setBusy(false) }
+  }
+  const testNotification = async () => {
+    setBusy(true)
+    try { await bridge.testRestNotification(); setMessage('通知接口调用成功，请在手表上确认声音或振动。') }
+    catch (e) { setMessage(String(e.message || e)) }
     finally { setBusy(false) }
   }
   return <>
@@ -40,7 +61,16 @@ export default function HuaweiWatchSettings() {
       <SelectRow title="休息倒数样式" value={prefs.show.rest} onChange={v => update({ show: { rest: v } })}
         options={[{ value: 'ring', label: '圆环和倒数' }, { value: 'plain', label: '仅倒数' }]} />
       <Row title="休息结束震动"><Switch checked={prefs.restHaptics} onChange={v => update({ restHaptics: v })} /></Row>
+      <Row title="休息结束系统通知"><Switch aria-label="休息结束系统通知" checked={restNotifications} disabled={busy} onChange={notifyRest} /></Row>
     </Section>
+    {restNotifications && <div className="hw-acts">
+      <button className="btn" disabled={busy} onClick={testNotification}>测试手表通知</button>
+      {!exact && <button className="btn" onClick={async () => {
+        try { await bridge.openRestAlarmSettings(); setMessage('请在系统中允许 openGym 设置闹钟和提醒，返回后重新打开此页。') }
+        catch (e) { setMessage(String(e.message || e)) }
+      }}>允许准时提醒</button>}
+      <p className="sect-f">由手机定时发送通知，手表退到后台也可接收。需开启“休息结束震动”，并允许 Wear Engine 通知、保持手机连接；通知声音和振动跟随手表系统设置，勿扰或未佩戴时可能静音。{!exact && '尚未允许精确闹钟，提醒可能延迟。'}</p>
+    </div>}
 
     <h2 className="sect-t">手表应用</h2>
     <div className="hw-form">

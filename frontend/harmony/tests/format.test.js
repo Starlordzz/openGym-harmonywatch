@@ -3,12 +3,13 @@ import assert from 'node:assert/strict'
 import { formatNumber, numberFont, numberWidth, clock, grouped, effortValue, effortPosition, effortBand, effortStart, effortColor, setDots } from '../watch/entry/src/main/js/default/common/format.js'
 import { numbers, tagsOf, progress, setsOf, summaryStats } from '../watch/entry/src/main/js/default/common/view.js'
 
-test('numbers read like the phone: integers without a decimal, otherwise one place', () => {
+test('numbers omit trailing zeroes and preserve hundredths for fractional plates', () => {
   assert.equal(formatNumber(60), '60')
   assert.equal(formatNumber(62.5), '62.5')
   assert.equal(formatNumber(0), '0')
-  assert.equal(formatNumber(79.95), '80')
-  assert.equal(formatNumber(2.25), '2.3')
+  assert.equal(formatNumber(79.95), '79.95')
+  assert.equal(formatNumber(2.25), '2.25')
+  assert.equal(formatNumber(0.1 + 0.2), '0.3')
   assert.equal(formatNumber(NaN), '0')
 })
 

@@ -3,6 +3,14 @@ import assert from 'node:assert/strict'
 import data from '../watch/entry/src/main/js/default/common/locales.js'
 import { wordsFor } from '../watch/entry/src/main/js/default/common/i18n.js'
 import { fill } from '../watch/entry/src/main/js/default/common/format.js'
+import { createHash } from 'node:crypto'
+import { readFileSync } from 'node:fs'
+test('all decoded languages retain their exact text after shared-pack compression', () => {
+  const before = JSON.parse(readFileSync(new URL('./locale-hashes.json', import.meta.url)))
+  for (const lang of Object.keys(data.packs)) {
+    assert.equal(createHash('sha256').update(JSON.stringify(wordsFor(lang))).digest('hex'), before[lang], lang)
+  }
+})
 test('existing watch translations map phone locale and keep the Apple-only copy out', () => {
   // The watch ships 12 packs (scripts/harmony/build-locales.mjs WATCH_LANGS); the rest fall back to English.
   assert.equal(Object.keys(data.packs).length, 12)

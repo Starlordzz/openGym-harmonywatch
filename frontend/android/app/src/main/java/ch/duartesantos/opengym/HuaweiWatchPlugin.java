@@ -60,7 +60,9 @@ public class HuaweiWatchPlugin extends Plugin {
         if (!pkg.matches("[a-zA-Z][a-zA-Z0-9_]*(\\.[a-zA-Z0-9_]+)+") || !fingerprint.matches("[a-fA-F0-9]{64}")) {
             call.reject("Valid watch bundleName and SHA-256 signing certificate fingerprint required"); return;
         }
-        if (!pkg.equals(prefs.getString("package", "")) || !fingerprint.equals(prefs.getString("fingerprint", ""))) prefs.edit().remove("authorized").commit();
+        if (!pkg.equals(prefs.getString("package", "")) || !fingerprint.equals(prefs.getString("fingerprint", ""))) {
+            prefs.edit().remove("authorized").commit(); WatchRestAlerts.enable(getContext(), false);
+        }
         if (!prefs.edit().putString("package", pkg).putString("fingerprint", fingerprint).commit()) { call.reject("Cannot save configuration"); return; }
         call.resolve();
     }
@@ -102,7 +104,39 @@ public class HuaweiWatchPlugin extends Plugin {
         out.put("paired", device != null && device.isConnected()); out.put("installed", installed);
         out.put("activated", !refreshing); out.put("configured", !prefs.getString("package", "").isEmpty());
         out.put("bundleName", prefs.getString("package", "")); out.put("fingerprint", prefs.getString("fingerprint", ""));
+        out.put("restNotifications", WatchRestAlerts.enabled(getContext()));
+        out.put("restNotificationExact", RestAlert.exactAllowed(getContext()));
+        out.put("restNotificationError", WatchRestAlerts.prefs(getContext()).getString("error", ""));
         out.put("transport", "huawei"); return out;
+    }
+    @PluginMethod public void setRestNotifications(PluginCall call) {
+        if (!Boolean.TRUE.equals(call.getBoolean("enabled", false))) {
+            WatchRestAlerts.enable(getContext(), false); call.resolve(link()); return;
+        }
+        if (device == null || !device.isConnected()) { call.reject("Connect the watch first"); return; }
+        getActivity().runOnUiThread(() -> HiWear.getAuthClient(getActivity()).requestPermission(new AuthCallback() {
+            @Override public void onOk(Permission[] granted) {
+                boolean notify = false, manager = false;
+                for (Permission p : granted) {
+                    notify |= Permission.NOTIFY.getName().equals(p.getName());
+                    manager |= Permission.DEVICE_MANAGER.getName().equals(p.getName());
+                }
+                if (!notify || !manager) { WatchRestAlerts.enable(getContext(), false); call.reject("Wear Engine NOTIFY and DEVICE_MANAGER permissions are required"); return; }
+                WatchRestAlerts.enable(getContext(), true); WatchRestAlerts.boot(getContext(), watchBoot);
+                call.resolve(link());
+            }
+            @Override public void onCancel() { call.reject("Watch notification authorization cancelled"); }
+        }, Permission.DEVICE_MANAGER, Permission.NOTIFY).addOnFailureListener(e -> call.reject("Wear Engine notification authorization failed: " + e.getMessage())));
+    }
+    @PluginMethod public void testRestNotification(PluginCall call) {
+        if (!WatchRestAlerts.enabled(getContext()) || device == null) { call.reject("Enable watch rest notifications first"); return; }
+        try { WatchRestAlerts.send(getContext(), device, prefs.getString("package", ""), () -> call.resolve(), e -> call.reject(e.getMessage())); }
+        catch (Exception e) { call.reject(e.getMessage()); }
+    }
+    @PluginMethod public void openRestAlarmSettings(PluginCall call) {
+        if (android.os.Build.VERSION.SDK_INT >= 31) getActivity().startActivity(new android.content.Intent(
+                android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:" + getContext().getPackageName())));
+        call.resolve();
     }
     @PluginMethod public void status(PluginCall call) { main.post(() -> {
         if (!refreshing && prefs.getBoolean("authorized", false) && !prefs.getString("package", "").isEmpty()
@@ -221,10 +255,13 @@ public class HuaweiWatchPlugin extends Plugin {
             if (kind.equals("hello")) {
                 boolean was = installed; installed = true;
                 String boot = payload.optString("boot", ""); boolean restarted = !boot.equals(watchBoot); watchBoot = boot;
+                WatchRestAlerts.boot(getContext(), boot);
                 if (!was || restarted) notifyListeners("watchState", link());
             } else if (kind.equals("snapshotAck")) {
                 PluginCall call = snapshots.remove(payload.getString("id"));
                 if (call != null) { JSObject out = new JSObject(); out.put("sent", true); call.resolve(out); }
+            } else if (kind.equals("restAlarm")) {
+                WatchRestAlerts.receive(getContext(), payload, device, prefs.getString("package", ""));
             } else if (kind.equals("events")) {
                 JSONArray queue = events(), incoming = payload.getJSONArray("events");
                 Set<String> seen = new HashSet<>();

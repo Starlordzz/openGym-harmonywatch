@@ -20,7 +20,7 @@ export function savedState(entries = [entry()]) {
 // Real app + controller + page. Only native I/O, timers and the framework's getApp are replaced.
 export function mount(t, saved = savedState(), { silent = false, corrupt = false, radio = false } = {}) {
   let now = 10000, stored = corrupt ? '{bad json' : JSON.stringify(saved), get, receiver
-  const timers = [], writes = [], sent = [], vibrations = [], sensorCalls = []
+  const timers = [], writes = [], sent = [], vibrations = [], sensorCalls = [], screenRequests = []
   const schedule = (fn, ms) => { const task = { fn, ms, active: true }; timers.push(task); return task }
   const cancel = task => { if (task) task.active = false }
   t.mock.method(Date, 'now', () => now)
@@ -31,6 +31,7 @@ export function mount(t, saved = savedState(), { silent = false, corrupt = false
   const platform = { available: radio, now: () => now,
     storage: { get(o) { get = o; if (!silent) o.success(stored) }, set(o) { stored = o.value; writes.push(copy(JSON.parse(stored))); o.success() } },
     vibrator: { vibrate() { vibrations.push(now) } },
+    brightness: { setKeepScreenOn(o) { screenRequests.push(o.keepScreenOn) } },
     sensor: { subscribeHeartRate() { sensorCalls.push('start') }, unsubscribeHeartRate() { sensorCalls.push('stop') } },
     setTimeout: schedule, clearTimeout: cancel, setInterval: () => null, clearInterval() {},
     client: { setPeerPkgName() {}, setPeerFingerPrint() {}, registerReceiver(o) { receiver = o; o.onSuccess() }, unregisterReceiver() {},
@@ -50,7 +51,7 @@ export function mount(t, saved = savedState(), { silent = false, corrupt = false
     if (oldGetApp === undefined) delete globalThis.getApp; else globalThis.getApp = oldGetApp
     if (oldRuntime === undefined) delete globalThis.__watchTestRuntime; else globalThis.__watchTestRuntime = oldRuntime
   })
-  return { app, vm, writes, sent, vibrations, sensorCalls, get stored() { return JSON.parse(stored) },
+  return { app, vm, writes, sent, vibrations, sensorCalls, screenRequests, get stored() { return JSON.parse(stored) },
     time(at) { now = at },
     fire(ms) { for (const task of timers.slice()) if (task.active && task.ms === ms) { task.active = false; task.fn() } },
     answer(text) { get.success(text) }, failRead() { get.fail() },

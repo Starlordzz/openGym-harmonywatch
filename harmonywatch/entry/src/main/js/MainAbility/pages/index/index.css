@@ -4,8 +4,7 @@
 .body { width: 408px; height: 480px; flex-direction: column; }
 .screen { width: 408px; height: 480px; flex-direction: column; justify-content: center; align-items: center; padding: 10px; }
 .exerciseScreen { padding: 4px; }
-.col { width: 368px; height: 340px; flex-direction: column; justify-content: center; align-items: center; }
-.idleEmpty { height: 310px; }
+.col { width: 368px; height: 310px; flex-direction: column; justify-content: center; align-items: center; }
 .row { width: 368px; height: 72px; flex-direction: row; justify-content: center; align-items: center; }
 .logo { width: 368px; height: 44px; font-size: 34px; text-align: center; color: #30d158; }
 .h2 { width: 368px; height: 80px; font-size: 34px; line-height: 38px; text-align: center; color: #ffffff; margin-bottom: 8px; }
@@ -14,12 +13,14 @@
 .idleHint { width: 344px; height: 144px; line-height: 32px; }
 .small { height: 30px; font-size: 22px; line-height: 28px; text-overflow: ellipsis; }
 .cap { width: 300px; height: 28px; font-size: 22px; text-align: center; color: #aaaaaa; }
+.buttonCap { width: 152px; }
+.statusNote { width: 344px; height: 56px; font-size: 22px; line-height: 26px; text-align: center; color: #aaaaaa; }
 .accentText { color: #30d158; }
-.round { width: 108px; height: 108px; border-radius: 54px; background-color: #30d158; color: #000000; font-size: 50px; text-align: center; }
+.round { width: 108px; height: 108px; }
 .roundSmall { width: 340px; height: 68px; border-radius: 34px; background-color: #30d158; color: #000000; font-size: 28px; text-align: center; }
 .roundWrap { width: 152px; height: 136px; flex-direction: column; justify-content: center; align-items: center; }
-.startWrap { height: 184px; }
-.startRound { width: 152px; height: 152px; border-radius: 76px; font-size: 66px; }
+.startWrap { height: 156px; }
+.startRound { width: 128px; height: 128px; }
 .wide { width: 368px; height: 60px; border-radius: 16px; background-color: #262626; color: #ffffff; font-size: 28px; text-align: center; margin-top: 6px; }
 .accent { background-color: #30d158; color: #000000; }
 .routineList { width: 368px; height: 96px; }
@@ -27,21 +28,29 @@
 .rowbtn { width: 368px; height: 46px; border-radius: 12px; background-color: #262626; color: #ffffff; font-size: 28px; text-align: center; }
 .edgeBtn { width: 104px; height: 64px; border-radius: 32px; background-color: #262626; color: #ffffff; font-size: 28px; text-align: center; margin-left: 4px; margin-right: 4px; }
 .link { width: 180px; height: 44px; background-color: #000000; color: #aaaaaa; font-size: 24px; text-align: center; }
+.backButton { width: 180px; height: 44px; flex-direction: row; justify-content: center; align-items: center; }
+.backIcon { width: 32px; height: 32px; }
+.backText { width: 120px; height: 36px; font-size: 24px; text-align: center; color: #aaaaaa; }
+.stepButton { width: 220px; height: 44px; border-radius: 12px; background-color: #262626; color: #30d158; font-size: 24px; text-align: center; margin-top: 6px; margin-bottom: 6px; }
 .ringWrap { width: 352px; height: 352px; justify-content: center; align-items: center; }
 .ring { width: 352px; height: 352px; center-x: 176px; center-y: 176px; radius: 156px; stroke-width: 12px; start-angle: 0deg; total-angle: 360deg; color: #30d158; background-color: #262626; }
 .cyanRing { color: #64d2ff; }
 .ringText { width: 280px; height: 280px; top: 36px; left: 36px; flex-direction: column; justify-content: center; align-items: center; }
 .ringNote { width: 260px; height: 60px; font-size: 22px; line-height: 26px; text-align: center; color: #aaaaaa; text-overflow: ellipsis; }
-.ringCap { width: 260px; height: 56px; font-size: 22px; line-height: 26px; text-align: center; color: #aaaaaa; text-overflow: ellipsis; }
+.ringCap { width: 260px; height: 44px; font-size: 22px; line-height: 26px; text-align: center; color: #aaaaaa; text-overflow: ellipsis; }
+.restWrap { width: 260px; height: 260px; }
+.restArc { width: 260px; height: 260px; center-x: 130px; center-y: 130px; radius: 116px; }
+.restText { width: 220px; height: 220px; top: 20px; left: 20px; }
 .ringDigits { width: 280px; height: 100px; font-size: 84px; text-align: center; color: #ffffff; }
 .digits { width: 340px; height: 104px; font-size: 84px; text-align: center; color: #30d158; }
 .bigDigits { width: 280px; height: 160px; font-size: 128px; text-align: center; color: #30d158; }
 .head { width: 368px; height: 60px; flex-direction: row; align-items: center; justify-content: space-between; }
 .name { width: 254px; height: 56px; font-size: 26px; line-height: 28px; color: #ffffff; text-overflow: ellipsis; }
-.headerStatus { width: 108px; height: 54px; flex-direction: column; justify-content: center; align-items: center; }
-.hr { width: 108px; height: 28px; font-size: 24px; text-align: right; color: #ff453a; }
-.hrWait { width: 108px; height: 52px; font-size: 22px; text-align: right; color: #aaaaaa; text-overflow: ellipsis; }
-.sync { width: 108px; height: 24px; font-size: 22px; text-align: right; color: #aaaaaa; }
+.headerStatus { width: 108px; height: 54px; flex-direction: column; justify-content: center; align-items: flex-end; }
+.heartRow { width: 108px; height: 28px; flex-direction: row; align-items: center; }
+.heartIcon { width: 20px; height: 20px; }
+.heartText { width: 88px; height: 28px; font-size: 22px; text-align: right; color: #ff453a; text-overflow: ellipsis; }
+.offlineIcon { width: 24px; height: 24px; }
 .tags { width: 368px; height: 28px; flex-direction: row; justify-content: center; align-items: center; }
 .tag { height: 28px; font-size: 20px; line-height: 26px; text-align: center; border-radius: 10px; padding-left: 6px; padding-right: 6px; margin-left: 2px; margin-right: 2px; }
 .tagWarm { color: #ff9f0a; background-color: #33240c; }
@@ -66,7 +75,7 @@
 .effort { width: 76px; height: 68px; border-radius: 24px; background-color: #262626; flex-direction: column; justify-content: center; align-items: center; }
 .effortName { width: 76px; height: 24px; font-size: 18px; text-align: center; color: #aaaaaa; }
 .effortValue { width: 76px; height: 36px; font-size: 32px; text-align: center; }
-.actionBtn { width: 104px; height: 44px; border-radius: 14px; background-color: #262626; color: #ffffff; font-size: 24px; text-align: center; margin-top: 4px; flex-direction: column; justify-content: center; align-items: center; }
+.actionBtn { width: 104px; height: 44px; border-radius: 14px; background-color: #262626; margin-top: 4px; flex-direction: column; justify-content: center; align-items: center; }
 .pageCount { width: 92px; height: 28px; font-size: 22px; text-align: center; color: #aaaaaa; }
 .dots { width: 368px; height: 24px; flex-direction: row; justify-content: center; align-items: center; }
 .dotbox { width: 24px; height: 24px; justify-content: center; align-items: center; margin-left: 2px; margin-right: 2px; }
@@ -77,14 +86,23 @@
 .sep { width: 28px; height: 100px; font-size: 80px; color: #aaaaaa; }
 .weighRow { width: 368px; height: 116px; flex-direction: row; justify-content: center; align-items: center; }
 .part { height: 100px; font-size: 80px; text-align: center; padding: 4px; }
+.wholePart { width: 176px; }
+.tenthPart { width: 64px; }
 .stat { width: 368px; height: 52px; flex-direction: row; justify-content: space-between; align-items: center; }
 .statLabel { width: 96px; height: 30px; font-size: 22px; color: #aaaaaa; }
 .statValue { width: 260px; height: 50px; font-size: 40px; text-align: right; }
 .summaryList { width: 368px; height: 260px; }
 .summaryItem { width: 368px; height: 56px; }
+.summaryStatus { width: 368px; height: 72px; justify-content: center; align-items: center; }
 .summaryTitle { height: 48px; }
 .summaryName { height: 40px; text-overflow: ellipsis; }
 .noSet { width: 368px; height: 220px; flex-direction: column; justify-content: center; align-items: center; }
-.icon { width: 368px; height: 96px; font-size: 80px; text-align: center; color: #aaaaaa; margin-bottom: 8px; }
+.emptyIcon { width: 96px; height: 96px; margin-bottom: 8px; }
+.finishTitle { height: 48px; margin-bottom: 0px; text-overflow: ellipsis; }
+.finishWrap { height: 112px; }
+.finishRound { width: 84px; height: 84px; }
+.finishActions { height: 66px; }
+.half { width: 176px; font-size: 24px; margin-left: 4px; margin-right: 4px; }
+.finishLinks { height: 44px; }
 
 .actionText { width: 104px; height: 32px; font-size: 24px; text-align: center; color: #ffffff; text-overflow: ellipsis; }

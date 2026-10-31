@@ -68,6 +68,7 @@
         <receiver
             android:name=".RestAlertReceiver"
             android:exported="false" />
+        <receiver android:name=".WatchRestAlertReceiver" android:exported="false" />
 
         <!-- Reposts the rest countdown every second so the notification shade keeps the
              clock and a shrinking bar after the WebView is frozen. The lock screen shows
