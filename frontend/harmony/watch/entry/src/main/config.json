@@ -1,0 +1,45 @@
+{
+  "app": {
+    "bundleName": "host.msknet.opengym.fit",
+    "vendor": "openGym",
+    "version": {
+      "code": 1,
+      "name": "0.1.0"
+    },
+    "apiVersion": {
+      "compatible": 3,
+      "target": 3
+    }
+  },
+  "deviceConfig": {},
+  "module": {
+    "deviceType": [
+      "liteWearable"
+    ],
+    "distro": {
+      "deliveryWithInstall": true,
+      "moduleName": "entry",
+      "moduleType": "entry"
+    },
+    "abilities": [
+      {
+        "name": "default",
+        "icon": "$media:icon",
+        "label": "openGym",
+        "type": "page"
+      }
+    ],
+    "js": [
+      {
+        "name": "default",
+        "pages": [
+          "pages/index/index"
+        ],
+        "window": {
+          "designWidth": 408,
+          "autoDesignWidth": false
+        }
+      }
+    ]
+  }
+}

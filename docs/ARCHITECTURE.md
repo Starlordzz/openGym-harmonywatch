@@ -17,6 +17,7 @@ flowchart LR
     A[Android app<br/>APK or Google Play]
     I[iPhone app]
     W[Apple Watch]
+    HF[HUAWEI FIT Lite app - experimental]
     WG[Widgets and<br/>Live Activity]
   end
 
@@ -32,6 +33,7 @@ flowchart LR
   N -- /api --> API
   API --> D
   W <-- WatchConnectivity --> I
+  HF <-- Wear Engine adapter --> A
   I -- App Group snapshot --> WG
 
   MCP["mcp/ (optional)<br/>stdio, reads data, logs via API"] -.reads.-> D
@@ -168,6 +170,18 @@ packages are put together and signed on the release machine (`scripts/android/bu
   the App Group (`lib/widgets.js` → `WidgetBridgePlugin.swift`), the widgets read it.
 - **Animation packs** (`ios/App/AnimationPacksDownloader`, `AnimationPacksPlugin.swift`): the
   sharper animation sizes as Apple-hosted Background Assets.
+
+## HUAWEI FIT development
+
+The experimental FIT 5 Pro port uses the DevEco FA JS Lite project in `harmonywatch/`.
+Canonical portable core and UI sources are in `frontend/harmony/`; staging preserves the
+DevEco-generated MainAbility and API 26 toolchain. The existing Android app supplies a
+HuaweiWatch bridge and reuses the current workout actions and NAS API.
+
+The current HAP includes the official Apache-licensed Wear Engine Lite JS SDK and passes the
+API 26 build. It remains unsigned; service approval, signing and hardware validation are still
+required. An explicit offline build mode is also available. See
+[HARMONY_FIT.md](HARMONY_FIT.md) for the capability matrix.
 
 ## CI and releases
 

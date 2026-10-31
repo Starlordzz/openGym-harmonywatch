@@ -25,6 +25,7 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        registerPlugin(HuaweiWatchPlugin.class);
         registerPlugin(HealthConnectPlugin.class);
         registerPlugin(ChannelPlugin.class);
         FlavorPlugins.register(this);
