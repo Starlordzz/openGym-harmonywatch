@@ -1,16 +1,14 @@
 // Plain JSON state; no platform APIs. Times and protocol match WatchCore (milliseconds).
 import { setIndex, sideUp, key } from './model.js'
-import { defaultReady } from './plan.js'
-export { setIndex, sideUp, defaultReady }
+export { setIndex, sideUp }
 export function initialState() {
-  return { workout: null, ready: defaultReady(), settings: {}, unit: 'kg', restSec: 90,
+  return { workout: null, ready: null, settings: {}, unit: 'kg', restSec: 90,
     startedHere: null, finishedHere: [], pending: {}, skipped: [], entryIndex: 0, outbox: [], sequence: 0 }
 }
 function copy(v) { return JSON.parse(JSON.stringify(v)) }
 export function restoreState(value) {
   if (!Array.isArray(value.outbox)) throw Error('Invalid state')
   var s = Object.assign(initialState(), value)
-  if (!s.ready && !s.workout) s.ready = defaultReady()
   // Old keys omitted the entry index. Recover pending events from their recorded entryIdx;
   // an ambiguous old skip belongs only to its first occurrence, never every duplicate.
   if (s.workout) s.workout.entries.forEach(function(e, ei) {
