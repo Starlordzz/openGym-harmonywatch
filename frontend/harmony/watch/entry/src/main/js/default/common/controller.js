@@ -2,6 +2,7 @@ import { initialState, restoreState, applySnapshot, acknowledge } from './sessio
 import { mergeHeart, stats } from './heart.js'
 import { clipPlan, acceptFile, clearClips, isClipUri } from './clips.js'
 import { packets, assembler } from './wire.js'
+import { createRestRelay } from './rest-relay.js'
 
 // One serialized storage writer; radio never sees an event before its durable state.
 export function createRuntime(platform, changed, failure) {
@@ -12,6 +13,7 @@ export function createRuntime(platform, changed, failure) {
   var now = platform.now || function() { return Date.now() }
   var state = initialState(), receive = assembler(), writing = false
   var boot = 'boot-' + Date.now() + '-' + Math.random().toString(16).slice(2)
+  var restRelay = createRestRelay(send, now, boot)
   var remove = platform.remove || function() {}
   var saves = [], queue = [], sending = false, timer, stopped = false, hr = [], loaded = false, registered = false
   // Reachability, the Wear Engine way: the SDK's ping only says whether the phone app is installed
@@ -56,7 +58,7 @@ export function createRuntime(platform, changed, failure) {
       if (settled) return
       settled = true; clearTimeout(timeout); sending = false
       if (ok) { queue.shift(); lastOk = now(); traffic = true; mark(); pump() }
-      else { queue = []; mark(); report('连接中断，已保存的记录稍后重试') }
+      else { queue = []; restRelay.reset(); mark(); report('连接中断，已保存的记录稍后重试') }
     }
     var timeout = setTimeout(function() { end(false) }, 10000)
     try { client.send(m, { onSuccess: function() {}, onFailure: function() { end(false) },
@@ -65,6 +67,7 @@ export function createRuntime(platform, changed, failure) {
   function flush() {
     if (platform.available === false || !registered || !loaded || stopped || writing || saves.length || queue.length || sending) return
     if (!lastHello || now() - lastHello > 60000) { lastHello = now(); send({ kind: 'hello', boot: boot }) }
+    restRelay.update(state)
     if (state.outbox.length) send({ kind: 'events', events: state.outbox.slice(0, 10) })
   }
   function onMessage(raw) {
@@ -89,7 +92,7 @@ export function createRuntime(platform, changed, failure) {
           var hs = stats(hr, Date.now() - state.summary.seconds * 1000, Date.now())
           if (hs) { state.summary.hrAvg = hs.avg; state.summary.hrMax = hs.max }
         }
-        save(function() { send({ kind: 'snapshotAck', id: result.id }); changed(state) })
+        save(function() { send({ kind: 'snapshotAck', id: result.id }); changed(state); flush() })
       } else if (p.kind === 'clip') {
         var previous = state.clips && state.clips[p.exId]
         if (clipPlan(state, p)) {
@@ -141,6 +144,12 @@ export function createRuntime(platform, changed, failure) {
     },
     change: function(fn) { if (!loaded || stopped) return; fn(state); if (!state.workout) clearClips(state, remove); save(function() { changed(state); flush() }); changed(state) },
     vibrate: function() { if (state.settings.restHaptics !== false) vibrator.vibrate({ mode: 'short', success: function() {} }) },
+    keepScreenOn: function(on) {
+      try {
+        if (platform.brightness) platform.brightness.setKeepScreenOn({ keepScreenOn: on,
+          fail: function(data, code) { console.warn('keepScreenOn failed: ' + code) } })
+      } catch (e) { console.warn('keepScreenOn unavailable') }
+    },
     heartStart: function() { sensor.subscribeHeartRate({ success: function(v) {
       if (v.heartRate >= 25 && v.heartRate <= 250) hr.push({ at: now(), value: v.heartRate })
       hr = hr.slice(-600)

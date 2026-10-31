@@ -5,6 +5,7 @@ import { wordsFor } from './common/i18n.js'
 import { start, tick, skip, finish, summary, idle } from './common/session.js'
 import { localTick, afterTick, closeRest, stats } from './common/heart.js'
 import { clipAt } from './common/clips.js'
+import { adjustNumber } from './common/editor.js'
 
 // watchOS takes the summary's heart rate from the HealthKit workout; here it comes from the
 // sensor samples of the session itself.
@@ -27,12 +28,14 @@ export default {
     )
     this.rt.load()
   },
-  onDestroy() { if (this.rt) this.rt.stop() },
+  onDestroy() { if (this.rt) { this.rt.keepScreenOn(false); this.rt.stop() } },
 
   attach(fn) { this.listener = fn; fn(this.state, this.lastError) },
   words(lang) { return wordsFor(lang) },
   change(fn) { this.rt.change(fn) },
   vibrate() { this.rt.vibrate() },
+  keepScreenOn(on) { this.rt.keepScreenOn(on) },
+  editNumber(page, delta, number, effort, color) { adjustNumber(page, delta, number, effort, color) },
   samples() { return this.rt.samples() },
   heartRate(since) { return this.rt.heart(since) },
   heartStart() { this.rt.heartStart() },

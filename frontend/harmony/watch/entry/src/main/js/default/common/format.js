@@ -4,9 +4,7 @@ import { key } from './model.js'
 
 export function formatNumber(v) {
   if (typeof v !== 'number' || !isFinite(v)) return '0'
-  var tenths = Math.round(v * 10)
-  if (tenths % 10 === 0) return String(tenths / 10)
-  return (tenths / 10).toFixed(1)
+  return String(Math.round(v * 100) / 100)
 }
 
 // Source Han numeric advances are at most about 0.56em (decimal point 0.28em).

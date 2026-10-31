@@ -7,7 +7,7 @@ import { configurePermissions } from './lite-config.mjs'
 const args = process.argv.slice(2)
 const get = name => { const i = args.indexOf(name); return i < 0 ? null : args[i + 1] }
 if (!get('--project')) {
-  console.error('Usage: node scripts/harmony/prepare.mjs --project <Lite project> [--bundle <watch bundle>] [--offline] [--sdk <official SDK directory> --phone-package <Android applicationId> --phone-fingerprint <SHA256>]')
+  console.error('Usage: node scripts/harmony/prepare.mjs --project <Lite project> [--bundle <watch bundle>] [--builtin-plan] [--offline] [--sdk <official SDK directory> --phone-package <Android applicationId> --phone-fingerprint <SHA256>]')
   process.exit(1)
 }
 const project = resolve(get('--project'))
@@ -46,6 +46,13 @@ js.pages = ['pages/index/index']
 js.window = { ...(js.window || {}), designWidth: 408, autoDesignWidth: false }
 configurePermissions(config.module, ability.name)
 await cp(join(template, 'js/default'), destination, { recursive: true })
+// Personal offline testing variant; leave the normal source/default state empty.
+if (args.includes('--builtin-plan')) {
+  const sessionFile = join(destination, 'common/session.js')
+  const session = await readFile(sessionFile, 'utf8')
+  if (!session.includes('ready: null')) throw Error('Cannot seed the built-in plan in this session source')
+  await writeFile(sessionFile, "import { builtinReady } from './builtin-plan.js'\n" + session.replace('ready: null', 'ready: builtinReady()'))
+}
 await mkdir(join(project, 'entry/src/main/resources/base/media'), { recursive: true })
 await cp(join(template, 'resources/base/media/icon.png'), join(project, 'entry/src/main/resources/base/media/icon.png'))
 await cp(join(template, 'resources/base/media/icon_small.png'), join(project, 'entry/src/main/resources/base/media/icon_small.png'))
@@ -57,10 +64,11 @@ if (sdk) {
   await writeFile(join(destination, 'common/runtime.js'), `import storage from '@system.storage'
 import vibrator from '@system.vibrator'
 import sensor from '@system.sensor'
+import brightness from '@system.brightness'
 import file from '@system.file'
 import { createRuntime } from './controller.js'
 export function runtime(changed, failure) {
-  return createRuntime({ available: false, storage: storage, vibrator: vibrator, sensor: sensor,
+  return createRuntime({ available: false, storage: storage, vibrator: vibrator, sensor: sensor, brightness: brightness,
     remove: function(uri) { file.delete({ uri: uri, fail: function() {} }) },
     setTimeout: setTimeout, clearTimeout: clearTimeout, setInterval: setInterval, clearInterval: clearInterval }, changed, failure)
 }

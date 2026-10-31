@@ -58,4 +58,13 @@ docs/*HEALTH*
 docs/*BACKGROUND*
 docs/*FEASIBILITY*
 docs/*REPORT*
+docs/*NOTIFICATIONS*
+docs/*DEMO*
+docs/*HUAWEI*
+docs/*AGC*
+docs/*APP_GALLERY*
 scripts/harmony/download-huawei-docs.py
+harmonywatch/artifacts/
+harmonywatch/signing/
+harmonywatch/phone-debug-identity.json
+harmonywatch/watch-debug-identity.json

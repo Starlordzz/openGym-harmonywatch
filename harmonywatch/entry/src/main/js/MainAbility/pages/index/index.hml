@@ -44,8 +44,8 @@
       <div class="col" if="{{routines.length > 0}}">
         <text class="h2 todayTitle" if="{{!!todayName}}">{{todayName}}</text>
         <div class="roundWrap startWrap" if="{{!!todayName}}">
-          <input class="round startRound" type="button" value="▶" onclick="startToday" />
-          <text class="cap">{{words.start}}</text>
+          <image class="round startRound" src="/common/icons/button-play.png" onclick="startToday" />
+          <text class="cap buttonCap">{{words.start}}</text>
         </div>
         <list class="routineList"><list-item class="routineItem" for="{{others}}"><input class="rowbtn" type="button" value="{{$item.name}}" onclick="startOther($idx)" /></list-item></list>
       </div>
@@ -53,7 +53,7 @@
         <text class="h2">{{idleTitle}}</text>
         <text class="note idleHint">{{idleHint}}</text>
       </div>
-      <text class="note small" if="{{!!pending}}">{{pending}}</text>
+      <text class="statusNote" if="{{!!pending}}">{{pending}}</text>
       <input class="link" type="button" value="{{words.heart}}" onclick="toggleSensor" />
     </div>
 
@@ -67,18 +67,18 @@
     <div class="screen" if="{{screen === 'weigh'}}">
       <text class="h2">{{words.quickCheckin}}</text>
       <div class="weighRow">
-        <text class="part" style="color: {{bwWholeColor}}; background-color: {{bwWholeBg}}; border-radius: 10px" onclick="pickPart('whole')">{{bwWhole}}</text>
+        <text class="part wholePart" style="color: {{bwWholeColor}}; background-color: {{bwWholeBg}}; border-radius: 10px" onclick="pickPart('whole')">{{bwWhole}}</text>
         <text class="sep">.</text>
-        <text class="part" style="color: {{bwTenthColor}}; background-color: {{bwTenthBg}}; border-radius: 10px" onclick="pickPart('tenth')">{{bwTenth}}</text>
+        <text class="part tenthPart" style="color: {{bwTenthColor}}; background-color: {{bwTenthBg}}; border-radius: 10px" onclick="pickPart('tenth')">{{bwTenth}}</text>
         <text class="unit">{{unit}}</text>
       </div>
       <div class="row">
-        <input class="edgeBtn" type="button" value="−" onclick="weighStep(-1)" />
-        <input class="edgeBtn" type="button" value="+" onclick="weighStep(1)" />
+        <image class="edgeBtn" src="/common/icons/button-minus.png" onclick="weighStep(-1)" />
+        <image class="edgeBtn" src="/common/icons/button-plus.png" onclick="weighStep(1)" />
       </div>
       <input class="wide accent" type="button" value="{{words.saveStart}}" onclick="weighSave" />
       <input class="link" type="button" value="{{words.noWeight}}" onclick="weighSkip" />
-      <input class="link" type="button" value="{{words.cancel}}" onclick="weighCancel" />
+      <div class="backButton" onclick="weighCancel"><image class="backIcon" src="/common/icons/back.png" /><text class="backText">{{words.cancel}}</text></div>
     </div>
 
     <!-- 3-2-1 -->
@@ -88,7 +88,7 @@
         <div class="ringText" onclick="startNow"><text class="bigDigits">{{digits}}</text></div>
       </stack>
       <div class="row">
-        <input class="edgeBtn" type="button" value="✕" onclick="cancelCountdown" />
+        <image class="edgeBtn" src="/common/icons/button-close.png" onclick="cancelCountdown" />
       </div>
       <text class="cap">{{words.start}}</text>
     </div>
@@ -98,9 +98,8 @@
       <div class="head">
         <text class="name">{{exName}}</text>
         <div class="headerStatus">
-          <text class="hr" if="{{!!hr}}">{{hr}}</text>
-          <text class="hrWait" if="{{!!hrWaiting}}">{{hrWaiting}}</text>
-          <text class="sync" if="{{!!offline}}">{{offlineMark}}</text>
+          <div class="heartRow" if="{{!!hr || !!hrWaiting}}"><image class="heartIcon" src="/common/icons/heart.png" /><text class="heartText">{{hr || hrWaiting}}</text></div>
+          <image class="offlineIcon" src="/common/icons/offline.png" if="{{!!offline}}" />
         </div>
       </div>
       <div class="tags" if="{{warmup || left || right || superset}}">
@@ -132,7 +131,7 @@
         </div>
       </div>
       <text class="note small" if="{{!!last && !noSet}}">{{last}}</text>
-      <div class="noSet" if="{{noSet}}"><text class="icon">{{noSetIcon}}</text><text class="note">{{noSetText}}</text></div>
+      <div class="noSet" if="{{noSet}}"><image class="emptyIcon" src="{{noSetIcon}}" /><text class="note">{{noSetText}}</text></div>
       <div class="primary" if="{{!noSet}}">
         <div class="sideRail">
           <image class="clip" src="{{clipSrc}}" if="{{!!clipSrc}}" />
@@ -143,8 +142,8 @@
           <text class="extras" if="{{!!extras}}">{{extras}}</text>
         </div>
         <div class="roundWrap">
-          <input class="round" type="button" value="{{timed ? '▶' : '✓'}}" onclick="done" onlongpress="askSkip" />
-          <text class="cap">{{timed ? words.startHold : words.done}}</text>
+          <image class="round" src="{{timed ? '/common/icons/button-play.png' : '/common/icons/button-check.png'}}" onclick="done" onlongpress="askSkip" />
+          <text class="cap buttonCap">{{timed ? words.startHold : words.done}}</text>
         </div>
         <div class="sideRail">
           <text class="pageCount">{{pageNo}} / {{pageCount}}</text>
@@ -168,26 +167,24 @@
       <text class="cap">{{editTitle}}</text>
       <div class="editValue"><text class="bignum">{{editValue}}</text><text class="unit" if="{{!!editSuffix}}">{{editSuffix}}</text></div>
       <div class="row">
-        <input class="edgeBtn" type="button" value="−" onclick="editStepBy(-1)" />
-        <input class="edgeBtn" type="button" value="+" onclick="editStepBy(1)" />
+        <image class="edgeBtn" src="/common/icons/button-minus.png" onclick="editStepBy(-1)" />
+        <image class="edgeBtn" src="/common/icons/button-plus.png" onclick="editStepBy(1)" />
       </div>
-      <text class="note small" if="{{!!editStep}}">{{editStep}}</text>
+      <input class="stepButton" type="button" value="{{editStep}}" onclick="toggleStep" />
       <input class="wide accent" type="button" value="{{words.done}}" onclick="editDone" />
     </div>
 
     <!-- rest -->
     <div class="screen" if="{{screen === 'rest'}}">
-      <stack class="ringWrap">
-        <progress class="ring" type="arc" percent="{{ringPercent}}" if="{{restRing}}" />
-        <div class="ringText">
+      <stack class="ringWrap restWrap">
+        <progress class="ring restArc" type="arc" percent="{{ringPercent}}" if="{{restRing}}" />
+        <div class="ringText restText">
           <text class="ringCap">{{words.rest}}</text>
           <text class="ringDigits">{{digits}}</text>
-          <!-- Conditional nodes are not drawn inside this stack, so both stay unconditional
-               and empty strings simply render nothing. -->
-          <text class="ringNote">{{nextText}}</text>
-          <text class="ringNote">{{offline}}</text>
         </div>
       </stack>
+      <text class="statusNote">{{nextText}}</text>
+      <text class="statusNote" if="{{!!offline}}">{{offline}}</text>
       <div class="row">
         <input class="edgeBtn" type="button" value="+15s" onclick="restMore" />
         <input class="edgeBtn" type="button" value="{{words.skip}}" onclick="restSkip" />
@@ -206,26 +203,25 @@
         </div>
       </stack>
       <div class="row">
-        <input class="edgeBtn" type="button" value="■" onclick="complete" />
+        <image class="edgeBtn" src="/common/icons/button-stop.png" onclick="complete" />
         <input class="edgeBtn" type="button" value="{{words.lock}}" onclick="lockPage" />
       </div>
     </div>
 
     <!-- the end of the workout -->
     <div class="screen" if="{{screen === 'finish'}}">
-      <text class="h2">{{workoutName}}</text>
-      <div class="roundWrap">
-        <input class="round" type="button" value="⚑" onclick="discard" />
-        <text class="cap">{{words.finish}}</text>
+      <text class="h2 finishTitle">{{workoutName}}</text>
+      <div class="roundWrap finishWrap">
+        <image class="round finishRound" src="/common/icons/button-flag.png" onclick="discard" />
+        <text class="cap buttonCap">{{words.finish}}</text>
       </div>
       <text class="note small">{{setsLine}}</text>
-      <text class="note small" if="{{!!offline}}">{{offline}}</text>
-      <div class="row">
-        <input class="wide accent" type="button" value="{{words.save}}" onclick="save" />
-        <input class="wide" type="button" value="{{words.discard}}" onclick="discard" />
+      <text class="statusNote" if="{{!!offline}}">{{offline}}</text>
+      <div class="row finishActions">
+        <input class="wide half accent" type="button" value="{{words.save}}" onclick="save" />
+        <input class="wide half" type="button" value="{{words.discard}}" onclick="discard" />
       </div>
-      <input class="link" type="button" value="{{words.resume}}" onclick="resume" />
-      <input class="link" type="button" value="{{words.lock}}" onclick="lockPage" />
+      <div class="row finishLinks"><input class="link" type="button" value="{{words.resume}}" onclick="resume" /><input class="link" type="button" value="{{words.lock}}" onclick="lockPage" /></div>
     </div>
 
     <!-- saved -->
@@ -239,7 +235,7 @@
         </list-item>
         <list-item class="summaryItem" if="{{records.length > 0}}"><text class="cap">{{words.records}}</text></list-item>
         <list-item class="summaryItem" for="{{records}}"><text class="note">{{$item.name}}</text></list-item>
-        <list-item class="summaryItem" if="{{!!offline}}"><text class="note">{{offline}}</text></list-item>
+        <list-item class="summaryStatus" if="{{!!pending}}"><text class="statusNote">{{pending}}</text></list-item>
       </list>
       <input class="wide accent" type="button" value="{{words.done}}" onclick="closeSummary" />
     </div>

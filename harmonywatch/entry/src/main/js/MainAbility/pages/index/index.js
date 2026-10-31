@@ -11,7 +11,7 @@ export default {
     remaining: 3, ringPercent: 100, ringColor: '#30d158', digits: '3', restRing: true, nextText: '', holdName: '',
     pageNo: 1, pageCount: 1, exName: '', extras: '', hr: '', clipSrc: '', warmup: false, left: false, right: false, superset: false,
     cardio: false, timed: false, bodyweight: false, weight: '0', added: '', reps: '0', seconds: '30', weightFont: 68, repsFont: 68, secondsFont: 84, weightWidth: 76, secondsWidth: 94, effortName: '', effortText: '–',
-    effortColor: '#ffffff', last: '', dots: [], noSet: false, noSetText: '', noSetIcon: '', hrWaiting: '', hrWanted: true, offlineMark: '⟳',
+    effortColor: '#ffffff', last: '', dots: [], noSet: false, noSetText: '', noSetIcon: '', hrWaiting: '', hrWanted: true,
     editField: '', editTitle: '', editValue: '0', editSuffix: '', editStep: '',
     workoutName: '', setsLine: '', summaryName: '', savedTitle: '', stats: [], records: [],
     debugLines: [], lockDigits: '', touchLocked: false, confirm: false, skipConfirm: false, asking: false },
@@ -39,12 +39,13 @@ export default {
     }
   },
   onDestroy() {
+    this.app.keepScreenOn(false)
     this.ackRest()
     clearInterval(this.animationClock); clearInterval(this.clock)
     if (typeof clearMonitorForCrownEvents === 'function') clearMonitorForCrownEvents()
   },
-  onHide() { this.visible = false; this.clipSrc = '' },
-  onShow() { this.visible = true; if (this.session) this.tickClock() },
+  onHide() { this.visible = false; this.clipSrc = ''; this.app.keepScreenOn(false) },
+  onShow() { this.visible = true; this.app.keepScreenOn(true); if (this.session) this.tickClock() },
 
   // ---- state → screen -------------------------------------------------------------------------
   sync() {
@@ -58,6 +59,7 @@ export default {
     this.offline = s.outbox.length && s.online === false ? this.words.savedLater : ''
     this.touchLocked = !!s.touchLocked && !!s.workout
     if (!s.workout) {
+      this.ackRest()
       if (this.sensing) this.app.heartStop()
       this.sensing = false
       this.confirm = this.skipConfirm = this.asking = this.manualFinish = false
@@ -101,7 +103,7 @@ export default {
       this.warmup = this.left = this.right = this.superset = false
       this.dots = dots(e, -1, s.skipped, ei)
       var left = e.sets.some(function(r) { return !r.done })
-      this.noSetIcon = left ? '↻' : '✓'
+      this.noSetIcon = '/common/icons/' + (left ? 'retry' : 'check') + '.png'
       this.noSetText = left ? this.words.tapDot : this.words.allDone
       return true
     }
@@ -128,8 +130,8 @@ export default {
     this.extras = s.settings.show && s.settings.show.elapsed ? clock((now - s.workout.start) / 1000) : ''
     var h = this.app.heartRate(this.lastTick || s.workout.start)
     this.hrWanted = !s.settings.show || s.settings.show.hr !== false
-    this.hr = h && this.hrWanted ? '♥ ' + h.avg : ''
-    this.hrWaiting = !h && this.hrWanted && s.sensorEnabled && this.sensing ? '♥ ' + this.words.measuring : ''
+    this.hr = h && this.hrWanted ? String(h.avg) : ''
+    this.hrWaiting = !h && this.hrWanted && s.sensorEnabled && this.sensing ? this.words.measuring : ''
     this.showNext = !s.settings.show || s.settings.show.next !== false
     return true
   },
@@ -179,10 +181,11 @@ export default {
     return true
   },
   crownStep(dir) {
-    if (this.touchLocked || typeof this.ei !== 'number') return
+    if (this.touchLocked) return
     if (this.screen === 'edit') { this.editStepBy(dir); return }
     if (this.screen === 'weigh') { this.weighStep(dir); return }
     if (this.screen === 'exercise') {
+      if (typeof this.ei !== 'number') return
       var s = this.session
       if (!s || !s.workout) return
       var ei = this.ei + dir
@@ -222,8 +225,8 @@ export default {
     else if (this.screen === 'exercise' || this.screen === 'edit') {
       this.extras = s.settings.show && s.settings.show.elapsed ? clock((now - s.workout.start) / 1000) : ''
       var h = this.app.heartRate(this.lastTick || s.workout.start)
-      this.hr = h && this.hrWanted ? '♥ ' + h.avg : ''
-      this.hrWaiting = !h && this.hrWanted && s.sensorEnabled && this.sensing ? '♥ ' + this.words.measuring : ''
+      this.hr = h && this.hrWanted ? String(h.avg) : ''
+      this.hrWaiting = !h && this.hrWanted && s.sensorEnabled && this.sensing ? this.words.measuring : ''
     }
     this.lockDigits = this.screen === 'rest' || this.screen === 'hold' ? this.digits : ''
   },
@@ -236,6 +239,7 @@ export default {
     this.picked = -1
     this.choice = routine
     this.bw = this.session.settings.lastBw || (this.unit === 'lb' ? 160 : 70)
+    this.bwActive = 'whole'
     this.weighParts()
     if (this.session.settings.weighIn === false) this.countdown()
     else this.screen = 'weigh'
@@ -269,7 +273,7 @@ export default {
     if (this.bwActive === 'tenth') {
       var tenths = Math.round(this.bw * 10) + (delta > 0 ? 1 : -1)
       this.bw = Math.max(0, tenths) / 10
-    } else this.bw = Math.max(0, Math.round(this.bw) + (delta > 0 ? 1 : -1))
+    } else this.bw = Math.max(0, Math.round(this.bw * 10) + (delta > 0 ? 10 : -10)) / 10
     this.weighParts()
   },
   weighSave() { this.withBw = true; this.countdown() },
@@ -298,7 +302,7 @@ export default {
       : field === 'reps' ? this.words.reps : field === 'seconds' ? this.words.hold : this.effortName
     this.editSuffix = field === 'weight' ? this.unit : field === 'seconds' ? 's' : ''
     var step = field === 'weight' ? (e.step > 0 ? e.step : this.unit === 'lb' ? 5 : 2.5) : field === 'seconds' ? 5 : 1
-    this.editStep = '± ' + formatNumber(step) + (field === 'weight' ? ' ' + this.unit : field === 'seconds' ? ' s' : '')
+    this.setEditStep(step)
     if (field === 'effort') {
       var kind = s.settings.effort
       this.editPos = effortPosition(kind, this.effort == null ? effortStart(kind) : this.effort)
@@ -309,30 +313,16 @@ export default {
     }
     this.screen = 'edit'
   },
-  editStepBy(delta) {
-    var s = this.session
-    if (!s.workout || !s.workout.entries[this.ei]) return
-    if (this.editField === 'effort') {
-      var kind = s.settings.effort
-      this.editPos = Math.min(kind === 'rpe' ? 9 : 6, Math.max(0, this.editPos + (delta > 0 ? 1 : -1)))
-      var v = effortValue(kind, this.editPos)
-      this.editValue = v == null ? '–' : formatNumber(v)
-      this.effort = v
-      this.effortText = this.editValue
-      this.effortColor = effortColor(kind, v)
-      return
-    }
-    var e = s.workout.entries[this.ei]
-    var step = this.editField === 'weight' ? (e.step > 0 ? e.step : this.unit === 'lb' ? 5 : 2.5) : this.editField === 'seconds' ? 5 : 1
-    var current = Number(this.editValue) || 0
-    var next = Math.round((current + (delta > 0 ? step : -step)) / step) * step
-    if (this.editField === 'seconds') next = Math.max(5, next)
-    else next = Math.max(0, next)
-    this.editValue = formatNumber(next)
-    if (this.editField === 'weight') { this.live.weight = next; this.weight = this.editValue; this.edited = true }
-    else if (this.editField === 'reps') { this.live.reps = next; this.reps = this.editValue; this.edited = true }
-    else { this.live.seconds = next; this.seconds = this.editValue }
+  setEditStep(step) {
+    this.editIncrement = step
+    this.editStep = '± ' + formatNumber(step) + ' ' + this.editSuffix
   },
+  toggleStep() {
+    if (this.editField !== 'weight') return
+    var e = this.session.workout && this.session.workout.entries[this.ei]
+    if (e) this.setEditStep(this.editIncrement === 0.1 ? (e.step > 0 ? e.step : this.unit === 'lb' ? 5 : 2.5) : 0.1)
+  },
+  editStepBy(delta) { this.app.editNumber(this, delta, formatNumber, effortValue, effortColor) },
   editDone() { this.screen = 'exercise'; this.sync() },
 
   // ---- a set ----------------------------------------------------------------------------------
@@ -372,14 +362,15 @@ export default {
   },
 
   // ---- rest, hold -----------------------------------------------------------------------------
-  // Rest is over: three pulses, one repeat after 5 s unless the wrist notices (Apple's pattern).
+  // Repeat the three-pulse pattern every 5 s until acknowledged, like the original Watch app.
   startRestAlarm() {
+    this.ackRest()
     this.alarmOn = true
     this.pulse(0); this.pulse(150); this.pulse(300)
     var page = this
     this.alarmTimer = setTimeout(function () {
       if (!page.alarmOn) return
-      page.pulse(0); page.pulse(150); page.pulse(300)
+      page.startRestAlarm()
     }, 5000)
   },
   pulse(delay) { var page = this; setTimeout(function() { if (page.alarmOn) page.app.vibrate() }, delay) },
