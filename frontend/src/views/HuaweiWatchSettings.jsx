@@ -57,7 +57,7 @@ export default function HuaweiWatchSettings() {
     </div>
     <div className="hw-acts">
       <button className="btn primary" disabled={busy} onClick={connect}>{busy ? '正在连接…' : '授权并连接'}</button>
-      <p className="sect-f">当前为开发版本，训练同步和动作动画需真机验证。热量和华为运动健康写入暂未启用。</p>
+      <p className="sect-f">本项目为适配鸿蒙手表（HUAWEI FIT / WATCH）的 openGym 改进分支，配套 Android 客户端使用（不再支持 iPhone / Apple Watch）。当前为开发版本，训练同步和动作动画需真机验证。热量和华为运动健康写入暂未启用。</p>
     </div>
   </>
 }

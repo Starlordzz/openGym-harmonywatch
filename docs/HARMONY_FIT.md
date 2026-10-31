@@ -1,5 +1,10 @@
 # openGym on HUAWEI FIT 5 Pro
 
+> [!IMPORTANT]
+> **关于本仓库定位与平台支持声明**：
+> 本项目为基于 Duarte Santos 的 openGym（<https://github.com/DuarteSantos8/openGym>）的第三方适配改进版，专门针对**华为 FIT / 鸿蒙智能手表（Lite Wearable）**进行深度适配与通信改造。
+> **本项目不再支持 iPhone 和 Apple Watch**：为了适配鸿蒙手表，我们在 Android 配套应用中扩展了华为 Wear Engine 通信桥接、离线事件同步与动作逐帧渲染等功能（原版无此功能）；同时由于维护者没有苹果开发者账号，无法对 iOS / watchOS 应用进行签名、真机调试和发布分发，因此本分支全面聚焦于 **Android + 华为轻鸿蒙手表**。如需 iPhone 或 Apple Watch 支持，请使用原作者上游仓库。
+
 Experimental port of the existing Apple Watch workout logic. **Full parity and hardware operation
 are not verified.** The Android APK and a Lite HAP with the real Wear Engine radio adapter have
 been built. The official JS SDK is included unmodified under its Apache 2.0 license and its published

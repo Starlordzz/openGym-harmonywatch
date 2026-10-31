@@ -3,6 +3,14 @@
 openGym — Copyright (C) 2026 Duarte Santos.
 openGym's own code is licensed under the **GNU AGPL v3.0** (see [LICENSE](LICENSE)).
 
+## openGym-harmonywatch Fork and Platform Scope
+
+This repository is an openGym fork adapted specifically for **HarmonyOS smartwatches (HUAWEI WATCH / FIT series)**.
+Original project: openGym (c) 2026 Duarte Santos (<https://github.com/DuarteSantos8/openGym>).
+
+**Platform Scope Notice**:
+This fork focuses exclusively on the **Android companion app + HarmonyOS smartwatches**. It **no longer supports iPhone or Apple Watch** (`不再支持 iPhone 和 Apple Watch`). The necessary Wear Engine communication layer, frame conversion pipeline, and offline watch sync mechanisms have been added to the Android application, which are not present in upstream. Because the maintainer does not have an Apple Developer account for signing and publishing iOS/watchOS applications, Apple ecosystem maintenance has been discontinued in this fork. Upstream openGym remains the reference for iOS and Apple Watch users.
+
 ## App store exception
 
 As an additional permission under section 7 of the AGPL v3.0, the copyright holder permits

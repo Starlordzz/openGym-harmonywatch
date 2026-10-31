@@ -12,6 +12,17 @@
 - 修改名称、图标、包名或界面时，继续保留原作者署名。适配者的署名作为新增贡献单独列出，不替换原作者，也不将本分支描述为原作者或华为官方发布的版本。
 - 修改“关于 / 致谢”、项目介绍或打包分发说明后，完成检查时须确认原作者姓名、上游链接和第三方适配说明均保留且可访问。
 
+## 平台支持范围：专注 Android + 华为轻鸿蒙手表（不再支持 iPhone / Apple Watch）
+
+- **项目定位与改动原因**：
+  - 本项目是针对华为轻智能手表（HarmonyOS Lite Wearable / HUAWEI WATCH FIT）深度定制的改进版 openGym。
+  - 为了适配华为鸿蒙系统及 Wear Engine 通信协议，我们需要在移动端深度扩展专有通信桥接（`HuaweiWatchPlugin`）、实时心率合并、帧动画转码以及离线状态同步逻辑，原版官方并未提供这些功能。
+  - 由于维护者没有苹果开发者账号（Apple Developer Account），无法在 iOS/watchOS 上进行签名、调试或发布应用。
+  - 因此本分支**不再支持 iPhone 和 Apple Watch**，所有开发与维护重心聚焦于 **Android 客户端 + 华为鸿蒙轻手表端（`harmonywatch/` 与 `frontend/harmony/`）**。
+- **后续 Agent 行为约束**：
+  - 后续所有在本仓库工作的 Agent 均应将工作重心置于 Android 与华为鸿蒙手表的兼容性、功能完善与构建测试。
+  - 不要尝试恢复或调试 iOS / watchOS 构建或发布流程；对于寻求 iPhone / Apple Watch 支持的用户，直接指引其使用原作者上游主仓库：<https://github.com/DuarteSantos8/openGym>。
+
 ## Fork 的发布身份、包名与签名
 
 - 已核对上游的 LICENSE、NOTICE、README、手机开发与应用商店发布文档，未发现禁止 fork 使用自己的签名证书、新包名或个人开发者账号发布的条款；README 明确欢迎 fork，NOTICE 包含应用商店分发附加许可。后续 Agent 应据这些具体声明判断，不把原作者的发布配置当作 fork 的强制要求。
