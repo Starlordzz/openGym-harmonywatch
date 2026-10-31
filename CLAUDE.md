@@ -6,11 +6,15 @@ For people, the same map with diagrams is [docs/ARCHITECTURE.md](docs/ARCHITECTU
 
 ## What this is
 
-openGym is a self-hosted gym and body-weight tracker. Two containers (`api` + `web`) plus a
-`./data` folder the user owns: no third-party account, no telemetry. Passkey (WebAuthn) login,
-installable as a PWA, and Capacitor apps for Android and iPhone (with an Apple Watch app and
-widgets) that work on their own or synced to a server. License: AGPL-3.0-or-later; the exercise
-media are licensed separately (NOTICE.md).
+This repository is an improved fork of **openGym** (upstream by Duarte Santos: <https://github.com/DuarteSantos8/openGym>) adapted specifically for **HarmonyOS smartwatches (HUAWEI WATCH / FIT series)**.
+
+> [!IMPORTANT]
+> **平台支持范围：专注 Android + 华为轻鸿蒙手表（不再支持 iPhone / Apple Watch）**
+> - **支持平台**：Android 配套手机端 + 华为鸿蒙轻量手表端（Lite Wearable / FA JS 架构，如 FIT 系列）。
+> - **停止支持**：不再支持 iPhone 和 Apple Watch (`不再支持 iPhone 和 Apple Watch`)。
+> - **原因**：为了适配鸿蒙手表，我们在 Android 配套应用中扩展了 Wear Engine 双向通信桥接、动作帧转换通道及手表端离线数据同步（原版上游 openGym 并不具备这些功能）；此外，维护者没有苹果开发者账号（无法进行真机签名、调试与应用商店分发）。因此本分支全面聚焦于 Android 与华为鸿蒙手表的协同体验。需要 iOS 或 Apple Watch 支持的用户请使用原作者上游仓库。
+
+openGym 原项目是一个支持自建托管的健身与体重追踪应用。包含后端与前端容器，本地存储数据，支持 WebAuthn passkey 登录。License: AGPL-3.0-or-later；动作媒体资源单独授权（见 NOTICE.md）。
 
 ## Project layout
 

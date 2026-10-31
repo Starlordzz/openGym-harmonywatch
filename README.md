@@ -29,6 +29,15 @@
 
 </div>
 
+> [!IMPORTANT]
+> **📢 华为鸿蒙手表改进版与平台支持说明 / Fork Scope Notice**
+>
+> 本项目是基于原作者 **Duarte Santos** 的 [openGym](https://github.com/DuarteSantos8/openGym) 开源项目开发的**第三方华为鸿蒙手表（HarmonyOS Lite Wearable / HUAWEI WATCH FIT）适配改进版**。
+>
+> **⚠️ 平台支持变更说明：本分支不再支持 iPhone 和 Apple Watch**
+> 1. **功能定制需要**：为了适配华为鸿蒙手表生态（Wear Engine 通信机制），我们在移动端深度定制并新增了手表通信桥接、动作帧动画转码、实时心率聚合与双向离线快照状态机，原版 openGym 没有这些功能。
+> 2. **苹果账号限制**：开发者没有苹果开发者账号（Apple Developer Account），无法在 iOS / watchOS 设备上编译、签名与发布应用。
+> 3. **专注 Android + 华为手表**：本分支代码库将开发与维护重心完全聚焦于 **Android + 华为轻鸿蒙手表**。如果需要使用 iPhone 或 Apple Watch，请直接使用原作者上游官方仓库：[DuarteSantos8/openGym](https://github.com/DuarteSantos8/openGym)。
 ## Why openGym
 
 Most workout apps keep your data on their servers, push you towards a subscription, or vanish
@@ -189,7 +198,8 @@ the phone, no account) or connect them to your server and sync.
 
 | | Get it |
 |---|---|
-| **iPhone and iPad**, with the **Apple Watch** app | The [App Store](https://apps.apple.com/app/id6822275400), in every App Store country |
+| **Android + HUAWEI WATCH / FIT** | 本分支专为安卓与华为轻鸿蒙手表适配，提供专用 APK 与手表端安装包（见 [HARMONY_FIT.md](docs/HARMONY_FIT.md)） |
+| **iPhone & Apple Watch** | **本分支不再支持**。因适配鸿蒙需添加专属通信桥接且维护者无苹果开发者账号，如需 iOS/watchOS 支持请访问原版：[DuarteSantos8/openGym](https://github.com/DuarteSantos8/openGym) |
 | **Android** | The signed APK from the [latest release](https://github.com/DuarteSantos8/openGym/releases/latest) or [opengym.ch](https://opengym.ch), in three sizes: **Standard** (`openGym-X.Y.Z.apk`, animations at 180 px, about 315 MB), **Plus** (`openGym-Plus-X.Y.Z.apk`, 240 px, about 424 MB) and **HD** (`openGym-HD-X.Y.Z.apk`, 360 px, about 760 MB). It updates itself and stays the kind you picked |
 | **Google Play** | Coming: a new developer account has to run a closed test first |
 
