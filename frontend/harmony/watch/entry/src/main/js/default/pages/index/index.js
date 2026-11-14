@@ -6,46 +6,106 @@ import { setIndex, sideUp } from '../../common/model.js'
 // the radio and every mutation live in app.js (getApp()); this file only draws and dispatches.
 export default {
   data: { words: {}, title: 'openGym', line: '正在读取记录', screen: 'loading', error: '', pending: '', offline: '',
-    routines: [], todayName: '', others: [], idleTitle: '', idleHint: '',
+    restPaused: false, sensorOn: false, routines: [], todayName: '', others: [], idleTitle: '', idleHint: '',
     bwWhole: '70', bwTenth: '0', bwWholeColor: '#30d158', bwTenthColor: '#ffffff', bwWholeBg: '#262626', bwTenthBg: '#000000', unit: 'kg',
     remaining: 3, ringPercent: 100, ringColor: '#30d158', digits: '3', restRing: true, nextText: '', holdName: '',
     pageNo: 1, pageCount: 1, exName: '', extras: '', hr: '', clipSrc: '', warmup: false, left: false, right: false, superset: false,
     cardio: false, timed: false, bodyweight: false, weight: '0', added: '', reps: '0', seconds: '30', weightFont: 68, repsFont: 68, secondsFont: 84, weightWidth: 76, secondsWidth: 94, effortName: '', effortText: '–',
     effortColor: '#ffffff', last: '', dots: [], noSet: false, noSetText: '', noSetIcon: '', hrWaiting: '', hrWanted: true,
-    editField: '', editTitle: '', editValue: '0', editSuffix: '', editStep: '',
+    editField: '', editTitle: '', editValue: '0', editSuffix: '', alarmOn: false,
     workoutName: '', setsLine: '', summaryName: '', savedTitle: '', stats: [], records: [],
     debugLines: [], lockDigits: '', touchLocked: false, confirm: false, skipConfirm: false, asking: false },
   onInit() {
     this.visible = true
     this.app = getApp()
     var page = this
+    /*f*/
+    this.app.traceRead(page)
+    /*endf*/
     // Draw idle immediately while native storage settles; attach() then shows data or its error.
     this.words = this.app.words('zh-Hans')
     this.idleTitle = this.words.notSynced
     this.idleHint = this.words.phoneHint
     this.screen = 'idle'
     this.error = ''
-    this.app.attach(function(s, error) { page.error = !s ? error || '' : ''; page.session = s; page.sync() })
-    this.animationClock = setInterval(() => {
-      var s = this.session, e = s && s.workout && s.workout.entries[this.ei]
-      this.clipSrc = this.visible && this.screen === 'exercise' && e ? this.app.clipFrame(e.id, Date.now()) : ''
-    }, 125)
-    this.clock = setInterval(() => this.tickClock(), 1000)
-    // The FIT 5 Pro's crown, exposed by ACELite as a global monitor (one object per turn:
-    // { timestamp, angularVelocity, degree }). Guarded: the previewer and older builds lack it.
-    this.crownDeg = 0
-    if (typeof setMonitorForCrownEvents === 'function') {
-      setMonitorForCrownEvents(function (evt) { return page.crown(evt) })
+    this.onState = function(s, error) {
+      if (page.dead || !page.visible) return
+      if (!s) page.ackRest()
+      page.error = !s ? error || '' : ''; page.session = s; page.sync()
+    }
+    this.app.attach(this.onState)
+  },
+  onDestroy() { this.onHide(); this.dead = true },
+  mark(t) {
+    /*o*/
+    var a = this.trace || (this.trace = [])
+    a.push(Math.round(Date.now() % 100000) + ' ' + t)
+    if (a.length > 7) a.shift()
+    /*endo*/
+    /*f*/
+    this.app.mark(this, t)
+    /*endf*/
+  },
+  onHide() {
+    if (!this.visible) return
+    /*o*/
+    this.mark('hide')
+    /*endo*/
+    /*f*/
+    // The exit mark carries what was still on: alarm, sensor, a workout on screen, recent jank.
+    this.mark('h' + this.app.flag(this))
+    /*endf*/
+    this.visible = false
+    this.stopClocks()
+    /*f*/ this.mark('k') /*endf*/
+    try { if (this.crownWatching && typeof clearMonitorForCrownEvents === 'function') clearMonitorForCrownEvents() } catch (e) {}
+    this.crownWatching = false
+    /*f*/ this.mark('c') /*endf*/
+    this.ackRest()
+    /*f*/ this.mark('r') /*endf*/
+    this.clipSrc = ''
+    if (this.app) {
+      this.app.detach(this.onState)
+      /*f*/ this.mark('d') /*endf*/
+      if (this.sensing) this.app.heartStop(true)
+      this.sensing = false
+      /*f*/ this.mark('x') /*endf*/
+      this.app.keepScreenOn(false)
+      /*f*/ this.mark('p') /*endf*/
+      /*f*/ this.app.probeLater() /*endf*/
     }
   },
-  onDestroy() {
-    this.app.keepScreenOn(false)
-    this.ackRest()
-    clearInterval(this.animationClock); clearInterval(this.clock)
-    if (typeof clearMonitorForCrownEvents === 'function') clearMonitorForCrownEvents()
+  onShow() {
+    if (this.dead || !this.app) return
+    /*o*/
+    this.mark('show')
+    /*endo*/
+    /*f*/
+    this.mark('s')
+    /*endf*/
+    this.visible = true; this.crownDeg = this.crownLast = this.crownStamp = 0
+    /*f*/ this.crownAt = 0 /*endf*/
+    this.app.attach(this.onState)
+    this.app.keepScreenOn(true)
+    this.stopClocks()
+    var page = this
+    this.animationClock = setInterval(function() {
+      if (page.dead || !page.visible) return
+      /*f*/
+      // The clock is the page's heartbeat: a gap between beats measures frozen JS on the real device.
+      page.app.jank(page)
+      /*endf*/
+      var s = page.session, e = s && s.workout && s.workout.entries[page.ei]
+      var src = page.screen === 'exercise' && e ? page.app.clipFrame(e.id, Date.now()) : ''
+      if (src !== page.clipSrc) page.clipSrc = src
+    }, 250)
+    this.clock = setInterval(function() { if (!page.dead && page.visible) page.tickClock() }, 1000)
+    try { if (!this.crownWatching && typeof setMonitorForCrownEvents === 'function') {
+      setMonitorForCrownEvents(function(evt) { return page.crown(evt) }); this.crownWatching = true
+    } } catch (e) {}
+    if (this.session) this.tickClock()
   },
-  onHide() { this.visible = false; this.clipSrc = ''; this.app.keepScreenOn(false) },
-  onShow() { this.visible = true; this.app.keepScreenOn(true); if (this.session) this.tickClock() },
+  stopClocks() { clearInterval(this.animationClock); clearInterval(this.clock) },
 
   // ---- state → screen -------------------------------------------------------------------------
   sync() {
@@ -53,6 +113,7 @@ export default {
     if (!s) return
     this.words = this.app.words(s.settings.lang)
     this.unit = s.unit || 'kg'
+    this.sensorOn = !!s.sensorEnabled
     this.title = s.workout ? s.workout.name : 'openGym'
     this.pending = s.outbox.length ? this.words.savedLater : ''
     // Apple's rule: what is queued is only "offline" while the phone is not answering.
@@ -68,13 +129,17 @@ export default {
       this.idleView(s)
       return
     }
+    if (this.workoutId !== s.workout.id) {
+      this.workoutId = s.workout.id; this.screen = 'exercise'; this.picked = -1; this.live = null
+      this.confirm = this.skipConfirm = this.asking = this.manualFinish = false
+    }
     if (this.sensing && !s.sensorEnabled) { this.sensing = false; this.app.heartStop() }
     if (!this.sensing && s.sensorEnabled) { this.sensing = true; this.app.heartStart() }
     if (this.screen === 'edit') { this.exerciseView(s, now); return }
     if (this.asking) { this.askingView(s); return }
     if (this.manualFinish) { this.finishView(s); this.screen = 'finish'; return }
-    var restEnd = s.workout.rest && s.workout.rest.endsAt
-    this.screen = s.hold ? 'hold' : restEnd && restEnd > now ? 'rest' : 'exercise'
+    var r = s.workout.rest, restEnd = r && (r.paused || r.endsAt > now)
+    this.screen = s.hold ? 'hold' : restEnd ? 'rest' : 'exercise'
     if (!this.exerciseView(s, now)) return
     if (this.screen === 'rest') this.restView(s)
     else if (this.screen === 'hold' && s.hold) this.holdView(s.hold, now)
@@ -121,7 +186,6 @@ export default {
     this.secondsFont = numberFont(n.seconds, 84, 280)
     this.weightWidth = numberWidth(n.weight, this.weightFont)
     this.secondsWidth = numberWidth(n.seconds, this.secondsFont)
-    this.exName = e.name; this.pageNo = ei + 1; this.pageCount = s.workout.entries.length
     this.effortName = s.settings.effort ? effortName(s.settings.effort) : ''
     this.effortText = this.effort == null ? '–' : formatNumber(this.effort)
     this.effortColor = s.settings.effort ? effortColor(s.settings.effort, this.effort) : '#ffffff'
@@ -136,10 +200,11 @@ export default {
     return true
   },
   restView(s) {
-    var now = Date.now(), ends = s.workout.rest.endsAt, total = s.restDurationSec || s.workout.restSec
+    var r = s.workout.rest, left = r.paused ? r.left : (r.endsAt - Date.now()) / 1000, total = r.total || s.restDurationSec || s.workout.restSec
+    this.restPaused = !!r.paused
     this.ringColor = '#30d158'
-    this.digits = clock((ends - now) / 1000)
-    this.ringPercent = Math.min(100, Math.max(0, Math.round(100 * (ends - now) / Math.max(1000, total * 1000))))
+    this.digits = clock(left)
+    this.ringPercent = Math.min(100, Math.max(0, Math.round(100 * left / Math.max(1, total))))
     this.restRing = !s.settings.show || s.settings.show.rest !== 'plain'
     var e = s.workout.entries[s.entryIndex], si = setIndex(s, s.entryIndex, this.picked)
     this.nextText = this.showNext && e && si >= 0 ? fill(this.words.next, [e.name, si + 1]) : ''
@@ -167,33 +232,7 @@ export default {
     this.exerciseView(s, Date.now())
   },
 
-  // ---- crown ----------------------------------------------------------------------------------
-  // 24° per notch (a full turn is 15): the numbers move in their own steps, the exercise page turns.
-  crown(evt) {
-    var deg = evt && typeof evt.degree === 'number' ? evt.degree : 0
-    if (!deg) return true
-    this.crownDeg += deg
-    var notches = this.crownDeg > 0 ? Math.floor(this.crownDeg / 24) : Math.ceil(this.crownDeg / 24)
-    if (!notches) return true
-    this.crownDeg -= notches * 24
-    var dir = notches > 0 ? 1 : -1, times = Math.min(4, Math.abs(notches))
-    for (var i = 0; i < times; i++) this.crownStep(dir)
-    return true
-  },
-  crownStep(dir) {
-    if (this.touchLocked) return
-    if (this.screen === 'edit') { this.editStepBy(dir); return }
-    if (this.screen === 'weigh') { this.weighStep(dir); return }
-    if (this.screen === 'exercise') {
-      if (typeof this.ei !== 'number') return
-      var s = this.session
-      if (!s || !s.workout) return
-      var ei = this.ei + dir
-      if (ei < 0 || ei >= s.workout.entries.length) return
-      this.picked = -1
-      this.app.showEntry(ei)
-    }
-  },
+  crown(evt) { /*f*/ if (evt && !evt.degree) this.crownAt = Date.now(); /*endf*/ return this.app.crown(this, evt) },
 
   // ---- clocks ---------------------------------------------------------------------------------
   tickClock() {
@@ -207,10 +246,10 @@ export default {
       return
     }
     if (!s.workout) return
-    var ends = s.hold ? s.hold.endsAt : s.workout.rest && s.workout.rest.endsAt
+    var ends = s.hold ? s.hold.endsAt : s.workout.rest && !s.workout.rest.paused && s.workout.rest.endsAt
     if (ends && ends <= now) {
       if (s.hold) { this.complete(true); return }
-      this.app.closeRestAt(now); this.startRestAlarm(); return
+      this.startRestAlarm(); this.app.closeRestAt(now); return
     }
     var state = this.app.idleAt(now)
     this.asking = state === 'ask'
@@ -245,18 +284,17 @@ export default {
     else this.screen = 'weigh'
   },
   openDebug() {
-    var s = this.session
-    this.debugLines = [
-      { text: 'workout: ' + (s.workout ? s.workout.id : 'none') },
-      { text: 'pending ticks: ' + Object.keys(s.pending || {}).length },
-      { text: 'started here: ' + (s.startedHere || '-') },
-      { text: 'clips: ' + Object.keys(s.clips || {}).length },
-      { text: 'ready: ' + (s.ready ? 'yes' : 'no') + ', outbox: ' + s.outbox.length },
-      { text: 'online: ' + (s.online ? 'yes' : 'no') }
-    ]
+    // The forensic view must never be the thing that throws: with no session yet, show the empty
+    // picture. This is the 2 s press on the idle screen (T12).
+    var s = this.session || { outbox: [] }
+    this.debugLines = this.app.debugLines(s, this)
     this.screen = 'debug'
   },
   closeDebug() { this.screen = 'idle'; this.sync() },
+  /*f*/
+  // 2 s press on the debug title: flip the screen-on probe, then redraw the panel in place.
+  toggleProbe() { this.app.toggleProbe(this) },
+  /*endf*/
 
   // ---- weigh-in -------------------------------------------------------------------------------
   weighParts() {
@@ -294,15 +332,14 @@ export default {
   // ---- editing a number -----------------------------------------------------------------------
   edit(field) {
     var s = this.session
-    if (this.touchLocked || !s.workout || !s.workout.entries[this.ei]) return
+    if (this.touchLocked || !s || !s.workout || !s.workout.entries[this.ei]) return
     var e = s.workout.entries[this.ei]
     if (!this.live) this.live = { weight: Number(this.weight) || 0, reps: Number(this.reps) || 0, seconds: Number(this.seconds) || 30 }
     this.editField = field
     this.editTitle = field === 'weight' ? (this.bodyweight ? this.words.addedWeight : this.words.weight)
       : field === 'reps' ? this.words.reps : field === 'seconds' ? this.words.hold : this.effortName
     this.editSuffix = field === 'weight' ? this.unit : field === 'seconds' ? 's' : ''
-    var step = field === 'weight' ? (e.step > 0 ? e.step : this.unit === 'lb' ? 5 : 2.5) : field === 'seconds' ? 5 : 1
-    this.setEditStep(step)
+    this.editIncrement = field === 'seconds' ? 5 : 1
     if (field === 'effort') {
       var kind = s.settings.effort
       this.editPos = effortPosition(kind, this.effort == null ? effortStart(kind) : this.effort)
@@ -313,28 +350,20 @@ export default {
     }
     this.screen = 'edit'
   },
-  setEditStep(step) {
-    this.editIncrement = step
-    this.editStep = '± ' + formatNumber(step) + ' ' + this.editSuffix
-  },
-  toggleStep() {
-    if (this.editField !== 'weight') return
-    var e = this.session.workout && this.session.workout.entries[this.ei]
-    if (e) this.setEditStep(this.editIncrement === 0.1 ? (e.step > 0 ? e.step : this.unit === 'lb' ? 5 : 2.5) : 0.1)
-  },
   editStepBy(delta) { this.app.editNumber(this, delta, formatNumber, effortValue, effortColor) },
+  editFineBy(delta) { if (this.editField === 'weight') this.app.editNumber(this, delta, formatNumber, effortValue, effortColor, 0.1) },
   editDone() { this.screen = 'exercise'; this.sync() },
 
   // ---- a set ----------------------------------------------------------------------------------
   done() {
-    if (this.touchLocked) return
+    if (this.touchLocked || !this.session || !this.session.workout) return
     if (this.timed) {
       var seconds = Number(this.seconds) || 30
       this.app.startHold(this.ei, this.si, { w: Number(this.weight) || 0, sec: seconds }, seconds * 1000)
     } else this.complete()
   },
   complete(automatic) {
-    if (this.touchLocked && automatic !== true) return
+    if (!this.session || this.touchLocked && automatic !== true) return
     var s = this.session, hold = s.hold
     var values = this.cardio ? {} : { w: Number(this.weight) || 0, r: Number(this.reps) || 0 }
     var now = hold && automatic === true ? Math.min(Date.now(), hold.endsAt) : Date.now()
@@ -353,7 +382,7 @@ export default {
   cancelSkip() { this.skipConfirm = false },
   pickDot(i) { if (this.touchLocked) return; this.ackRest(); this.picked = i; this.screen = 'exercise'; this.sync() },
   onSwipe(evt) {
-    if (this.touchLocked || !this.session.workout || typeof this.ei !== 'number') return
+    if (this.touchLocked || !this.session || !this.session.workout || typeof this.ei !== 'number') return
     var dir = evt && evt.direction
     var ei = this.ei + (dir === 'down' || dir === 'right' ? -1 : 1)
     if (ei < 0 || ei >= this.session.workout.entries.length) return
@@ -362,25 +391,36 @@ export default {
   },
 
   // ---- rest, hold -----------------------------------------------------------------------------
-  // Repeat the three-pulse pattern every 5 s until acknowledged, like the original Watch app.
+  // Long, separated pulses: the Lite API does not promise to queue overlapping requests.
   startRestAlarm() {
     this.ackRest()
     this.alarmOn = true
-    this.pulse(0); this.pulse(150); this.pulse(300)
+    this.pulse(0); this.pulse(2000); this.pulse(4000); this.pulse(6000)
     var page = this
+    // Two rounds of four long pulses (about 16 s), then silence: the screen stays until touched,
+    // but an unattended watch must not keep buzzing.
     this.alarmTimer = setTimeout(function () {
+      page.alarmTimer = null
       if (!page.alarmOn) return
-      page.startRestAlarm()
-    }, 5000)
+      page.pulse(0); page.pulse(2000); page.pulse(4000); page.pulse(6000)
+    }, 10000)
   },
-  pulse(delay) { var page = this; setTimeout(function() { if (page.alarmOn) page.app.vibrate() }, delay) },
+  pulse(delay) {
+    var page = this
+    if (!delay) { if (!page.dead && page.visible && page.alarmOn) page.app.vibrate('long'); return }
+    if (!this.alarmPulses) this.alarmPulses = []
+    this.alarmPulses.push(setTimeout(function() { if (!page.dead && page.visible && page.alarmOn) page.app.vibrate('long') }, delay))
+  },
   ackRest() {
     this.alarmOn = false
+    if (this.alarmPulses) this.alarmPulses.forEach(function(id) { clearTimeout(id) })
+    this.alarmPulses = []
     if (this.alarmTimer) { clearTimeout(this.alarmTimer); this.alarmTimer = null }
   },
   restMore() { if (!this.touchLocked) this.app.restMore(15000) },
-  endRest() { this.app.closeRestAt(Date.now()) },
-  restSkip() { if (!this.touchLocked) this.endRest() },
+  restLess() { if (!this.touchLocked) this.app.restMore(-15000) },
+  restPause() { if (!this.touchLocked) this.app.restMore(0, true) },
+  restSkip() { if (!this.touchLocked) this.app.closeRestAt(Date.now()) },
 
   // ---- finish ---------------------------------------------------------------------------------
   finishPage() { if (this.touchLocked || !this.session || !this.session.workout) return; this.manualFinish = true; this.finishView(this.session); this.screen = 'finish' },
@@ -398,5 +438,7 @@ export default {
   // ---- lock -----------------------------------------------------------------------------------
   lockPage() { if (this.session.workout) this.app.lock(true) },
   unlockPage() { this.app.lock(false) },
-  toggleSensor() { this.app.sensor(!this.session.sensorEnabled) }
+  // The idle screen is live before the first state arrives, so a tap can land with no session yet.
+  // app.sensor would be refused there anyway: writes wait for the storage read to settle.
+  toggleSensor() { if (this.session) this.app.sensor(!this.session.sensorEnabled) }
 }

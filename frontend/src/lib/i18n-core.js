@@ -42,6 +42,12 @@ export const DERIVED_LOCALES = {
 // to remember to add.
 export const baseLang = l => DERIVED_LOCALES[l]?.base || l
 
+// Requirement U17: a Chinese UI shows the Chinese name alone ("杠铃卧推", not
+// "杠铃卧推 (Barbell Bench Press)"). The English original is no help to a reader working in
+// Chinese, and this text travels with the name into the watch, the widgets and the exports.
+// Other languages keep it. The Settings switch still overrides this, per language, either way.
+export const enParensDefault = l => !baseLang(l).startsWith('zh')
+
 // Applies a derived locale's transform to a loaded pack, returning it unchanged for a language
 // that is not derived. Packs are trees of strings: the locale pack is flat { source: target },
 // instruction packs are { exId: [steps] }, exercise-name packs { exId: name }.

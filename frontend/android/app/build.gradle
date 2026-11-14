@@ -13,6 +13,10 @@ android {
         // Public application identity from Huawei developer console; pass -PhuaweiAppId=... locally.
         // Keep the numeric-looking App ID a string in PackageManager metadata.
         resValue "string", "huawei_app_id", project.findProperty("huaweiAppId") ?: ""
+        // Public identities allow an exact migration of the previous SHA-256 peer setting.
+        buildConfigField "String", "WATCH_BUNDLE", groovy.json.JsonOutput.toJson(project.findProperty("watchBundleName") ?: "")
+        buildConfigField "String", "WATCH_PEER_FINGERPRINT", groovy.json.JsonOutput.toJson(project.findProperty("watchPeerFingerprint") ?: "")
+        buildConfigField "String", "WATCH_CERTIFICATE_SHA256", groovy.json.JsonOutput.toJson(project.findProperty("watchCertificateSha256") ?: "")
         versionCode 28
         versionName "1.4.3"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -68,7 +72,7 @@ repositories {
 }
 
 dependencies {
-    implementation "com.huawei.hms:wearengine:5.0.2.306"
+    implementation "com.huawei.hms:wearengine:5.0.3.304"
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"

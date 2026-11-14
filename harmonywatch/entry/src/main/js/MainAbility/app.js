@@ -2,10 +2,12 @@
 // bundle (also capped at 48 KB by the device loader) only has to draw.
 import { runtime } from './common/runtime.js'
 import { wordsFor } from './common/i18n.js'
-import { start, tick, skip, finish, summary, idle } from './common/session.js'
+import { start, tick, skip, finish, summary, idle, event } from './common/session.js'
 import { localTick, afterTick, closeRest, stats } from './common/heart.js'
 import { clipAt } from './common/clips.js'
 import { adjustNumber } from './common/editor.js'
+import { crown } from './common/crown.js'
+import { changeRest } from './common/rest-control.js'
 
 // watchOS takes the summary's heart rate from the HealthKit workout; here it comes from the
 // sensor samples of the session itself.
@@ -28,18 +30,38 @@ export default {
     )
     this.rt.load()
   },
-  onDestroy() { if (this.rt) { this.rt.keepScreenOn(false); this.rt.stop() } },
+  onDestroy() { this.listener = null; if (this.rt) { this.rt.keepScreenOn(false); this.rt.stop() } },
+
+
+
+  debugLines(s, page) {
+    var lines = [
+      { text: 'outbox: ' + s.outbox.length + ', clips: ' + Object.keys(s.clips || {}).length }
+    ]
+    var tr = page.trace || []
+    for (var i = 0; i < tr.length; i++) lines.push({ text: tr[i] })
+    return lines.concat(this.radioLines())
+  },
+
+
+  radioLines() {
+    var lines = [{ text: this.rt.radioStatus() }], error = this.lastError || ''
+    for (var i = 0; i < Math.min(error.length, 112); i += 28) lines.push({ text: error.slice(i, i + 28) })
+    return lines
+  },
 
   attach(fn) { this.listener = fn; fn(this.state, this.lastError) },
+  detach(fn) { if (this.listener === fn) this.listener = null },
   words(lang) { return wordsFor(lang) },
   change(fn) { this.rt.change(fn) },
-  vibrate() { this.rt.vibrate() },
+  vibrate(mode, force) { this.rt.vibrate(mode, force) },
+  crown(page, evt) { return crown(page, evt) },
   keepScreenOn(on) { this.rt.keepScreenOn(on) },
-  editNumber(page, delta, number, effort, color) { adjustNumber(page, delta, number, effort, color) },
+  editNumber(page, delta, number, effort, color, step) { adjustNumber(page, delta, number, effort, color, step) },
   samples() { return this.rt.samples() },
   heartRate(since) { return this.rt.heart(since) },
   heartStart() { this.rt.heartStart() },
-  heartStop() { this.rt.heartStop() },
+  heartStop(keep) { this.rt.heartStop(keep) },
   clipFrame(exId, at) { return this.state ? clipAt(this.state, exId, at) : '' },
   summaryAt(at) { return this.state ? summary(this.state, at) : null },
   idleAt(now) { return this.state ? idle(this.state, now) : '' },
@@ -61,14 +83,17 @@ export default {
     this.rt.change(function(s) { if (!s.workout) return; s.hold = { start: now, endsAt: now + ms, ei: ei, si: si, values: values } })
   },
   clearHold() { this.rt.change(function(s) { s.hold = null }) },
-  closeRestAt(at) { var rt = this.rt; this.rt.change(function(s) { if (!s.workout) return; closeRest(s, rt.samples(), at); s.workout.rest = null }) },
-  restMore(ms) {
-    this.rt.change(function(s) {
-      if (!s.workout || !s.workout.rest) return
-      s.workout.rest.endsAt += ms
-      if (s.restAfter) s.restAfter.endsAt = s.workout.rest.endsAt
-      s.restDurationSec = (s.restDurationSec || s.workout.restSec) + ms / 1000
-    })
+  closeRestAt(at) { var rt = this.rt; this.rt.change(function(s) {
+    if (!s.workout) return
+    if (s.workout.rest) s.closedRestAt = Math.max(s.closedRestAt || 0, s.workout.rest.endsAt)
+    closeRest(s, rt.samples(), at); s.workout.rest = null
+    var e = s.workout.entries[s.entryIndex]
+    if (e) event(s, 'navigate', { wid: s.workout.id, exId: e.id, entryIdx: s.entryIndex, restSkip: true }, at)
+  }) },
+  restMore(ms, pause) {
+    var ended = false, at = Date.now()
+    this.rt.change(function(s) { ended = changeRest(s, ms, pause, at) })
+    if (ended) this.closeRestAt(at)
   },
   finishWorkout(at, discard) {
     var rt = this.rt
@@ -80,7 +105,11 @@ export default {
       if (s.summary) attachHr(s.summary, rt.samples(), start, at)
     })
   },
-  showEntry(ei) { this.rt.change(function(s) { s.entryIndex = ei }) },
+  showEntry(ei) { this.rt.change(function(s) {
+    if (!s.workout || !s.workout.entries[ei]) return
+    s.entryIndex = ei
+    event(s, 'navigate', { wid: s.workout.id, exId: s.workout.entries[ei].id, entryIdx: ei }, Date.now())
+  }) },
   lock(on) { this.rt.change(function(s) { s.touchLocked = on }) },
   snooze() { this.rt.change(function(s) { s.snooze = Date.now() }) },
   sensor(on) { this.rt.change(function(s) { s.sensorEnabled = on }) },

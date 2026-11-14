@@ -1,23 +1,29 @@
-# openGym on HUAWEI FIT 5 Pro
+# openGym 华为手表开发指南
 
 > [!IMPORTANT]
 > **关于本仓库定位与平台支持声明**：
-> 本项目为基于 Duarte Santos 的 openGym（<https://github.com/DuarteSantos8/openGym>）的第三方适配改进版，专门针对**华为 FIT / 鸿蒙智能手表（Lite Wearable）**进行深度适配与通信改造。
+> 本项目为基于 Duarte Santos 的 openGym（<https://github.com/DuarteSantos8/openGym>）的第三方适配改进版，面向**圆表、方表等华为手表**适配，当前实现为 Lite Wearable；已验证设备与其他型号待办见[兼容性记录](harmony/COMPATIBILITY_ZH.md)。
 > **本项目不再支持 iPhone 和 Apple Watch**：为了适配鸿蒙手表，我们在 Android 配套应用中扩展了华为 Wear Engine 通信桥接、离线事件同步与动作逐帧渲染等功能（原版无此功能）；同时由于维护者没有苹果开发者账号，无法对 iOS / watchOS 应用进行签名、真机调试和发布分发，因此本分支全面聚焦于 **Android + 华为轻鸿蒙手表**。如需 iPhone 或 Apple Watch 支持，请使用原作者上游仓库。
 
 Experimental port of the existing Apple Watch workout logic. **Full parity and hardware operation
 are not verified.** The Android APK and a Lite HAP with the real Wear Engine radio adapter have
 been built. The official JS SDK is included unmodified under its Apache 2.0 license and its published
 SHA-256 has been verified. The watch debug certificate and device-bound Profile have been issued;
-the signed HAP has passed SDK verification. Huawei service approval and device tests remain outstanding.
+the signed HAP has passed SDK verification. Huawei Wear Engine approval was granted on 2026-11-13;
+device testing has confirmed normal crown exit and foreground keep-awake. P2P sends still returned
+206 before the phone peer identity correction. The corrected phone now sends 207 and receives hello;
+watch state persistence exceeded the Lite KV limit and was moved to files. The user has confirmed
+correct Full Body plans and persistence after crown exit/reopening; record upload and animations await device tests.
+Current progress and installation records: [交接进度](HARMONY_HANDOFF_PROMPT_ZH.md) and
+[缺陷清单](HARMONY_OPEN_BUGS_ZH.md), updated 2026-11-14.
 
-For the current machine and installation steps see [中文准备指南](HARMONY_SETUP_ZH.md).
-All remaining user-dependent actions are grouped in [一次性处理清单](HARMONY_ACTIONS_ZH.md).
+For the current machine and installation steps see 中文准备指南（本地材料：`HARMONY_SETUP_ZH.md`）.
+All remaining user-dependent actions are grouped in 一次性处理清单（本地材料：`HARMONY_ACTIONS_ZH.md`）.
 
 Current user scope: exclude watch-face complications and Smart Stack. Defer native system workouts,
 calories and Huawei Health writing. Out-of-app punctual vibration and its phone NOTIFY fallback
-are also low priority. Keep foreground rest countdown/haptics; prioritize recording, offline sync
-and recovery. Background findings remain in [后台能力调查](HARMONY_BACKGROUND_ZH.md).
+were cancelled by the user on 2026-11-14. Foreground countdown and haptics remain enabled. Keep foreground rest countdown/haptics; prioritize recording, offline sync
+and recovery. Background findings remain in 后台能力调查（本地材料：`HARMONY_BACKGROUND_ZH.md`）.
 
 ## Architecture and source ownership
 
@@ -28,7 +34,7 @@ and recovery. Background findings remain in [后台能力调查](HARMONY_BACKGRO
   platform adapter sources. Edit here and stage with `scripts/harmony/prepare.mjs`; generated
   `MainAbility` copies must stay synchronized. The pure core has Node tests in `frontend/harmony/tests`.
 - The existing Android client contains the `HuaweiWatch` Capacitor bridge, using Wear Engine
-  5.0.2.306. Existing workouts, history, NAS authentication and server APIs are reused. No separate
+  5.0.3.304 on Android (the Lite JS SDK remains 5.0.2.306). Existing workouts, history, NAS authentication and server APIs are reused. No separate
   mobile UI or new NAS endpoint is introduced.
 
 The personal Android build selects `host.msknet.opengym.phone` via `-PpersonalApplicationId=...`.
@@ -82,6 +88,17 @@ The adapter waits for the SDK's asynchronous service-version probe before subscr
 against the unmodified SDK, checking message construction, receive callbacks and success code 207.
 The API 26 `WearEngineLite` declarations are not substituted for the legacy P2pClient contract.
 
+### State persistence (2026-11-14)
+
+Lite `@system.storage.set` values must be below 128 bytes; the empty session JSON alone is 171 bytes.
+`common/state-storage.js` now writes URI-encoded ASCII state to alternating app files in chunks
+of at most 4096 bytes. A short KV index is committed after the file is complete. The previous
+file remains readable after an interrupted new write; snapshot acknowledgements still follow persistence.
+Legacy JSON is read and migrated on the next successful save. Older HAPs that directly parse the KV
+value cannot read the new index; subsequent builds must retain the file adapter.
+See [Huawei storage](https://developer.huawei.com/consumer/cn/doc/harmonyos-references/js-apis-system-storage/)
+and [file APIs](https://developer.huawei.com/consumer/cn/doc/harmonyos-references/js-apis-system-file/).
+
 ### Lite runtime constraints
 
 Two engine rules break the page silently and were both present before the 2026-10-29 previewer run:
@@ -105,8 +122,8 @@ The watch is therefore split in two bundles, each inside the limit in a **releas
 
 | File | release | limit |
 |---|---|---|
-| `app.js` (state, radio, storage, mutations, translations) | 45,607 B | 49,152 B |
-| `pages/index/index.js` (layout, view model) | 44,847 B | 49,152 B |
+| `app.js` (state, radio, storage, mutations, translations) | 49,112 B | 49,152 B |
+| `pages/index/index.js` (layout, view model) | 49,031 B | 49,152 B |
 
 `getApp()` only answers when the app's options have a `data` object
 (`app_data_module.cpp` reads `vm.data`), so `app.js` keeps `data: { ready: false }`; everything else
@@ -119,7 +136,7 @@ watch build keeps 12 of the 19 Apple Watch languages to fit: `node scripts/harmo
 `--langs`) and the app bundle goes back over 48 KB.
 
 `scripts/harmony/check-size.mjs` gates the release build on both bundles (and `build-local.ps1` runs
-it), so a page too big for the device fails the build instead of shipping. The app bundle has 3,545 bytes of headroom: a new string usually means dropping one language from `WATCH_LANGS`.
+it), so a page too big for the device fails the build instead of shipping. Both bundles now sit close to the limit (40 bytes left in `app.js`, 121 in the page), so a new string usually means dropping one language from `WATCH_LANGS`.
 
 To see the previewer's pixels yourself: run the simulator, connect a WebSocket to
 `ws://127.0.0.1:<lws port>/<the -sid value>` (any other path fails validation), and read the binary
@@ -185,7 +202,8 @@ a localised "52 min" because Lite has no duration formatter.
 
 
 The registered Android product is openGym Phone (APP ID `119569911`); account service is enabled.
-Wear Engine DEVICE_MANAGER was submitted on 2026-10-29; the console lists it as pending approval.
+Wear Engine DEVICE_MANAGER and NOTIFY were approved on 2026-11-13; DEVICE_MANAGER authorization
+was verified on the phone. Notification delivery remains unverified.
 Both official Excel templates were filled and uploaded. The current APK has been rebuilt with this
 APP ID and verified against the registered signing certificate. Rebuild with JDK 21 using:
 
@@ -193,26 +211,37 @@ APP ID and verified against the registered signing certificate. Rebuild with JDK
 JAVA_HOME=/path/to/jdk21 HUAWEI_APP_ID=119569911 bash scripts/harmony/build-android.sh
 ```
 
-The personal build helper reads the public Android APP ID and watch peer defaults from the two
-`harmonywatch/*-debug-identity.json` files; `HUAWEI_APP_ID`, `VITE_HUAWEI_WATCH_BUNDLE` and
-`VITE_HUAWEI_WATCH_FINGERPRINT` can override them. Existing saved phone peer settings take precedence
-over these initial UI defaults. No service secret, CSR or private key is embedded. The APP ID is
+The personal build helpers read the public Android APP ID and watch bundle from
+`harmonywatch/*-debug-identity.json`. `watch-peer-identity.mjs` derives the HarmonyOS 5+ Lite
+Wearable peer fingerprint from `harmonywatch/signing/opengym-fit-leaf.cer` as
+`bundleName_Base64(04 || X || Y)`: a 65-byte uncompressed P-256 public key, preserving Base64 case
+and padding, at most 127 characters. The certificate SHA-256 remains a verification field;
+the Android phone identity used by the watch continues to use APK certificate SHA-256.
+See [Huawei fingerprint rules](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/wearengine_faq-9).
+`HUAWEI_APP_ID`, `VITE_HUAWEI_WATCH_BUNDLE` and `VITE_HUAWEI_WATCH_FINGERPRINT` override defaults.
+The native bridge migrates the exact previous bundle/certificate SHA-256 preference to the new public-key
+identity on startup; other saved identities remain user configured. No service secret, CSR or private key is embedded. The APP ID is
 stored through an Android string resource so a numeric-looking ID remains string metadata, following
 the [Wear Engine identity configuration](https://developer.huawei.com/consumer/en/doc/development/connectivity-Guides/addingappid-packagename-0000001050818013).
 
 A direct Gradle build without APP ID still builds but refuses to initiate Wear Engine authorization. The bridge
-only requests DEVICE_MANAGER. It registers receivers after consent and reconnects on later launches.
+requests DEVICE_MANAGER for the connection. The FIT system notification feature was removed
+on 2026-11-14; upgrades cancel the former watch alarm and clear its saved configuration. It registers receivers after consent and reconnects on later launches.
 Incoming phone events remain on disk if the app process dies; reopen the app to resume syncing.
 
-The large Android asset tree is slow to hash over WSL's Windows filesystem. A temporary Linux
-build copy was used to generate the current APK, without changing the user's project location.
+After the full helper has staged exercise-media, use `build-android-incremental.sh` for UI and
+existing native bridge iterations. It preserves the staged media and its NOTICE and refreshes web
+assets; plugin/configuration or media changes require the full helper. Use JDK 21 and the existing
+Android SDK and Gradle cache. The large media tree is slow to hash over WSL's Windows filesystem.
 
 ## Signing and artifacts
 
-Current files are in `harmonywatch/artifacts/` (ignored): personal debug APK, radio-enabled signed
-and unsigned HAPs, an earlier offline verification HAP, SHA-256 sums and status notes. Use
-`openGymFIT-radio-signed.hap` for sideload testing. The APK is signed; its application ID, registered signing certificate, APP ID string resource and
-compiled watch peer defaults were inspected. Copies of both current installation files are in `D:\Downloads\`.
+Current files are in `harmonywatch/artifacts/` (ignored). The ordinary watch package is
+`openGymFIT-training-fix-signed.hap`, without preset plans; its contents come from saved state and phone
+snapshots. The current phone APK is `openGym-HuaweiFit-training-fix-debug.apk`, including the training fixes and peer identity
+correction, old preference migration and current-plan ordering/cache fixes.
+Build, installation, hashes and device test status are recorded in the current handoff document.
+Older PPL and startup packages remain historical test artifacts.
 It can be tested alongside the original client; do not uninstall the original just to test NAS login.
 
 Unsigned HAPs cannot be installed directly. The signed HAP contains `entry-default-signed.bin`.
@@ -232,7 +261,7 @@ Tampered executable, Profile, CMS and trailer were rejected. This does not estab
 The final ZIP was checked to contain the exact verified signed BIN. Verification flags and artifact
 hash are recorded in `harmonywatch/artifacts/SIGNING_VERIFICATION.json`. Public distribution is out of scope.
 
-## Capability and verification status
+## Historical capability inventory (2026-10-30)
 
 | Capability | Status |
 |---|---|
@@ -251,13 +280,14 @@ hash are recorded in `harmonywatch/artifacts/SIGNING_VERIFICATION.json`. Public 
 | Watch-face complications / Smart Stack | Excluded by user |
 | Phone launch / wake | Official Wear Engine ping supports Lite launch; SDK method verified, integration/device test pending |
 | Screen-off sampling | No established Lite continuity guarantee; see background investigation |
-| Out-of-app punctual vibration / phone notification fallback | Low priority; no established independent Lite scheduling guarantee |
+| Out-of-app phone notification fallback | Cancelled by user on 2026-11-14; foreground watch haptics retained |
 
-Checks completed: previous full frontend/watch run 126 tests; latest recovery-focused run 9 page tests
+Historical checks: previous full frontend/watch run 126 tests; latest recovery-focused run 9 page tests
 and 24 portable core/runtime/official SDK tests. Other checks: 19-pack locale
 consistency, mobile frontend build, Android Java compilation and personal APK assembly/signature
 verification (latest identity build passed; actual authorization/radio still untested), DevEco API 26 Lite JS/HML/bin build without component/style warnings, unsigned HAP
-container validation, CSR self-signature validation. No FIT hardware tests have run.
+container validation, CSR self-signature validation. FIT hardware tests had not run at that stage.
+The current 2026-11-14 device results and open items are in [交接进度](HARMONY_HANDOFF_PROMPT_ZH.md).
 
 Primary references: [Lite development](https://developer.huawei.com/consumer/cn/multidevice/wearables/lite/),
 [Wear Engine](https://developer.huawei.com/consumer/cn/hms/huawei-wearengine/),
@@ -270,7 +300,7 @@ Primary references: [Lite development](https://developer.huawei.com/consumer/cn/
 The current watch suite passes 57 tests; the adapted frontend page suite passes 9 tests. Regression
 coverage now includes delayed/corrupt storage, repeated exercise identities and old state migration,
 summary navigation, invalid skip guards, and per-set heart windows. See the updated
-[development report](HARMONY_WATCH_REPORT_ZH.md) and [offline Huawei references](huawei/README.md).
+development report（本地材料：`HARMONY_WATCH_REPORT_ZH.md`） and offline Huawei references（本地材料：`huawei/README.md`）.
 
 The release helper checks every JS file against 49,152 bytes, then uses the installed SDK
 haptobin converter and packer to create a fresh Lite executable container. Hvigor only creates

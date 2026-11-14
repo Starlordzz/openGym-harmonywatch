@@ -5,20 +5,20 @@
 ## 原作者署名与鸿蒙适配说明
 
 - 原项目为 **openGym**，原作者为 **Duarte Santos（GitHub：DuarteSantos8）**，上游仓库：<https://github.com/DuarteSantos8/openGym>。作者信息依据本仓库 [NOTICE.md](NOTICE.md)。
-- 本项目是基于 openGym 的第三方华为 FIT / HarmonyOS 适配。说明成果时，应区分原项目及 Apple Watch 版的贡献与本分支新增的鸿蒙适配、Android 通信桥接贡献。
+- 本项目是基于 openGym 的第三方华为手表 / HarmonyOS 适配。说明成果时，应区分原项目及 Apple Watch 版的贡献与本分支新增的鸿蒙适配、Android 通信桥接贡献。
 - 应用的“关于 / 致谢”入口、项目介绍及对外提供安装包的说明应明确标注原作者和上游来源。手表显示空间有限时，可用简短署名，并在配套手机应用或随包文档中提供完整来源。
-- 推荐署名：**“基于 Duarte Santos 的 openGym 项目开发；本版本为第三方华为 FIT / HarmonyOS 适配。”** 同时提供上游仓库链接。
+- 推荐署名：**“基于 Duarte Santos 的 openGym 项目开发；本版本为第三方华为手表 / HarmonyOS 适配。”** 同时提供上游仓库链接。
 - 保留原有版权声明、[LICENSE](LICENSE)、[NOTICE.md](NOTICE.md) 及第三方素材 / SDK 的许可说明；代码沿用仓库声明的 AGPL-3.0-or-later。素材与 SDK 的许可范围分别按对应声明处理。
 - 修改名称、图标、包名或界面时，继续保留原作者署名。适配者的署名作为新增贡献单独列出，不替换原作者，也不将本分支描述为原作者或华为官方发布的版本。
 - 修改“关于 / 致谢”、项目介绍或打包分发说明后，完成检查时须确认原作者姓名、上游链接和第三方适配说明均保留且可访问。
 
-## 平台支持范围：专注 Android + 华为轻鸿蒙手表（不再支持 iPhone / Apple Watch）
+## 平台支持范围：Android + 华为手表（圆表、方表等形态）（不再支持 iPhone / Apple Watch）
 
 - **项目定位与改动原因**：
-  - 本项目是针对华为轻智能手表（HarmonyOS Lite Wearable / HUAWEI WATCH FIT）深度定制的改进版 openGym。
+  - 本项目面向圆表、方表等华为手表形态，是基于 openGym 的第三方适配。当前实现使用 HarmonyOS Lite Wearable，FIT 5 Pro 为已验证设备；其他型号及运行时的适配与验证状态见 [兼容性记录](docs/harmony/COMPATIBILITY_ZH.md)。
   - 为了适配华为鸿蒙系统及 Wear Engine 通信协议，我们需要在移动端深度扩展专有通信桥接（`HuaweiWatchPlugin`）、实时心率合并、帧动画转码以及离线状态同步逻辑，原版官方并未提供这些功能。
   - 由于维护者没有苹果开发者账号（Apple Developer Account），无法在 iOS/watchOS 上进行签名、调试或发布应用。
-  - 因此本分支**不再支持 iPhone 和 Apple Watch**，所有开发与维护重心聚焦于 **Android 客户端 + 华为鸿蒙轻手表端（`harmonywatch/` 与 `frontend/harmony/`）**。
+  - 因此本分支**不再支持 iPhone 和 Apple Watch**，所有开发与维护重心聚焦于 **Android 客户端 + 华为手表端（`harmonywatch/` 与 `frontend/harmony/`）**。
 - **后续 Agent 行为约束**：
   - 后续所有在本仓库工作的 Agent 均应将工作重心置于 Android 与华为鸿蒙手表的兼容性、功能完善与构建测试。
   - 不要尝试恢复或调试 iOS / watchOS 构建或发布流程；对于寻求 iPhone / Apple Watch 支持的用户，直接指引其使用原作者上游主仓库：<https://github.com/DuarteSantos8/openGym>。

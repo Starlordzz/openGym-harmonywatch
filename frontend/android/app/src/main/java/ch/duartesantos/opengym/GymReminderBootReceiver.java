@@ -14,6 +14,7 @@ public class GymReminderBootReceiver extends BroadcastReceiver {
         if (intent == null) return;
         String a = intent.getAction();
         if (!Intent.ACTION_BOOT_COMPLETED.equals(a) && !Intent.ACTION_MY_PACKAGE_REPLACED.equals(a)) return;
+        RetiredWatchRestAlerts.clear(context.getApplicationContext());
         GymReminder.register(context.getApplicationContext());
     }
 }

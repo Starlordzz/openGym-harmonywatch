@@ -4,10 +4,11 @@ import { createRuntime } from '../watch/entry/src/main/js/default/common/control
 import { packets, assembler } from '../watch/entry/src/main/js/default/common/wire.js'
 import { event } from '../watch/entry/src/main/js/default/common/session.js'
 function fixture({ offline = false, saved = '', silent = false } = {}) {
-  var stored = saved, current, errors = [], written = [], outgoing = [], writes = [], timers = [], receiver, pendingGet, failWrite = false, sendFails = false, pingCode = 201, sensorCallback, now = 10000
+  var store = { 'opengym-fit-v1': saved }, current, errors = [], written = [], outgoing = [], timers = [], receiver, pendingGet, failWrite = false, sendFails = false, pingCode = 201, sensorCallback, now = 10000
   const decode = assembler()
   const platform = { available: !offline,
-    storage: { get: o => { if (silent) pendingGet = o; else o.success(stored || '') }, set: o => { writes.push(o); if (!failWrite) { stored = o.value; written.push(JSON.parse(stored)); o.success() } else o.fail() } },
+    // Keyed like the device's own storage: the runtime keeps its forensics stream in a second key.
+    storage: { get: o => { if (silent) pendingGet = o; else o.success(store[o.key] || '') }, set: o => { if (failWrite) { o.fail(); return } store[o.key] = o.value; if (o.key === 'opengym-fit-v1') written.push(JSON.parse(o.value)); o.success() } },
     now: () => now,
     vibrator: { vibrate() {} }, sensor: { subscribeHeartRate(o) { sensorCallback = o.success }, unsubscribeHeartRate() {} },
     client: { setPeerPkgName() {}, setPeerFingerPrint() {}, registerReceiver(o) { receiver = o; o.onSuccess() }, unregisterReceiver() {},
@@ -19,7 +20,7 @@ function fixture({ offline = false, saved = '', silent = false } = {}) {
   }
   if (offline) { delete platform.client; delete platform.Builder; delete platform.Message }
   const runtime = createRuntime(platform, s => { current = s }, e => errors.push(e))
-  return { runtime, outgoing, written, errors, get state() { return current }, get saved() { return stored },
+  return { runtime, outgoing, written, errors, get state() { return current }, get saved() { return store['opengym-fit-v1'] },
     sample(value, at) { now = at; sensorCallback({ heartRate: value }) }, time(at) { now = at },
     fail(v) { failWrite = v }, sendFail(v) { sendFails = v }, ping(code) { pingCode = code }, retry() { const tasks = timers; timers = []; tasks.forEach(fn => fn()) },
     answer(text) { pendingGet.success(text) },

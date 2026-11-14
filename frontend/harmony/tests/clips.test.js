@@ -30,3 +30,13 @@ test('only complete current-workout frames animate; files are cleaned on finish'
   s.settings.show = { clip: false }; assert.equal(clipAt(s, 'a', 0), '')
   const removed = []; clearClips(s, path => removed.push(path)); assert.equal(removed.length, 2); assert.equal(clipAt(s, 'a', 0), '')
 })
+test('a replacement clip keeps the previous complete animation until all new frames arrive', () => {
+  const s = { workout: { id: 'w', entries: [{ id: 'a' }] }, settings: {} }
+  clipPlan(s, { wid: 'w', exId: 'a', files: ['og-a-0.png'] })
+  acceptFile(s, 'internal://app/og-a-0.png')
+  clipPlan(s, { wid: 'w', exId: 'a', files: ['og-b-0.png', 'og-b-1.png'] })
+  acceptFile(s, 'internal://app/og-b-0.png')
+  assert.equal(clipAt(s, 'a', 0), 'internal://app/og-a-0.png')
+  acceptFile(s, 'internal://app/og-b-1.png')
+  assert.equal(clipAt(s, 'a', 0), 'internal://app/og-b-0.png')
+})

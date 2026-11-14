@@ -1920,6 +1920,7 @@ function ActiveWorkout() {
       // One side of a per-side set (a unilateral exercise): that side's numbers and its own tick.
       const oneSide = side && isSideSet(now) ? side : null
       const wasDone = oneSide ? now.sides[oneSide].done : now?.done
+      const restBefore = useUI.getState().timer
       // The same set ticked here after the watch did: the later tick wins, the heart rate still lands.
       // The effort the watch logged (lib/watch-sync.js effortFrom): RPE or RIR, never both.
       const eff = rpe != null ? ['rpe', rpe] : rir != null ? ['rir', rir] : null
@@ -1944,7 +1945,14 @@ function ActiveWorkout() {
         if (eff) { delete set.rpe; delete set.rir; set[eff[0]] = eff[1] }
       })
       if (!wasDone) toggleRef.current(idx, i, oneSide || undefined)
+      const rest = useUI.getState().timer
+      if (at && rest && rest !== restBefore && !rest.paused) useUI.getState().alignRest(at + rest.total * 1000)
       if (at || hr) mutEntry(idx, en => { const set = en.sets[i]; if (!(oneSide ? set?.sides?.[oneSide]?.done : set?.done)) return; if (at) set.at = at; if (hr) set.hr = hr })
+    },
+    restChange: rest => useUI.getState().followWatchRest(rest),
+    navigate: (idx, skipRest) => {
+      update(s => { if (s.active && !s.active.editingWorkoutId && s.active.entries?.[idx]) s.active.cur = idx })
+      if (skipRest) useUI.getState().stopRest()
     },
     finish: () => { if (!useStore.getState().S.active?.editingWorkoutId) finishWorkoutNow() },
     discard: () => { if (!useStore.getState().S.active?.editingWorkoutId) discardNow() },

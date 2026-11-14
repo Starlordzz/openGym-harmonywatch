@@ -19,7 +19,9 @@ export function clipPlan(s, p) {
   if (!s.workout || p.wid !== s.workout.id || !s.workout.entries.some(function(e) { return e.id === p.exId })) return false
   if (!Array.isArray(p.files) || p.files.length < 1 || p.files.length > 16 || !p.files.every(function(n) { return isClipName(n) })) return false
   s.clips = s.clips || {}
-  s.clips[p.exId] = { wid: p.wid, names: p.files.slice(), paths: {}, interval: Math.max(100, Math.min(1000, p.interval || 125)) }
+  var old = s.clips[p.exId]
+  s.clips[p.exId] = { wid: p.wid, names: p.files.slice(), paths: {}, previous: clipReady(old) ? old : old && old.previous,
+    interval: Math.max(100, Math.min(1000, p.interval || 125)) }
   return true
 }
 export function acceptFile(s, path) {
@@ -35,10 +37,12 @@ export function acceptFile(s, path) {
   })
   return accepted
 }
+export function clipReady(clip) { return !!clip && clip.names.every(function(n) { return !!clip.paths[n] }) }
 export function clipAt(s, exId, time) {
   var clip = s.clips && s.clips[exId]
   if (!clip || !s.workout || clip.wid !== s.workout.id || s.settings.show && s.settings.show.clip === false) return ''
-  if (!clip.names.every(function(n) { return !!clip.paths[n] })) return ''
+  if (!clipReady(clip)) clip = clip.previous
+  if (!clipReady(clip)) return ''
   return clip.paths[clip.names[Math.floor(time / clip.interval) % clip.names.length]]
 }
 export function isClipUri(uri) {
@@ -47,6 +51,7 @@ export function isClipUri(uri) {
 export function clearClips(s, remove) {
   Object.keys(s.clips || {}).forEach(function(k) {
     var c = s.clips[k]; Object.keys(c.paths).forEach(function(n) { remove(c.paths[n]) })
+    if (c.previous) Object.keys(c.previous.paths).forEach(function(n) { remove(c.previous.paths[n]) })
   })
   s.clips = {}
 }

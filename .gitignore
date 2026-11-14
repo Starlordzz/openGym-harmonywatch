@@ -68,3 +68,9 @@ harmonywatch/artifacts/
 harmonywatch/signing/
 harmonywatch/phone-debug-identity.json
 harmonywatch/watch-debug-identity.json
+
+# Local root runtime leftovers
+/.hvigor/
+/file_system/
+# Public progress and implementation docs; application materials stay local.
+!docs/HARMONY_REST_NOTIFICATIONS_ZH.md
