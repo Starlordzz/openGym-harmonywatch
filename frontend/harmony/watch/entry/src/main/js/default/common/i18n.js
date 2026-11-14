@@ -1,11 +1,19 @@
 import data from './locales.js'
 var cache = {}
+function expand(text) {
+  var out = ''
+  for (var i = 0; i < text.length; i++) {
+    var n = text.charCodeAt(i) - 384
+    out += n >= 0 && n < data.fragments.length ? data.fragments[n] : text.charAt(i)
+  }
+  return out
+}
 function pack(lang) {
   var values = data.packs[lang]
   if (!values) return null
   var parent = values.base ? data.packs[values.base] : null
   var out = {}
-  for (var i = 0; i < data.keys.length; i++) out[data.keys[i]] = parent ? (values.changes[i] != null ? values.changes[i] : parent[i]) : values[i] || ''
+  for (var i = 0; i < data.keys.length; i++) out[data.keys[i]] = expand(parent ? (values.changes[i] != null ? values.changes[i] : parent[i]) : values[i] || '')
   return out
 }
 export function wordsFor(lang) {

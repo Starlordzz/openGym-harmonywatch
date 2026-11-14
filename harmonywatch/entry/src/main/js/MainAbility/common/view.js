@@ -1,6 +1,6 @@
 // What the page shows, derived from the session state. Pure: the page keeps only the numbers being
 // edited and the clocks; the rules Apple's SwiftUI views apply live here.
-import { formatNumber, clock, grouped, setDots } from './format.js'
+import { formatNumber, clock, grouped, setDots, fill } from './format.js'
 import { sideUp } from './model.js'
 
 export function tagsOf(entry, row) {
@@ -51,5 +51,5 @@ export function progress(s) {
 
 // "3 of 12 sets" from the localised template "%lld of %lld sets".
 export function setsOf(template, p) {
-  return p.total ? template.replace('%lld', String(p.done)).replace('%lld', String(p.total)) : ''
+  return p.total ? fill(template, [p.done, p.total]) : ''
 }

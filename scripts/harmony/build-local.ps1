@@ -25,6 +25,10 @@ try {
     $buildMode = if ($DebugBuild) { 'debug' } else { 'release' }
     & $wrapper assembleHap --no-daemon --mode module -p product=default -p buildMode=$buildMode
     $result = $LASTEXITCODE
+    if ($result -eq 0 -and $buildMode -eq 'release') {
+        & (Join-Path $env:NODE_HOME 'node.exe') (Join-Path $PSScriptRoot 'optimize-lite-bundles.mjs') $ProjectPath (Join-Path $env:DEVECO_SDK_HOME 'default\openharmony')
+        if ($LASTEXITCODE -ne 0) { throw 'Lite bundle optimization failed' }
+    }
     # The device refuses a JS file over 48 KB; the previewer only warns, so gate release builds on it.
     if ($result -eq 0 -and $buildMode -eq 'release') {
         & node (Join-Path $PSScriptRoot 'check-size.mjs')

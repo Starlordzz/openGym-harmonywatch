@@ -40,6 +40,41 @@ afterEach(() => {
 })
 
 describe('a set ticked on the watch', () => {
+  it('does not end the rest half a second before its shared deadline', () => {
+    act(() => useUI.getState().startRest(90, 0))
+    const endsAt = useUI.getState().timer.endsAt
+    vi.setSystemTime(endsAt - 400)
+    act(() => document.dispatchEvent(new Event('visibilitychange')))
+    expect(useUI.getState().timer.ready).not.toBe(true)
+    expect(useUI.getState().timer.left).toBe(1)
+  })
+  it('uses the watch completion time as the shared rest deadline despite delayed delivery', () => {
+    const at = Date.now() - 1800
+    act(() => { applyEvents([{ id: 'delay', type: 'setDone', wid: 'w-watch', exId: '0025', entryIdx: 0, setIdx: 0, at }], () => useStore.getState()) })
+    expect(useUI.getState().timer.endsAt).toBe(at + 90000)
+  })
+  it('follows exact watch rest edits once, including pause and resume', () => {
+    act(() => useUI.getState().startRest(90, 0))
+    const endsAt = useUI.getState().timer.endsAt + 15000
+    const send = (id, rest) => act(() => { applyEvents([{ id, type: 'restChange', wid: 'w-watch', rest }], () => useStore.getState()) })
+    send('rest-add', { endsAt, total: 105 })
+    expect(useUI.getState().timer.endsAt).toBe(endsAt)
+    send('rest-pause', { endsAt: 0, paused: true, left: 70, total: 105 })
+    expect(useUI.getState().timer).toMatchObject({ paused: true, left: 70 })
+    act(() => vi.advanceTimersByTime(5000))
+    expect(useUI.getState().timer.left).toBe(70)
+    send('rest-resume', { endsAt: Date.now() + 70000, paused: false, left: 70, total: 105 })
+    expect(useUI.getState().timer.paused).toBe(false)
+    send('rest-pause', { endsAt: 0, paused: true, left: 70, total: 105 })
+    expect(useUI.getState().timer.paused).toBe(false)
+  })
+  it('follows watch navigation and an explicit rest skip', () => {
+    act(() => { useStore.getState().update(s => { s.active.entries.push({ ...clone(s.active.entries[0]), id: 'other' }) }) })
+    act(() => useUI.getState().startRest(90, 0))
+    act(() => { applyEvents([{ id: 'next', type: 'navigate', wid: 'w-watch', exId: 'other', entryIdx: 1, restSkip: true, at: Date.now() }], () => useStore.getState()) })
+    expect(useStore.getState().S.active.cur).toBe(1)
+    expect(useUI.getState().timer).toBeNull()
+  })
   it('takes the watch\'s numbers, is ticked by the screen\'s own tick, and starts the rest', () => {
     const ev = { id: 'e1', type: 'setDone', wid: 'w-watch', exId: '0025', entryIdx: 0, setIdx: 0, w: 62.5, r: 7, at: 1 }
     act(() => { applyEvents([ev, ev], () => useStore.getState()) })

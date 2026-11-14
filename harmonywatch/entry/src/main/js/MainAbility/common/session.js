@@ -71,9 +71,13 @@ export function applySnapshot(state, snap) {
   var same = s.workout && next.id === s.workout.id
   if (next.id === s.startedHere) s.startedHere = null
   if (!same && unconfirmed) return s
-  if (!same) { s.pending = {}; s.skipped = []; s.entryIndex = next.cur || 0; s.hold = null; s.touchLocked = false }
+  if (!same) { s.pending = {}; s.skipped = []; s.entryIndex = next.cur || 0; s.hold = null; s.touchLocked = false; s.closedRestAt = 0 }
+  if (same && s.outbox.some(function(e) { return e.type === 'restChange' })) next.rest = copy(s.workout.rest)
+  if (same && next.rest && !next.rest.paused && next.rest.endsAt <= (s.closedRestAt || 0)) next.rest = null
   next.entries.forEach(function(e, ei) {
     e.sets.forEach(function(row, i) {
+      var old = same && s.workout.entries[ei], prior = old && old.id === e.id && old.sets[i]
+      if (prior && prior.done && (prior.at || 0) > (row.at || 0)) { row = copy(prior); e.sets[i] = row }
       ;['', 'L', 'R'].forEach(function(side) {
         var k = key(e.id, i, side, ei), p = s.pending[k]
         if (!p) return
@@ -184,7 +188,7 @@ export function acknowledge(s, ids) {
 }
 export function idle(s, now) {
   if (!s.workout) return ''
-  if (s.hold && s.hold.endsAt > now || s.workout.rest && s.workout.rest.endsAt > now) return ''
+  if (s.hold && s.hold.endsAt > now || s.workout.rest && (s.workout.rest.paused || s.workout.rest.endsAt > now)) return ''
   var last = s.workout.start
   s.workout.entries.forEach(function(e) { e.sets.forEach(function(row) { last = Math.max(last, row.at || 0) }) })
   var elapsed = now - Math.max(last, s.activity || 0, s.snooze || 0)

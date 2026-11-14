@@ -5,27 +5,26 @@ import { mount, savedState } from './helpers/watch.js'
 test('weight fine adjustment survives refresh and is recorded in the completed set', t => {
   const f = mount(t)
   f.vm.edit('weight')
-  f.vm.toggleStep()
-  assert.equal(f.vm.editIncrement, 0.1)
-  f.vm.editStepBy(1)
+  f.vm.editFineBy(1)
   assert.equal(f.vm.editValue, '20.1')
   f.app.change(s => { s.online = true })
-  f.vm.editStepBy(1)
+  f.vm.editFineBy(1)
   f.vm.editDone()
   f.vm.done()
   assert.equal(f.app.state.workout.entries[0].sets[0].w, 20.2)
   assert.equal(f.app.state.outbox.find(e => e.type === 'setDone').w, 20.2)
 })
 
-test('quarter-unit steps preserve their decimal precision', t => {
+test('whole-unit changes retain an existing quarter-unit weight', t => {
   const s = savedState()
   s.workout.entries[0].step = 0.25
+  s.workout.entries[0].sets[0].w = 20.25
   const f = mount(t, s)
   f.vm.edit('weight')
   f.vm.editStepBy(1)
-  assert.equal(f.vm.editValue, '20.25')
+  assert.equal(f.vm.editValue, '21.25')
   f.vm.editStepBy(1)
-  assert.equal(f.vm.editValue, '20.5')
+  assert.equal(f.vm.editValue, '22.25')
 })
 
 test('whole-unit weigh-in adjustments preserve the selected decimal and crown works before training', t => {
@@ -50,22 +49,23 @@ test('foreground requests stay-awake and releases it when hidden or destroyed', 
   assert.deepEqual(f.screenRequests, [true, false, true, false])
 })
 
-test('rest expiry emits three pulses and another pattern after five seconds, then a touch cancels it', t => {
+test('rest expiry emits two rounds of long pulses and then stops on its own', t => {
   const s = savedState()
   s.workout.rest = { endsAt: 11000 }
   const f = mount(t, s)
   f.time(11000); f.vm.tickClock()
-  for (const delay of [0, 150, 300]) f.fire(delay)
-  assert.equal(f.vibrations.length, 3)
-  f.fire(5000)
-  for (const delay of [0, 150, 300]) f.fire(delay)
-  assert.equal(f.vibrations.length, 6)
-  f.fire(5000)
-  for (const delay of [0, 150, 300]) f.fire(delay)
-  assert.equal(f.vibrations.length, 9)
-  f.vm.ackRest(); f.fire(5000)
-  for (const delay of [0, 150, 300]) f.fire(delay)
-  assert.equal(f.vibrations.length, 9)
+  for (const delay of [0, 2000, 4000, 6000]) f.fire(delay)
+  assert.equal(f.vibrations.length, 4)
+  f.fire(10000)
+  for (const delay of [0, 2000, 4000, 6000]) f.fire(delay)
+  assert.equal(f.vibrations.length, 8)
+  // No further round is scheduled: an untouched watch goes quiet after about 16 s.
+  f.fire(10000)
+  for (const delay of [0, 2000, 4000, 6000]) f.fire(delay)
+  assert.equal(f.vibrations.length, 8)
+  f.vm.ackRest()
+  for (const delay of [0, 2000, 4000, 6000]) f.fire(delay)
+  assert.equal(f.vibrations.length, 8)
 })
 
 test('disabled rest haptics never vibrate', t => {
@@ -73,7 +73,7 @@ test('disabled rest haptics never vibrate', t => {
   s.workout.rest = { endsAt: 11000 }
   const f = mount(t, s)
   f.time(11000); f.vm.tickClock()
-  for (const delay of [0, 150, 300, 5000, 0, 150, 300]) f.fire(delay)
+  for (const delay of [0, 2000, 4000, 6000, 10000, 0, 2000, 4000, 6000]) f.fire(delay)
   assert.equal(f.vibrations.length, 0)
 })
 
@@ -83,14 +83,15 @@ test('destroying the page cancels pending rest pulses and repeats', t => {
   f.fire(0)
   assert.equal(f.vibrations.length, 1)
   f.vm.onDestroy()
-  for (const delay of [150, 300, 5000, 0, 150, 300]) f.fire(delay)
+  for (const delay of [2000, 4000, 6000, 10000, 0, 2000, 4000, 6000]) f.fire(delay)
   assert.equal(f.vibrations.length, 1)
 })
 
 test('ending the workout on the phone stops an outstanding rest alarm', t => {
   const f = mount(t)
   f.vm.startRestAlarm()
+  const alreadyStarted = f.vibrations.length
   f.app.change(s => { s.workout = null })
-  for (const delay of [0, 150, 300, 5000, 0, 150, 300]) f.fire(delay)
-  assert.equal(f.vibrations.length, 0)
+  for (const delay of [0, 2000, 4000, 6000, 10000, 0, 2000, 4000, 6000]) f.fire(delay)
+  assert.equal(f.vibrations.length, alreadyStarted)
 })

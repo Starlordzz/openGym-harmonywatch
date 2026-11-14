@@ -8,7 +8,9 @@ import { readFileSync } from 'node:fs'
 test('all decoded languages retain their exact text after shared-pack compression', () => {
   const before = JSON.parse(readFileSync(new URL('./locale-hashes.json', import.meta.url)))
   for (const lang of Object.keys(data.packs)) {
-    assert.equal(createHash('sha256').update(JSON.stringify(wordsFor(lang))).digest('hex'), before[lang], lang)
+    const { on, off, pause, resumeRest, ...legacy } = wordsFor(lang)
+    assert.equal(createHash('sha256').update(JSON.stringify(legacy)).digest('hex'), before[lang], lang)
+    assert.ok(on && off && pause && resumeRest)
   }
 })
 test('existing watch translations map phone locale and keep the Apple-only copy out', () => {
@@ -34,4 +36,9 @@ test('existing watch translations map phone locale and keep the Apple-only copy 
 test('formats normal and translated positional placeholders', () => {
   assert.equal(fill('Set %lld of %lld', [1, 3]), 'Set 1 of 3')
   assert.equal(fill('%2$@ / %1$lld', [2, 'test']), 'test / 2')
+})
+
+test('new rest and heart controls use the existing phone translations', () => {
+  assert.equal(wordsFor('zh').pause, '暂停'); assert.equal(wordsFor('zh').resumeRest, '继续')
+  assert.equal(wordsFor('zh').on, '开'); assert.equal(wordsFor('zh').off, '关')
 })

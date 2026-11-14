@@ -1,12 +1,17 @@
 <!-- Lite if bindings must return booleans; strings/numbers are not coerced. -->
 <div class="page" onclick="ackRest">
-  <div class="screen" if="{{!!error}}">
+  <div class="screen" if="{{!!error && !alarmOn}}">
     <text class="h2">{{error}}</text>
     <text class="note">{{pending}}</text>
   </div>
+  <div class="screen" if="{{alarmOn}}">
+    <text class="h2 accentText">{{words.restOver}}</text>
+    <text class="note">{{exName}}</text>
+    <input class="wide accent" type="button" value="{{words.resume}}" onclick="ackRest" />
+  </div>
 
   <!-- touch lock: the only screen while it is on -->
-  <div class="screen" if="{{touchLocked}}">
+  <div class="screen" if="{{touchLocked && !alarmOn}}">
     <text class="h2">{{words.lock}}</text>
     <text class="note">{{title}}</text>
     <text class="digits" if="{{!!lockDigits}}">{{lockDigits}}</text>
@@ -14,24 +19,24 @@
   </div>
 
   <!-- confirmations, one panel at a time (Lite has no dialogs) -->
-  <div class="screen" if="{{!touchLocked && confirm}}">
+  <div class="screen" if="{{!alarmOn && !touchLocked && confirm}}">
     <text class="h2">{{words.finishQ}}</text>
     <input class="wide accent" type="button" value="{{words.save}}" onclick="save" />
     <input class="wide" type="button" value="{{words.discard}}" onclick="confirmDiscard" />
     <input class="wide" type="button" value="{{words.cancel}}" onclick="cancelDiscard" />
   </div>
-  <div class="screen" if="{{!touchLocked && !confirm && skipConfirm}}">
+  <div class="screen" if="{{!alarmOn && !touchLocked && !confirm && skipConfirm}}">
     <text class="h2">{{words.skipQ}}</text>
     <input class="wide" type="button" value="{{words.skipSet}}" onclick="skipConfirmed" />
     <input class="wide" type="button" value="{{words.cancel}}" onclick="cancelSkip" />
   </div>
-  <div class="screen" if="{{!touchLocked && !confirm && !skipConfirm && asking}}">
+  <div class="screen" if="{{!alarmOn && !touchLocked && !confirm && !skipConfirm && asking}}">
     <text class="h2">{{words.allDoneQ}}</text>
     <input class="wide" type="button" value="{{words.resume}}" onclick="keepGoing" />
     <input class="wide" type="button" value="{{words.finish}}" onclick="askFinish" />
   </div>
 
-  <div class="body" if="{{!error && !touchLocked && !confirm && !skipConfirm && !asking}}">
+  <div class="body" if="{{!alarmOn && !error && !touchLocked && !confirm && !skipConfirm && !asking}}">
     <!-- loading -->
     <div class="screen" if="{{screen === 'loading'}}">
       <text class="logo">openGym</text>
@@ -47,20 +52,22 @@
           <image class="round startRound" src="/common/icons/button-play.png" onclick="startToday" />
           <text class="cap buttonCap">{{words.start}}</text>
         </div>
-        <list class="routineList"><list-item class="routineItem" for="{{others}}"><input class="rowbtn" type="button" value="{{$item.name}}" onclick="startOther($idx)" /></list-item></list>
+        <list class="routineList" style="height: {{todayName ? 96 : 240}}px"><list-item class="routineItem" for="{{others}}"><input class="rowbtn" type="button" value="{{$item.name}}" onclick="startOther($idx)" /></list-item></list>
       </div>
       <div class="col idleEmpty" if="{{!routines.length}}">
         <text class="h2">{{idleTitle}}</text>
         <text class="note idleHint">{{idleHint}}</text>
       </div>
       <text class="statusNote" if="{{!!pending}}">{{pending}}</text>
-      <input class="link" type="button" value="{{words.heart}}" onclick="toggleSensor" />
+      <input class="link" type="button" style="width: 300px; font-size: 22px" value="{{words.heart + ' · ' + (sensorOn ? words.on : words.off)}}" onclick="toggleSensor" />
     </div>
 
-    <!-- debug (2 s press on idle) -->
+    <!-- debug (2 s press on idle; 2 s press on the title flips the screen-on probe, tap closes) -->
     <div class="screen" if="{{screen === 'debug'}}" onclick="closeDebug">
-      <text class="cap">debug</text>
-      <text class="note small" for="{{debugLines}}">{{$item.text}}</text>
+      <text class="cap" onlongpress="toggleProbe">debug</text>
+      <list class="debugList">
+        <list-item class="debugRow" for="{{debugLines}}"><text class="note small">{{$item.text}}</text></list-item>
+      </list>
     </div>
 
     <!-- weigh-in -->
@@ -133,7 +140,7 @@
       <text class="note small" if="{{!!last && !noSet}}">{{last}}</text>
       <div class="noSet" if="{{noSet}}"><image class="emptyIcon" src="{{noSetIcon}}" /><text class="note">{{noSetText}}</text></div>
       <div class="primary" if="{{!noSet}}">
-        <div class="sideRail">
+        <div class="mediaRail">
           <image class="clip" src="{{clipSrc}}" if="{{!!clipSrc}}" />
           <div class="effort" if="{{!!effortName}}" onclick="edit('effort')">
             <text class="effortName">{{effortName}}</text>
@@ -141,7 +148,7 @@
           </div>
           <text class="extras" if="{{!!extras}}">{{extras}}</text>
         </div>
-        <div class="roundWrap">
+        <div class="roundWrap doneWrap">
           <image class="round" src="{{timed ? '/common/icons/button-play.png' : '/common/icons/button-check.png'}}" onclick="done" onlongpress="askSkip" />
           <text class="cap buttonCap">{{timed ? words.startHold : words.done}}</text>
         </div>
@@ -167,10 +174,13 @@
       <text class="cap">{{editTitle}}</text>
       <div class="editValue"><text class="bignum">{{editValue}}</text><text class="unit" if="{{!!editSuffix}}">{{editSuffix}}</text></div>
       <div class="row">
-        <image class="edgeBtn" src="/common/icons/button-minus.png" onclick="editStepBy(-1)" />
-        <image class="edgeBtn" src="/common/icons/button-plus.png" onclick="editStepBy(1)" />
+        <input class="edgeBtn" type="button" value="{{editField === 'weight' ? '-1' : '-'}}" onclick="editStepBy(-1)" />
+        <input class="edgeBtn" type="button" value="{{editField === 'weight' ? '+1' : '+'}}" onclick="editStepBy(1)" />
       </div>
-      <input class="stepButton" type="button" value="{{editStep}}" onclick="toggleStep" />
+      <div class="row" if="{{editField === 'weight'}}">
+        <input class="edgeBtn" type="button" value="-0.1" onclick="editFineBy(-1)" />
+        <input class="edgeBtn" type="button" value="+0.1" onclick="editFineBy(1)" />
+      </div>
       <input class="wide accent" type="button" value="{{words.done}}" onclick="editDone" />
     </div>
 
@@ -186,7 +196,11 @@
       <text class="statusNote">{{nextText}}</text>
       <text class="statusNote" if="{{!!offline}}">{{offline}}</text>
       <div class="row">
+        <input class="edgeBtn" type="button" value="-15s" onclick="restLess" />
         <input class="edgeBtn" type="button" value="+15s" onclick="restMore" />
+        <input class="edgeBtn" type="button" value="{{restPaused ? words.resumeRest : words.pause}}" onclick="restPause" />
+      </div>
+      <div class="row">
         <input class="edgeBtn" type="button" value="{{words.skip}}" onclick="restSkip" />
         <input class="edgeBtn" type="button" value="{{words.lock}}" onclick="lockPage" />
       </div>

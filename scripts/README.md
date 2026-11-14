@@ -3,6 +3,10 @@
 Build and release helpers. Each script explains itself at the top; this page says which one you
 want. Run them from the repository root with Node 22 unless noted.
 
+## 华为手表
+
+[构建、签名与诊断脚本索引](harmony/README.md)。
+
 ## Run by CI (keep them working)
 
 | Script | What it does |

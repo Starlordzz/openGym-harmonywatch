@@ -168,7 +168,7 @@ const runRest = (set, get) => {
   timerTick = () => {
     const tm = get().timer
     if (!tm || tm.ready || tm.paused) return
-    const left = Math.max(0, Math.round((tm.endsAt - Date.now()) / 1000))
+    const left = Math.max(0, Math.ceil((tm.endsAt - Date.now()) / 1000))
     const seenLive = !document.hidden && pageHiddenAt === null
     if (!document.hidden) pageHiddenAt = null
     if (left === tm.left) return
@@ -332,6 +332,27 @@ export const useUI = create((set, get) => ({
     set({ timer: { ...rest, endsAt } })
     bookRestEnd(endsAt, tm.total, tm.kind)
     runRest(set, get)
+  },
+  alignRest(endsAt) {
+    const tm = get().timer
+    if (!tm || tm.paused || !Number.isFinite(endsAt)) return
+    const left = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000))
+    if (!left) {
+      stopRestTicking(); disarmRestAlert(); cancelPushRestTimer()
+      set({ timer: { ...tm, endsAt, left: 0, ready: true } })
+    } else {
+      set({ timer: { ...tm, endsAt, left } })
+      bookRestEnd(endsAt, tm.total, tm.kind)
+    }
+  },
+  followWatchRest(rest) {
+    const tm = get().timer
+    if (!tm || !rest) return
+    stopRestTicking(); disarmRestAlert(); cancelPushRestTimer()
+    const left = rest.paused ? rest.left : Math.max(0, Math.ceil((rest.endsAt - Date.now()) / 1000))
+    set({ timer: { ...tm, ...rest, left, paused: !!rest.paused, ready: !rest.paused && !left } })
+    if (rest.paused) holdRestAlert(left, rest.total)
+    else if (left) { bookRestEnd(rest.endsAt, rest.total, tm.kind); runRest(set, get) }
   },
   addRest(sec) {
     const tm = get().timer

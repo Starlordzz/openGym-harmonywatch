@@ -111,8 +111,9 @@ try {
   pixels = JSON.parse(checked.stdout.trim())
 }
 const result = { capturedAt: new Date().toISOString(), bundle, frames, pixels,
-  fontError: log.includes('Open font path failed'), evalError: log.includes('Eval JS file failed') }
-result.passed = !!pixels && pixels.width === 408 && pixels.height === 480 && pixels.visiblePixels > 100 && !result.fontError && !result.evalError
+  fontError: log.includes('Open font path failed'), evalError: log.includes('Eval JS file failed'),
+  jsException: /\[JS (?:Error|Exception)\]/.test(log) }
+result.passed = !!pixels && pixels.width === 408 && pixels.height === 480 && pixels.visiblePixels > 100 && !result.fontError && !result.evalError && !result.jsException
 writeFileSync(join(out, 'result.json'), JSON.stringify(result, null, 2) + '\n')
 console.log(JSON.stringify(result, null, 2))
 if (!result.passed) process.exitCode = 1

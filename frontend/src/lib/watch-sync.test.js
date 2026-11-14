@@ -37,10 +37,10 @@ describe('the snapshot', () => {
     expect(JSON.stringify(snap)).not.toMatch(/\.(gif|webp|png|jpg|mp4)|media|img/i)
   })
 
-  it('says there is no workout when none runs, and no rest when it is paused or over', () => {
+  it('retains the ended rest deadline so the watch can emit its local expiry haptics', () => {
     expect(buildSnapshot({ unit: 'kg' })).toEqual({ v: SNAPSHOT_VERSION, unit: 'kg', restSec: 0, active: null, ready: null })
-    expect(buildSnapshot(state(), { timer: { endsAt: 5, paused: true } }).active.rest).toBeNull()
-    expect(buildSnapshot(state(), { timer: { endsAt: 5, ready: true } }).active.rest).toBeNull()
+    expect(buildSnapshot(state(), { timer: { endsAt: 5, paused: true, left: 30, total: 90 } }).active.rest).toEqual({ endsAt: 0, paused: true, left: 30, total: 90 })
+    expect(buildSnapshot(state(), { timer: { endsAt: 5, ready: true } }).active.rest).toEqual({ endsAt: 5 })
     expect(buildSnapshot(state({ unit: 'lb' })).active.unit).toBe('lb')
   })
 

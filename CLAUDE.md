@@ -6,11 +6,11 @@ For people, the same map with diagrams is [docs/ARCHITECTURE.md](docs/ARCHITECTU
 
 ## What this is
 
-This repository is an improved fork of **openGym** (upstream by Duarte Santos: <https://github.com/DuarteSantos8/openGym>) adapted specifically for **HarmonyOS smartwatches (HUAWEI WATCH / FIT series)**.
+This repository is an improved fork of **openGym** (upstream by Duarte Santos: <https://github.com/DuarteSantos8/openGym>) adapted specifically for **Huawei smartwatches (round and rectangular models)**.
 
 > [!IMPORTANT]
-> **平台支持范围：专注 Android + 华为轻鸿蒙手表（不再支持 iPhone / Apple Watch）**
-> - **支持平台**：Android 配套手机端 + 华为鸿蒙轻量手表端（Lite Wearable / FA JS 架构，如 FIT 系列）。
+> **平台支持范围：专注 Android + 华为手表（圆表、方表等形态）（不再支持 iPhone / Apple Watch）**
+> - **目标平台**：Android 配套手机端 + 圆表、方表等华为手表。当前为 Lite Wearable / FA JS 实现，已验证 FIT 5 Pro；其他型号及运行时见 [兼容性记录](docs/harmony/COMPATIBILITY_ZH.md)。
 > - **停止支持**：不再支持 iPhone 和 Apple Watch (`不再支持 iPhone 和 Apple Watch`)。
 > - **原因**：为了适配鸿蒙手表，我们在 Android 配套应用中扩展了 Wear Engine 双向通信桥接、动作帧转换通道及手表端离线数据同步（原版上游 openGym 并不具备这些功能）；此外，维护者没有苹果开发者账号（无法进行真机签名、调试与应用商店分发）。因此本分支全面聚焦于 Android 与华为鸿蒙手表的协同体验。需要 iOS 或 Apple Watch 支持的用户请使用原作者上游仓库。
 

@@ -149,11 +149,23 @@ export function buildReady (S, today = todayISO()) {
   let todayIds = []
   try { todayIds = effectiveRoutineIds({ ...S, routines: S.routines || [], week: S.week || {}, dayPlan: S.dayPlan || {} }, today, today) || [] } catch { todayIds = [] }
   const planned = todayIds.length ? session(todayIds) : null
-  const others = (S.routines || []).filter(r => r && !todayIds.includes(r.id)).slice(0, READY_MAX).map(r => session([r.id])).filter(Boolean)
+  // Current scheduled routines lead the offline list, including on rest days. Payload fitting
+  // may keep just three others, so old retained routines must not displace the current plan.
+  const scheduled = new Set([
+    ...Object.values(S.week || {}).flat(),
+    ...(Array.isArray(S.queue?.ids) ? S.queue.ids : []),
+    ...Object.entries(S.dayPlan || {}).filter(([date]) => date >= today).map(([, id]) => id),
+  ])
+  const candidates = (S.routines || []).filter(r => r && !todayIds.includes(r.id))
+  const ordered = [...candidates.filter(r => scheduled.has(r.id)), ...candidates.filter(r => !scheduled.has(r.id))]
+  const others = ordered.slice(0, READY_MAX).map(r => session([r.id])).filter(Boolean)
   return { today: planned, others }
 }
 
 /** What the watch needs to run the session: plain data, no media (licence: text only). */
+export const restForWatch = timer => !timer ? null : timer.paused
+  ? { endsAt: 0, paused: true, left: timer.left, total: timer.total }
+  : num(timer.endsAt) ? { endsAt: timer.endsAt, ...(num(timer.total) ? { total: timer.total } : {}) } : null
 export function buildSnapshot(S, { timer = null, ready = null } = {}) {
   const A = S && S.active
   const unit = S && S.unit === 'lb' ? 'lb' : 'kg'
@@ -176,7 +188,7 @@ export function buildSnapshot(S, { timer = null, ready = null } = {}) {
       cur: Math.max(0, Math.min(A.entries.length - 1, A.cur || 0)),
       restSec: num(S.restSec) || 0,
       // a rest running on the phone, so the watch counts down the same one
-      rest: timer && !timer.paused && !timer.ready && num(timer.endsAt) ? { endsAt: timer.endsAt } : null,
+      rest: restForWatch(timer),
       entries: A.entries.filter(e => e && e.id != null).map(e => watchEntry(e, H, S)),
       // Apple Health's workout type on the watch: a run is a run (#799)
       ...(healthType ? { healthType } : {}),
@@ -279,6 +291,14 @@ export function applyEvents (events, getState) {
       const idx = entryIndexOf(A, ev)
       const set = idx >= 0 ? A.entries[idx].sets?.[ev.setIdx] : null
       if (set) handlers.setDone(idx, ev.setIdx, { w: num(ev.w), r: num(ev.r), at: num(ev.at), hr: sanitizeHr(ev.hr), ...extraOf(ev) })
+    } else if (ev.type === 'restChange' && ours) {
+      if (!handlers?.restChange) { appHandlers?.openWorkout?.(); break }
+      const r = ev.rest
+      if (r && num(r.total) > 0 && num(r.total) <= 900 && (r.paused ? num(r.left) > 0 && r.left <= 900 : num(r.endsAt) > 0)) handlers.restChange(r)
+    } else if (ev.type === 'navigate' && ours) {
+      if (!handlers?.navigate) { appHandlers?.openWorkout?.(); break }
+      const idx = entryIndexOf(A, ev)
+      if (idx >= 0) handlers.navigate(idx, ev.restSkip === true)
     } else if (ev.type === 'weighIn') {
       // The weigh-in the watch asks for before a workout it starts: a body weight entry on its
       // day, as the phone's own check-in makes one (today's replaces today's).
@@ -491,11 +511,11 @@ export async function startWatchSync ({ useStore, useUI }) {
   const p = await watchPlugin()
   if (!p) return () => {}
   getStateRef = () => useStore.getState()
-  let lastSent = null, lastClips = null, clipsInFlight = null, tm = null
+  let lastSent = null, lastClips = null, clipsInFlight = null, tm = null, snapshotInFlight = false, snapshotPending = false, watchBoot = ''
   // The ready sessions only change with the plan, the log or the day: built again only then.
   let readyKey = null, ready = null
   const readyFor = S => {
-    const key = [S.routines, S.week, S.dayPlan, S.workouts, S.exWeights, S.unit, todayISO()]
+    const key = [S.routines, S.week, S.dayPlan, S.queue, S.workouts, S.exWeights, S.unit, todayISO()]
     if (!readyKey || key.some((v, i) => v !== readyKey[i])) {
       readyKey = key
       try { ready = buildReady(S) } catch { ready = null }
@@ -507,7 +527,10 @@ export async function startWatchSync ({ useStore, useUI }) {
   let linked = false
   const checkLink = async () => {
     const was = linked
-    try { const st = await p.WatchBridge.status(); linked = !!(st && st.paired && st.installed) } catch { linked = false }
+    try {
+      const st = await p.WatchBridge.status(); linked = !!(st && st.paired && st.installed)
+      if (st?.watchBoot && st.watchBoot !== watchBoot) { watchBoot = st.watchBoot; lastSent = lastClips = null }
+    } catch { linked = false }
     // A watch that is new here (the app just installed on it, or reinstalled): it has nothing yet,
     // so the snapshot goes again even when it is the same as the last one sent.
     if (linked && !was) lastSent = null
@@ -542,8 +565,15 @@ export async function startWatchSync ({ useStore, useUI }) {
       if (discarded.length) snap.discarded = discarded
       const json = JSON.stringify(fitSnapshot(snap))
       if (json !== lastSent) {
-        const r = await p.WatchBridge.sendSnapshot({ json })
-        if (r && r.sent) lastSent = json
+        if (snapshotInFlight) { snapshotPending = true; return }
+        snapshotInFlight = true
+        try {
+          const r = await p.WatchBridge.sendSnapshot({ json })
+          if (r && r.sent) lastSent = json
+        } finally {
+          snapshotInFlight = false
+          if (snapshotPending) { snapshotPending = false; schedule() }
+        }
       }
       // The workout's animations, once per workout and exercise (the native side remembers).
       const clips = prefs.enabled && prefs.show.clip !== false ? clipsFor(S, huawei ? {} : undefined) : []
@@ -568,11 +598,18 @@ export async function startWatchSync ({ useStore, useUI }) {
     if (s.S === prev.S) return
     schedule()
     // A workout started on the phone: the watch app opens with it (HealthKit's startWatchApp).
-    if (!huawei && linked && shouldOpenOnWatch(prev.S?.active, s.S?.active)) Promise.resolve().then(() => p.WatchBridge.openOnWatch({ type: plannedType(s.S.active.entries) || undefined })).catch(() => {})
+    if ((huawei || linked) && shouldOpenOnWatch(prev.S?.active, s.S?.active)) Promise.resolve().then(() => p.WatchBridge.openOnWatch({ type: plannedType(s.S.active.entries) || undefined })).catch(() => {})
   })
   // The rest as the watch needs it changes when it starts, stops or is paused, not every second.
-  const restOf = t => (t ? `${t.endsAt}|${!!t.paused}|${!!t.ready}` : '')
-  const offUI = useUI.subscribe((s, prev) => { if (s.timer !== prev.timer && restOf(s.timer) !== restOf(prev.timer)) schedule() })
+  const restOf = t => (t ? `${t.endsAt}|${!!t.paused}|${!!t.ready}|${t.paused ? t.left : ''}|${t.total}` : '')
+  const offUI = useUI.subscribe((s, prev) => {
+    if (s.timer === prev.timer || restOf(s.timer) === restOf(prev.timer)) return
+    if (huawei && linked && readWatchPrefs().enabled) {
+      const wid = useStore.getState().S?.active?.id
+      if (wid) Promise.resolve(p.WatchBridge.sendRest?.({ wid, rest: restForWatch(s.timer) })).catch(() => {})
+    }
+    schedule()
+  })
   const offPrefs = onWatchPrefs(() => schedule())
   // The watch speaks the app's language, not its own system's: told again when it changes (the
   // exercise names in the snapshot change with it too).
@@ -582,7 +619,7 @@ export async function startWatchSync ({ useStore, useUI }) {
   // The link itself changed (the session finished activating after launch, a watch was paired, the
   // app was installed on it): asked again, and the snapshot sent when there is a watch now.
   // Sent again even when unchanged: a reinstalled watch app starts with nothing.
-  const subLink = await Promise.resolve(p.WatchBridge.addListener('watchState', () => { checkLink().then(() => { lastSent = null; lastClips = null; schedule() }) })).catch(() => null)
+  const subLink = await Promise.resolve(p.WatchBridge.addListener('watchState', () => { checkLink().then(() => { lastSent = null; schedule() }) })).catch(() => null)
   const onVisible = () => { if (document.visibilityState === 'visible') { drainWatchEvents(); checkLink().then(() => schedule()) } }
   document.addEventListener('visibilitychange', onVisible)
   // Asked once more now that the listeners are there: the link may have come up (watchState) while

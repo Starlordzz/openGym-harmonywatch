@@ -1,0 +1,350 @@
+# openGym 华为 FIT 项目交接 Prompt
+
+开发范围、优先级和验收要求见 [用户开发要求](HARMONY_USER_REQUIREMENTS_ZH.md)。
+
+请接手本项目，先阅读本文件、项目 AGENTS.md 和 CLAUDE.md，再根据用户的新要求继续开发。本记录覆盖 2026-10-31 至 2026-11-14，汇总开发进度、网页操作、当前产物、清理结果和接续工作。最新进度见下一节；缺陷明细见 [未解决缺陷清单](HARMONY_OPEN_BUGS_ZH.md)。
+
+## 最新进度（2026-11-14）
+
+| 事项 | 状态 | 依据 |
+|---|---|---|
+| B1 按冠退出后整表卡死、黑屏、断连 | 已修复，真机确认 | 普通包（含表冠监听与 Wear Engine）退出正常 |
+| 前台常亮 | 正常，真机确认 | 普通包；按冠退出时释放 |
+| B2 手机到手表计划同步 | 已修复，真机确认 | 用户确认 Full Body 正确，按冠退出重开后仍在；原生发送 207、hello 已通过 |
+| R1 页面 JS 体积 | 第二版页面余 135 B、app 余 1,875 B | `check-size.mjs` |
+| R2 休息结束系统通知 | 用户取消，代码已移除 | 删除转发链路及入口，升级取消旧排程；保留手表前台震动 |
+| B3–B9 真实训练缺陷 | 修复包已构建；第一版已安装并反馈；第二版已构建，等待手机连接 | 休息震动、卡顿/黑屏、编辑、图片、计时和导航同步；自动回归通过 |
+| R3 训练记录回传、动画、断连补传 | 真实训练回归进行中 | 当前已验证计划下发与退出重开恢复 |
+
+### 最新追加（2026-11-14，训练中回归排查）
+
+B1/B2 的前述验收为按冠退出、计划下发及退出重开恢复。用户随后在真实训练中新增 B3–B7：休息结束不震动、演示图过小/偶发消失、首次加重量偶发退到表盘、完成组后长卡顿或黑屏退表盘。黑屏后等一段时间仍能进应用看到休息；手动跳过休息可进入下一动作，但再完成仍卡住，自然到期有时停在旧已完成动作。另补 B8：手机休息倒计时比手表快约 1–2 秒。完整现象见缺陷清单，当前优先定位完成持久化、同步回调及休息状态推进。
+
+用户已取消“休息结束系统通知”。手机后台转发、NOTIFY 入口与排程代码已移除；前台倒计时、休息振动、常亮继续保留并验证。
+
+### 本轮产物、整理与上游同步
+
+完整记录见 [2026-11-14 改进与验证](HARMONY_IMPROVEMENTS_20261114_ZH.md)。第二版 APK `openGym-HuaweiWatch-training-v2-debug.apk`、HAP `openGymFIT-training-v2-signed.hap` 已构建验签；用户回复手机稍后连接，尚未安装第二版。手表/手机/原生队列共 298 项通过。
+
+项目目标为圆表、方表等华为手表，FIT 5 Pro 为已验证型号。README、兼容性、目录索引已按此更新；公开进度纳入源码，签名和本机证据继续忽略。已获取上游 main `68dad18f8`（310 个上游提交），合并与验证进行中。
+
+### 第二轮反馈与新增需求（2026-11-14，开发中）
+
+用户已覆盖安装 training-fix：两端动作现在一致；图片变大但希望更大；偶发退出到表盘仍存在；休息震动偏弱。手表只显示两个计划，底部心率开关缺少状态。关闭动作动画后暂未发现退出，仍需继续验证。
+
+新需求 B10：手表加减 15 秒、暂停/继续与手机双向同步，手机修改尽快送达。新需求 B11：手机点开始后唤起手表并进入训练界面，新任务收到后长震确认。代码已接入，手表 130、手机 166、原生队列 2 项通过；第二版手表已完成 48 KB 构建与签名（app 47,277 B、页面 49,017 B），手机也已构建验签。ADB 未连接，用户回复稍后连接，真机仍使用下表 training-fix。修改点及验证清单见 [缺陷进度第二轮](HARMONY_OPEN_BUGS_ZH.md)。
+
+### 当前训练修复交付（2026-11-14）
+
+| 产物 | 状态 | SHA-256 |
+|---|---|---|
+| `openGym-HuaweiFit-training-fix-debug.apk`，241,904,171 B | ADB 覆盖安装 Success，旧通知清理已执行 | `4561f2b41cfd4476801a3903d34687f2ed3f4c4e44664e8e5398c52a2327fc41` |
+| `openGymFIT-training-fix-signed.hap`，685,186 B | 已签名校验并推送 `/sdcard/haps/`，待用户覆盖安装、真实训练复测 | `7f8d9b7cf01039a3f60e66c6af96529b625185f4857a649706ef10207d7ef589` |
+
+代码已完成：取消手机系统通知与手表 relay；动画显示 96×96、整组持久化和替换时保留旧动画；保存队列合并；手机快照请求串行；旧快照保护已完成组/已关闭休息；编辑空状态保护；共享休息 deadline 与 ceil 倒计时；navigate 跨端动作位置事件。首个前台长震先于休息关闭时的存档工作发出。
+
+自动测试：手表 122 项、手机训练/同步/计时 100 项通过。新 HAP app.js 49,112 B、页面 49,031 B，余量分别 40 B、121 B，保留 12 种语言；普通诊断保留待回传数/动画数、show/hide、sdk/rx/tx 和最后错误。新 APK 的 136 个 Web 文件逐字节核对，原通知实现类已移除。手机实际旧通知配置为 `retired=true`，升级清理已执行。
+
+B3–B9 的马达反馈、实际卡顿/黑屏、图像稳定性、动作位置和双端倒计时仍待真机复测。已请用户安装新 HAP 后试 2–3 组（含加重量、自然休息到期），用户已反馈偶发退出、震动偏弱、图片希望更大；两端动作一致。直接读取到手机前台震动设置 `restHaptics=false`，现已保留其他偏好并改为 true，证据 `PHONE_SET_REST_HAPTICS_20261114.json`；后台系统通知仍为移除状态。系统时钟偏移尚未做专门校准，1–2 秒差异的实测结果继续记录 B8。
+
+证据：`harmonywatch/artifacts/BUILD_20261114_TRAINING.json`、`README_20261114_TRAINING.md`、`VERIFICATION_20261114_TRAINING_CONTENTS.json`、`PHONE_RETIRED_NOTIFICATIONS_20261114.json`。下文 Full Body 验收为前一轮组合的通过记录。
+
+### B1 修复内容
+
+根因：平台退出顺序为 `onHide → onDestroy`，页面的 `onDestroy` 内又调用一次 `onHide`，清理执行两次。修复为 `onHide` 入口的可见性守卫 `if (!this.visible) return`，编译页面增加 24 B。回归测试在 `frontend/harmony/tests/`，手表端共 115 项通过。
+
+定位过程是五轮对照包：关闭 Wear Engine（复现）→ 再关闭表冠监听（复现）→ 最小静态页（正常）→ 原 app.js 配静态页（正常）→ 完整页面加单次清理守卫（正常）。真机通过的完整包归档为 `openGymFIT-exit-full-verified-signed.hap`。
+
+同轮改动：移除启动阶段两条无消费方的 `pingPeer()` 调用；普通构建关闭逐步取证写盘，保留空闲页长按 2 s 的 debug 页。
+
+### B2 修正前读数（2026-11-13）
+
+手机端（ADB 经 WebView 调试口读取桥接状态，2026-11-13 21:05）：
+
+| 字段 | 值 | 含义 |
+|---|---|---|
+| `managerGranted` | true | DEVICE_MANAGER 实际已授权 |
+| `deviceName` / `p2pCapability` | HUAWEI WATCH FIT 5 Pro-A11 / 2 | 设备已发现，能力枚举 2 为未知 |
+| `lastPingCode` | 202 | 手表应用探测：运行中 |
+| `watchVersion` | 1000000 | 手机读到手表应用版本 |
+| `receiverRegistered` | true | 手机接收器已注册 |
+| `receivedPackets` | 0 | 未收到任何手表消息 |
+| `lastSendCode` | 206 | `helloRequest` 发送失败 |
+
+手表端 debug 页：`sdk:402 rx:ok tx:206`，最近错误“连接中断，已保存的记录稍后重试”。
+
+结论：配对、权限、应用探测、版本读取、双端接收器注册均通过；消息发送在双向都失败。用户此前看到的“已注册通信”是接收器注册成功，当时训练数据尚未进入发送流程；本轮新增主动握手后，发送失败才显示为 206。
+
+已验证后仍为 206 的改动：
+
+1. 手机接收器就绪后发送 `helloRequest`，手表收到后重发 hello；未应答时至少间隔 15 s 重试。
+2. 手机在“已连接、未应答”期间保留接收器，换接收器前先等待注销成功。
+3. 手表 `config.json` 的 `module.metaData.customizeData` 增加 `supportLists`（手机包名:证书指纹），由 `prepare.mjs` 生成。
+4. 前台通信自检包 `openGymFIT-link-probe-signed.hap`：客户端创建、注册、发送移到页面 `onShow` 之后，结果 `402 / rx:ok / tx:206 / 收到 0`。
+5. 手机 Wear Engine SDK 由 5.0.2.306 升到 5.0.3.304（`frontend/android/app/build.gradle`）。
+6. 手机端增加 `checkPermission(DEVICE_MANAGER)` 核验与手表应用探测（`HuaweiWatchPlugin.java` 的 `managerGranted`、`probeWatch()`），设置页显示连接权限、设备、通信能力、探测码和版本。
+
+已核对一致的身份：手机 APK 实际签名 [本机证书摘要已省略]；手机保存的手表身份 `host.msknet.opengym.fit` / [本机证书摘要已省略] 与签名 HAP 证书一致；手机 APP ID `YOUR_REGISTERED_APP_ID`。运行环境：华为运动健康 17.0.10.300（允许后台），HMS Core 6.16.4.362。
+
+### B2 手机指纹根因（2026-11-13 发现，11-14 修复验证）
+
+原始短文本自检包结果：用户在进度文档中记录仍为 206；官方示例短文本同样发送失败，后续优先修正身份配置。
+
+手机侧 `setPeerFingerPrint` 填入的手表指纹格式有误。华为[如何获取应用指纹](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/wearengine_faq-9)规定：HarmonyOS 5.0 及之后的 Lite Wearable 应用，指纹为 `应用包名_base64Encode(公钥)`，公钥取签名叶证书的 EC 未压缩点（65 字节，`04` 开头）；[手机侧 P2P 指南](https://developer.huawei.com/consumer/cn/doc/connectivity-guides/phone-send-message-0000001051059209)注明该指纹最长 127 位。此前填的是叶证书 SHA-256（64 位十六进制 [本机证书摘要已省略]），Android 对端采用该证书 SHA-256 格式。手表为 HarmonyOS 7.0.0.017，适用新格式。
+
+| 方向 | 值 | 状态 |
+|---|---|---|
+| 手表 → 手机身份（手表侧配置） | 包名 `host.msknet.opengym.phone` + APK 证书 SHA-256 [本机证书摘要已省略] | 格式正确，保持 |
+| 手机 → 手表身份（手机侧配置） | `host.msknet.opengym.fit_BGsX0fLhLEJH+Lzm5WOkQPJ3A32BLeszoPShOUXYmMKWT+NC4v4af5uO5+tKfA+eFivOM1drMV7Oy7ZAaDe/UfU=` | 由 `harmonywatch/signing/opengym-fit-leaf.cer` 算出，共 112 字符；2026-11-14 已从手机 SharedPreferences 核验迁移成功 |
+
+推导命令：`openssl x509 -in opengym-fit-leaf.cer -noout -pubkey | openssl pkey -pubin -outform DER`，取末尾 65 字节做 base64，前面拼 `包名_`。包名探测（202）与版本读取只用包名，所以此前能通过；指纹只在消息收发时校验，与全部读数相符。
+
+### 2026-11-14 手机端修正
+
+用户新增的公钥指纹发现已按官方文档与本地公共证书复核。这里的 Base64 是公钥编码，手机 CPU 架构保持现有构建配置。
+
+- `scripts/harmony/watch-peer-identity.mjs` 从签名叶证书提取 P-256 公钥，生成 `包名_Base64(04 || X || Y)`；同时核对证书 SHA-256 与公开身份文件，保留 Base64 大小写、`+`、`/`、`=`。
+- `build-android.sh` 与 `build-android-incremental.sh` 共用上述推导值，分别注入 Vite 默认值和原生 BuildConfig；`watchCertificateSha256` 继续用于证书核验与精确识别旧配置。
+- `WatchPeerIdentity.java` 校验新格式、包名前缀及 127 字符上限；`HuaweiWatchPlugin.configure()` 原先只接受 64 位十六进制，已替换。
+- 原生 `load()` 只迁移“构建登记的同一包名 + 同一旧证书 SHA-256”，保留其他自定义身份和已有授权。这样覆盖安装后，旧 SharedPreferences 会更新为同一证书的公钥身份；训练存档保持。
+- 手机设置页改为“手表应用指纹（包名与公钥）”，连接操作原样传递大小写敏感的 Base64 值。
+- 已复现旧原生正则拒绝新的 112 字符身份；公钥推导测试 2 项、原生格式/迁移测试 2 项、手机设置/同步回归 33 项通过。Android 构建成功，前端 5.33 s、Gradle 4 min 38 s；结果记录在 `harmonywatch/artifacts/*20261114_PEER*`。
+
+### 2026-11-14：训练状态存储失败
+
+用户普通训练包读数为 `sdk:402 rx:ok tx:207`，错误“存储失败，记录尚未同步”。重新注册手机接收器后直接读到 `installed=true`、`receivedPackets=1`、`lastSendCode=207`、`communicationError=""`、`watchError=[]`，证据 `PHONE_RECONNECT_20261114.json`。计数由新手机进程重新开始，与之前的累计 13 条分开记录。协议 hello 已通过，计划卡在手表落盘。
+
+已核实的平台限制：[`@system.storage.set`](https://developer.huawei.com/consumer/cn/doc/harmonyos-references/js-apis-system-storage/) 单值必须小于 128 字节。旧 runtime 直接将完整训练状态 JSON 存入 `opengym-fit-v1`，正常计划超过该上限；[`@system.file.readText`](https://developer.huawei.com/consumer/cn/doc/harmonyos-references/js-apis-system-file/) 单次读取最多 4096 字节。
+
+本轮新增 `common/state-storage.js`，由普通与离线 runtime 共用：
+
+- 原 KV key 存短索引，状态文本先 URI 编码为 ASCII，按最多 4096 字符分块读写；中文/emoji 的 UTF-8 字节边界保持完整。
+- 两份状态文件交替写入；先删除并写入非活动文件，全部成功后再提交短索引。半写入或索引提交失败时保留上一份完整状态。
+- 旧 JSON 状态继续可读，第一次成功保存后迁移；读取到索引对应文件缺失/截断时进入错误路径保护数据。
+- `snapshotAck` 与训练事件发送仍在落盘成功之后；保留 B1 单次清理和前台常亮。
+
+新增 4 项测试覆盖大 Unicode 状态、重启读取、文件半写入/索引失败、短状态覆盖、旧 JSON 迁移、截断保护，以及真实 controller 在落盘成功后才确认快照。手表 119 项全部通过；新 HAP 已构建、验签并推送至手机 `/sdcard/haps/openGymFIT-state-file-signed.hap`，哈希已核对。SHA-256 `fb2b1892e46cc74f06a538bab19a8f67cabe3a5b7d59206e6a22769be12eb0b8`，685,185 B。app.js 为 49,029 B（余 123 B），页面 48,865 B（余 287 B），保留 12 种语言。用户已确认新包能显示计划，后续手机排序修正版安装后也确认按冠退出重开仍保留正确 Full Body 计划。
+
+存档格式更新：旧 HAP 直接解析 KV JSON，无法读取新的文件索引。成功迁移后的后续构建需保留 `state-storage.js`，同步复测使用新 `state-file` 包。`-Forensics` 的其他取证键仍沿用 KV，部分缓冲可达 200 字符；普通包已剥离这些写入，后续启用取证前需另行适配容量。
+
+### 2026-11-14：旧 PPL 优先于当前 Full Body
+
+复现场景为训练库同时保留历史计划和当前计划，手表在休息日显示了历史计划。
+
+已复现的缺口：`buildReady()` 原先按计划库顺序截取 `others`，旧 PPL 在前；`fitSnapshot()` 超预算时会先压到 3 个 others，当前 Full Body 可能排到后面或被裁掉。本轮改为优先下发周计划、轮换队列和未来日期安排中仍在使用的计划，其余保留计划随后排列，手机计划库保持原样。
+
+另有独立缓存缺口：`readyFor()` 原先未把 `S.queue` 纳入缓存键，单独切换/重排轮换队列时仍会复用旧“今日”快照。本轮补齐 queue 依赖。两条回归已先复现失败：休息日列表首三项仍为 PPL、仅改 queue 后今日计划仍未更新；修正后手机设置/同步/语言回归 37 项通过，APK 已完成构建、签名核验和 ADB 覆盖安装。
+
+### 上一轮 Full Body 真机结果（2026-11-14）
+
+用户确认：**“Full Body 正确，重开后仍在”**。已完成手机公钥身份迁移、双端通信、手表大状态文件存储、当前计划优先级与轮换队列缓存修正。上一轮已验收组合如下：
+
+| 设备 | 已安装版本 | SHA-256 |
+|---|---|---|
+| Android | `openGym-HuaweiFit-plan-priority-debug.apk`，241,904,171 B | `673c1ab328b18a6405e65a0ef259bb275a4f2f36a59e99cec11bf813c7aee55a` |
+| FIT | `openGymFIT-state-file-signed.hap`，685,185 B | `fb2b1892e46cc74f06a538bab19a8f67cabe3a5b7d59206e6a22769be12eb0b8` |
+
+安装后的原生读数：`paired=true`、`installed=true`、`receiverRegistered=true`、`receivedPackets=4`、`lastSendCode=207`、`managerGranted=true`、`communicationError=""`。完整证据为 `PHONE_STATUS_20261114_PLAN_FINAL.json`；探测码为最近一次单独探测结果，消息与用户操作另行记录。
+
+测试与构建：手表 119 项、手机设置/同步/语言 37 项、公钥推导 2 项、原生指纹/迁移 2 项通过；新 APK 的 136 个 Web 构建文件与包内逐字节一致，签名仍为登记的 [本机证书摘要已省略]。手表已完成官方验签、固定叶证书/Profile/分块摘要校验，签名 BIN 中两份 JS 与编译输出一致。
+
+### 接续验证
+
+1. 保持上述 APK/HAP 组合，验证训练组数/重量记录回传、去重与 ACK，随后验证断连后补传；先保留本地未确认记录。
+2. 验证动作帧传输、手表实际渲染与缓存清理；训练素材继续遵守独立许可。
+3. NOTIFY 休息结束系统通知已由用户取消；后续验证手表应用内休息到期提示和振动。
+4. 页面与 app 的体积余量分别为 121 B、40 B；新增手表功能前先核对两份 bundle。
+
+### 2026-11-14 安装后读数
+
+ADB 覆盖安装成功；签名证书 SHA-256 仍为 [本机证书摘要已省略]。已核验 APK 的 DEX 和 Web 资源均含新公钥身份，迁移类与素材 NOTICE 均在包内。手机实际保存值从 [本机证书摘要已省略] 自动更新为上述 112 字符身份，`authorized=true` 保留。
+
+首次原生状态：接收 1 条、应用探测 201、发送 206。随后读数为接收 13 条、探测 202、发送 207、通信错误为空，hello 当时尚未解析；证据 `PHONE_STATUS_20261114_PEER_LATEST.json`。
+
+用户确认手表运行普通训练页。手机进程后续重启，重新注册接收器后读到 `installed=true`、接收 1 条、发送 207、无 `watchError`，证据 `PHONE_RECONNECT_20261114.json`。用户同步报告手表 `402 / ok / 207` 和存储失败。文件存储包与计划优先级手机更新后，用户已确认正确 Full Body 显示和退出重开恢复，最终结果见上一节。
+
+
+### 当前安装与工程状态
+
+| 位置 | 内容 |
+|---|---|
+| 手机已安装 APK | `openGym-HuaweiFit-training-fix-debug.apk`（`4561f2b4…fc41`），ADB 覆盖安装 Success；保留身份/计划修复，新增训练同步与通知移除 |
+| 手表当前/待测 | 之前 state-file 包已验收 Full Body/重开恢复；新 `openGymFIT-training-fix-signed.hap`（`7f8d9b7c…f589`）已推送，待训练复测 |
+| 手机 `/sdcard/haps/` | 新 `state-file` HAP 已推送并核对哈希；旧 `link-fix`、`link-probe`、`link-raw`、`exit-once` 留作历史对照 |
+| 备用 APK | `openGym-HuaweiFit-link-sdk306-debug.apk`，SDK 5.0.2.306 的上一版，`e2d822c4…6cb9` |
+| `harmonywatch/` 源码 | 普通模式，已包含双文件存储及训练回归修复，122 项测试通过 |
+| `harmonywatch/entry/build/` | 当前为训练修复普通包的编译输出；JS 已逐字节核对签名 BIN，HAP 内 BIN 与发布 BIN 相等 |
+| `frontend/android/.../app-sideload-debug.apk` | 2026-11-14 训练修复输出，与已归档/已安装 training-fix APK 一致 |
+
+ADB：`/mnt/d/dev/Android/Sdk/platform-tools/adb.exe -s f16fc84a`。读取手机桥接状态：先 `adb forward tcp:19223 localabstract:webview_devtools_remote_<pid>`，再用 DevEco 自带 node 运行 `harmonywatch/artifacts/PHONE_STATUS_20261113.mjs`。每次手机进程重启后重新读取 pid 并建立转发，保持 openGym 前台；旧 pid 或 WebView 暂停会造成工具连接失败。当前临时转发已清理，后续复测需重新建立。
+
+### 本轮新增构建入口
+
+- `scripts/harmony/sign-local.sh --bin-in … --bin-out … --hap-out …`：本机签名并校验 BIN/HAP。
+- `scripts/harmony/prepare-exit-probe.mjs --project harmonywatch [--minimal | --static-page]`：退出对照包。
+- `scripts/harmony/prepare-link-probe.mjs --project harmonywatch [--raw]`：前台通信自检页；`--raw` 发送官方示例短文本。
+- `scripts/harmony/build-android-incremental.sh`：只改前端或已有原生桥接时使用，保留已暂存的 exercise-media，公钥版 Gradle 4 min 38 s、计划版 3 min 55 s；首次或媒体变更仍用 `build-android.sh`。
+- 对照包或自检包构建后，运行 `node scripts/harmony/prepare.mjs --project harmonywatch` 恢复普通工程。
+
+最新训练修复与安装记录：`harmonywatch/artifacts/BUILD_20261114_TRAINING.json`。前一轮计划排序与安装记录：`harmonywatch/artifacts/BUILD_20261114_PLAN.json`、`README_20261114_PLAN.md`、`INSTALL_20261114_PLAN.log`、`TEST_20261114_PLAN_PHONE.log`。本轮文件存储记录：`harmonywatch/artifacts/BUILD_20261114_STORAGE.json`、`SIGNING_20261114_STORAGE.log`、`TEST_20261114_STORAGE_WATCH.log`。手机指纹记录：`harmonywatch/artifacts/BUILD_20261114_PEER.json`、`README_20261114_PEER.md`、`PHONE_PEER_20261114_BEFORE.json` / `AFTER.json`、`PHONE_STATUS_20261114_PEER.json`。11-13 对照包记录保留在 `BUILD_20261113_LINK.json`；新 APK 哈希已加入 `SHA256SUMS.txt`。下文“当前交付物”“当前验证”“接续工作”为 2026-11-03 的记录，与本节不一致处以本节为准。
+
+## 项目与环境
+
+这是 Duarte Santos（DuarteSantos8）的 [openGym](https://github.com/DuarteSantos8/openGym) 的第三方华为 FIT / HarmonyOS 适配，代码沿用 AGPL-3.0-or-later。应用介绍、致谢、源码和交付说明保留原作者和上游来源；训练素材许可见 NOTICE.md。
+
+仓库：`D:\LEARNING\vibeproject\openGym-harmonywatch\openGym-harmonywatch`。
+WSL：`/mnt/d/LEARNING/vibeproject/openGym-harmonywatch/openGym-harmonywatch`。
+
+| 项目 | 当前情况 |
+|---|---|
+| 电脑 | Windows 11 + WSL Ubuntu 26 |
+| IDE | DevEco Studio 26.0.0.851，`E:\Program Files\Huawei\DevEco Studio` |
+| 手机 | Android 手机，Android 16，已安装 openGym Android APK，登录 NAS 自部署服务 |
+| 手表 | HUAWEI WATCH FIT 5 Pro，NKI-B29，HarmonyOS 7.0.0.017，API 26 |
+| 手表应用 | 开发者中心名称 opengym，包名 `host.msknet.opengym.fit` |
+| 手机应用 | openGym Phone，包名 `host.msknet.opengym.phone`，APP ID `YOUR_REGISTERED_APP_ID` |
+| 工程 | `harmonywatch/`，Lite Wearable FA JS，HML + CSS + JS |
+| SDK | target API 26，Compatible SDK 6.1.1(24) |
+| 使用方式 | 个人签名、调测助手侧载、自用测试 |
+
+当前维护 Android 配套端和华为轻量手表。Wear Engine 申请选择两类穿戴；当前工程及实拍设备为 FIT 5 Pro，其他智能穿戴型号待适配。开发者中心的 opengym1 是测试应用。
+
+## 当前交付物
+
+项目内安装包集中在 `harmonywatch/artifacts/`：
+
+| 文件 | 用途 | SHA-256 |
+|---|---|---|
+| `openGymFIT-controls-fix-signed.hap` | 当前日常测试包，内置三套 PPL、15 个动作 | `27754a4c10f1f35f15cfbe4594db485bd7d00e9a52e602ee20e303766f70b707` |
+| `openGymFIT-first-launch-signed.hap` | 无预填计划的首次启动场景 | `ae1d81898488d6250958a14179ff504d83d35637c85d26052fe9eb627e0e2a8a` |
+| `openGym-HuaweiFit-personal-debug.apk` | Android 配套端，含华为通信及休息通知代码 | `65f61a0f8e7ca0923ed5df69e64c82b9e8c45d4180352a9c60bdaec238bee61c` |
+
+两个手表包使用相同包名和签名身份，覆盖安装保留本地存档。2026-11-03 已按当前源码（含 11-02、11-03 的交互修正与语言默认值改动）重新编译并重签，哈希随签名时间变化（见 `harmonywatch/artifacts/BUILD_20261103.json`）。首次启动包在无存档时显示“尚未同步”和手机同步提示；PPL 包可离线测试训练流程。项目外 D:\Downloads 曾放过交付副本；本次清理范围为项目目录，当前文件选择以上表为准。
+
+## 2026-10-31：开发与操作
+
+1. 修复安装错误 46 对应的权限元数据缺项，补齐 reason、usedScene.abilities 和 when=inuse，把权限结构检查接入源码、BIN 和 HAP 检查流程。
+2. 修复首次启动说明裁切、待同步文字重叠，给文本和容器设置明确尺寸；保留与手机一致的中文动作名称、较大的数字层级和小数显示。
+3. 接入前台持续亮屏：页面显示时请求 setKeepScreenOn(true)，隐藏和销毁时释放。实际 FIT 常亮时长和盖屏行为待复测。
+4. 使用本分支自绘 PNG 实现完成、返回、开始、旗帜、停止、心率、离线和加减图标。
+5. 接入休息结束通知链路：手表提前发送截止时间 → Android AlarmManager → Wear Engine NotifyClient → 手表模板通知。包括取消、延长替换、事件去重、过期丢弃和目标设备绑定。
+6. 手机 HUAWEI FIT 设置增加独立的“休息结束系统通知”开关、测试通知和精确闹钟设置入口。连接请求 DEVICE_MANAGER；开启通知请求 DEVICE_MANAGER 和 NOTIFY。
+7. 建立带 PPL、无计划两种测试构建和空存储启动预览，手机继续使用现有 NAS 服务。
+
+Android 通知实现已进入提交 对应历史提交（2026-10-31）。既有记录为 4 项 Android Gradle 通知规则测试、6 项手机设置/同步测试通过；证据见 REST_NOTIFICATIONS_VERIFICATION.json、ANDROID_VERIFICATION.json。
+
+## 2026-11-01：开发与操作
+
+### 手表交互及退出清理
+
+- 表冠累计相对角度达到 24° 才步进，单事件最多一步，两次有效步进至少相隔 250 ms，有效步进请求短振。
+- 重量编辑提供独立的 -1、+1、-0.1、+0.1 按键，保留已有两位小数。
+- 前台休息结束显示全屏提示，在 0、2、4 秒请求长振，每 10 秒重复；确认、隐藏、销毁或结束训练时取消。
+- 页面隐藏/销毁时停止页面时钟、心率、表冠监听和提醒。清理 SDK 就绪轮询和迟到的通信、存储回调；已排队训练记录继续落盘。
+- 修复原生结束训练页 TypeError: Expected a function，使用 Lite 兼容的手工占位符格式化；抓帧检查增加 JS 异常判断。
+- 构建并验证当前两个 HAP，保留 12 种语言，生成工程最终恢复为 PPL 模式。
+
+用户报告过按冠后界面和上下键暂时无响应，随后熄屏，再按冠恢复表盘。生命周期修复已有自动测试和原生隐藏/重显场景覆盖；该型号退出卡顿仍待安装当前包复测，并采集相应设备日志。
+
+### Wear Engine 材料及网页
+
+当前材料统一位于：
+`harmonywatch/artifacts/outputs/opengym-wearengine-resubmission-20261031/`。
+
+- 用途表：openGym-WearEngine-usage-20261031.xlsx。
+- 授权表：openGym-WearEngine-authorization-20261031.xlsx。
+- 权限为 DEVICE_MANAGER、NOTIFY，各有用途说明；授权表包含连接、开启通知、授权结果、测试和关闭通知的步骤。
+- 11 张配图：3 张手机真机图、5 张 FIT 真机图、3 张流程图；P04/P05/U01 展示回传确认、通知授权和双端提醒流程。
+- 两份 Excel、配套说明和流程图已统一为直接描述功能、展示内容和进度的文字，保留原作者与许可。
+- 华为网页已保存手表应用介绍、备注和手机应用介绍、新版本说明；Wear Engine 功能说明已核对。2026-11-13 审批通过，待真机验证。
+- 授权表曾打开为空白，根因是工作簿窗口被保存为 visibility="hidden"。已在 Excel 恢复显示并保存，关闭重开正常，单元格和 3 张嵌图保持一致。后续 Excel 自动化保存需检查窗口可见状态和实际显示内容。
+
+Wear Engine 已于 2026-11-13 审批通过，DEVICE_MANAGER 与 NOTIFY 均开通。实际计划下发、记录回传、动画传输、NOTIFY 授权、通知声音/振动和后台时效仍待双端真机验证。
+
+### Agent 配置及清理
+
+本次清理删除项目内 910 个旧生成文件，270,827,905 字节（约 258.28 MiB）：旧申请目录、材料备份、旧修复包与重复 HAP 别名、历史诊断/预览、旧 Android APK 输出及临时 BIN/HAP。逐项清单为 `harmonywatch/artifacts/CLEANUP_20261101.json`。
+
+当前三个安装包、两份申请表、原始手机/手表截图、当前原生场景和验证记录、签名材料及离线文档保留。源码、依赖和当前构建缓存保留。项目内安装包及申请表的清理前后 SHA-256 一致。
+
+### 工作树回退与恢复（已完成）
+
+Git 记录显示 2026-11-01 16:00:42 执行过 reset 到 HEAD，之后一度只剩 84 项测试。用户确认没有主动回退，并要求恢复更改。
+
+已从本机原始会话日志按顺序重放交互、生命周期、语言压缩、结束页和抓帧检查补丁，恢复新增 crown 模块、交互测试及两份材料工具脚本，再重新生成译文并暂存 PPL 工程。恢复后 94 项测试全部通过，release 构建成功；编译 app.js、页面 index.js 的 SHA-256 与保留的 11:33 签名包记录逐字节一致。工作树继续保留恢复后的修改。
+
+恢复结果见 harmonywatch/artifacts/SOURCE_RECOVERY_20261101.json；项目外另存恢复补丁。旧生成物清理结果保持完成，当前安装包和申请表哈希保持一致。
+
+## 2026-11-02 至 2026-11-03：后续修正
+
+- 表冠：步进后的锁定从 250 ms 提到 450 ms，锁定期间到达的角度直接丢弃，一次转动只跳一格；取消逐格震动（平台只提供通知式短/长震）。表冠按压卡顿（U13）改用空闲页长按 2 秒打开的 debug 页取证，显示最近 7 条 show/hide 时间戳。
+- 休息结束前台提醒改为两轮、每轮在 0、2、4 秒各请求一次长振，约 14 秒后自动停止；触摸或转表冠立即停止。
+- 手机 HUAWEI FIT 设置页的包名与指纹输入框改为标签在上、深色输入框在下的统一布局（U16）。
+- 材料截图统一为简体中文界面（U18）。动作名英文括号改为按语言决定默认值：`zh`、`zh-TW` 默认不显示，其他语言保留，设置页仍可逐语言手动开关（U17）；手机发送给手表的是格式化后的名称，默认值改动同时覆盖手表快照。
+- 空闲页的取证入口和心率开关在首个状态到达前不再抛异常。
+- 两个手表变体按当前源码重新编译并重签，通过 hap-sign-tool verify-app、verify-hap.py 和 verify-lite-bin.py 全套校验，HAP 内可执行文件哈希与发布 BIN 相等；手表测试 95 项通过。构建记录见 `harmonywatch/artifacts/BUILD_20261102.json` 与 `BUILD_20261103.json`。
+
+## 当前验证
+
+2026-11-03 重新执行：
+
+```bash
+node --test frontend/harmony/tests/*.test.js
+node scripts/harmony/check-size.mjs
+```
+
+结果：95 项通过，0 失败。PPL app.js 为 49,071 B，页面 index.js 为 49,092 B；每文件上限 49,152 B，余量分别 81 B、60 B。首次启动包 app.js 为 47,068 B。
+
+现存 2026-11-01 原生预览覆盖训练、重量编辑、休息提示、结束、隐藏后重显及两种启动场景，记录为无 JS 异常。实际马达反馈、持续亮屏和系统通知声音待 FIT 复测。
+
+当前包哈希与既有 HAP/BIN 记录一致。既有签名检查包含固定叶证书 CMS、Profile、分块摘要和权限结构，payload/Profile/CMS 签名/trailer 四种篡改检查通过。清理时再次按哈希核对保留文件。
+
+主要证据位于 harmonywatch/artifacts：
+
+- CONTROLS_VERIFICATION.json、CONTROLS_BIN_VERIFICATION.json。
+- STARTUP_SCENARIOS_VERIFICATION.json、TEST_PLAN_BUILD.json、FIRST_LAUNCH_BUILD.json。
+- ANDROID_VERIFICATION.json、REST_NOTIFICATIONS_VERIFICATION.json。
+- SIGNING_VERIFICATION.json、SHA256SUMS.txt。
+- 当前申请目录的 VERIFICATION.json。
+
+## 源码及构建入口
+
+模板源码：`frontend/harmony/watch/entry/src/main/js/default/`。
+DevEco 编译源码：`harmonywatch/entry/src/main/js/MainAbility/`。
+修改交互时核对两处及 prepare.mjs 的暂存结果；生成工程当前带测试 PPL，模板正常初始 ready 为 null。
+
+关键模块：
+
+- common/crown.js：表冠阈值、节流和触感请求。
+- common/controller.js、runtime.js、sdk-ready.js：通信、存储、平台生命周期。
+- pages/index/index.js、index.hml、index.css：页面、编辑按钮和休息提醒。
+- frontend/harmony/tests/interaction-fixes.test.js：本轮交互与生命周期回归。
+- frontend/android/app/src/main/java/ch/duartesantos/opengym/HuaweiWatchPlugin.java：Android Wear Engine 桥接。
+- 同目录 WatchRestAlerts.java、WatchRestAlertReceiver.java：手机定时和手表通知。
+- frontend/src/views/HuaweiWatchSettings.jsx：手机连接与通知设置。
+- frontend/src/lib/watch-sync.js：手机训练同步。
+
+Windows 构建：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\harmony\build-test.ps1 -DevEcoRoot "E:\Program Files\Huawei\DevEco Studio"
+```
+
+个人测试包不再预存训练计划，初始状态由手机快照填充；退出流水取证追加 `-Forensics`。`-FirstLaunch` 与 `--builtin-plan` 已移除。
+
+构建入口执行 release 优化、48 KB 检查和 Lite BIN/HAP 打包；侧载交付继续使用本机已有证书、Profile 和签名流程。目标设备类型为 liteWearable，requiredDeviceType 与之匹配。
+
+Android 构建入口为 scripts/harmony/build-android.sh，使用 JDK 21、个人包名和登记 APP ID。私钥、密码保留在本机既有位置。该工程若曾在 Windows 侧构建，Gradle 增量状态会记下 D:\ 路径，回到 WSL 重编会以 mergeSideloadDebugResources 空指针失败；先执行 :app:clean 或删除 frontend/android/app/build 再构建。
+
+当前 HEAD 为 对应历史提交；表冠、独立小数按钮、长振和退出清理等后续修改仍在工作树。实际差异通过 git status、git diff 查看。最近两天涉及手表模板、DevEco 工程、Android 桥接、手机设置/同步、测试和构建工具；NAS 服务及后端 API 沿用现有实现。
+
+## 接续工作
+
+按用户最新需求选择对应工作：
+
+1. 安装当前 PPL 包，复测表冠单步/短振、四个重量按键、休息长振及确认取消、按冠退出。若仍卡顿，收集调测助手同一时段日志。
+2. 服务和用户授权完成后，验证计划、动画、事件确认/去重、断连重试及记录补传。
+3. 验证 NOTIFY 开关、授权、测试通知、精确闹钟、取消/延长及后台送达；记录真实声音、振动和勿扰设置。
+4. 系统力量训练、热量、华为运动健康写入和离开应用后的独立准时提醒处于后续阶段；表盘组件、Smart Stack 已取消。
+5. 材料直接维护当前 resubmission-20261031 目录。scripts/harmony/update-wearengine-materials.py 是早先的一次性生成工具，仍含旧文案和旧输出目录，后续使用前需更新。申请提交和应用发布由用户另行安排。
+6. harmonywatch/artifacts/appgallery-screenshots/ 是暂未使用的商店素材（当前完全不上架）；其中动作库列表仍是 2026-11-03 之前的“中文 (English)”格式，将来上架前需按新默认重新生成。

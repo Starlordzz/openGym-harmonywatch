@@ -126,7 +126,7 @@ test('a per-side set reloads its own numbers when the side changes', t => {
   const f = mount(t, s)
   assert.equal(f.vm.weight, '10')
   f.vm.edit('weight'); f.vm.editStepBy(1); f.vm.editDone()
-  assert.equal(f.vm.weight, '12.5')
+  assert.equal(f.vm.weight, '11')
   f.app.change(st => { st.workout.entries[0].sets[0].sides.L.done = true })
   assert.equal(f.vm.weight, '20')
   assert.equal(f.vm.reps, '6')

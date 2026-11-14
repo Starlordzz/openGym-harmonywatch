@@ -25,7 +25,16 @@ public class HuaweiWatchPlugin extends Plugin {
     private SharedPreferences prefs;
     private boolean installed;
     private boolean refreshing;
+    private boolean receiverRegistered;
     private long lastDiscovery;
+    private long lastHelloRequest;
+    private int receivedPackets;
+    private Integer lastSendCode;
+    private Boolean managerGranted;
+    private Integer lastPingCode;
+    private Integer watchVersion;
+    private String probeError = "";
+    private String communicationError = "";
     private final Map<String, Transfer> transfers = new HashMap<>();
     private final Map<String, PluginCall> snapshots = new HashMap<>();
     private final ArrayDeque<Outbound> outgoing = new ArrayDeque<>();
@@ -33,6 +42,8 @@ public class HuaweiWatchPlugin extends Plugin {
     private WatchFrames frames;
     private int clipGeneration;
     private String watchBoot = "";
+    private final String phoneSession = UUID.randomUUID().toString();
+    private long stateRevision;
     private PluginCall activeClipCall;
     private final Set<File> frameDirectories = new HashSet<>();
     private static final class Outbound {
@@ -49,19 +60,25 @@ public class HuaweiWatchPlugin extends Plugin {
         Transfer(int n) { parts = new String[n]; }
     }
     @Override public void load() {
+        RetiredWatchRestAlerts.clear(getContext());
         prefs = getContext().getSharedPreferences("opengym-huawei-watch", 0);
+        String saved = prefs.getString("fingerprint", "");
+        String migrated = WatchPeerIdentity.migrate(prefs.getString("package", ""), saved,
+                BuildConfig.WATCH_BUNDLE, BuildConfig.WATCH_CERTIFICATE_SHA256, BuildConfig.WATCH_PEER_FINGERPRINT);
+        if (!saved.equals(migrated) && !prefs.edit().putString("fingerprint", migrated).commit())
+            communicationError = "Cannot migrate the saved watch identity";
         client = HiWear.getP2pClient(getActivity());
         frames = new WatchFrames(getContext(), main);
         File[] cached = getContext().getCacheDir().listFiles();
         if (cached != null) for (File dir : cached) if (dir.isDirectory() && dir.getName().matches("og-[a-f0-9]{32}")) deleteFrames(dir);
     }
     @PluginMethod public void configure(PluginCall call) {
-        String pkg = call.getString("bundleName", ""), fingerprint = call.getString("fingerprint", "").replace(":", "");
-        if (!pkg.matches("[a-zA-Z][a-zA-Z0-9_]*(\\.[a-zA-Z0-9_]+)+") || !fingerprint.matches("[a-fA-F0-9]{64}")) {
-            call.reject("Valid watch bundleName and SHA-256 signing certificate fingerprint required"); return;
+        String pkg = call.getString("bundleName", "").trim(), fingerprint = call.getString("fingerprint", "").trim();
+        if (!WatchPeerIdentity.valid(pkg, fingerprint)) {
+            call.reject("Lite Wearable identity must be bundleName_Base64(P-256 public key), at most 127 characters"); return;
         }
         if (!pkg.equals(prefs.getString("package", "")) || !fingerprint.equals(prefs.getString("fingerprint", ""))) {
-            prefs.edit().remove("authorized").commit(); WatchRestAlerts.enable(getContext(), false);
+            prefs.edit().remove("authorized").commit();
         }
         if (!prefs.edit().putString("package", pkg).putString("fingerprint", fingerprint).commit()) { call.reject("Cannot save configuration"); return; }
         call.resolve();
@@ -80,69 +97,95 @@ public class HuaweiWatchPlugin extends Plugin {
     }
     private void discover(PluginCall call) {
         refreshing = true; lastDiscovery = System.currentTimeMillis();
+        lastPingCode = null; watchVersion = null; probeError = "";
+        HiWear.getAuthClient(getActivity()).checkPermission(Permission.DEVICE_MANAGER)
+                .addOnSuccessListener(granted -> main.post(() -> {
+                    managerGranted = Boolean.TRUE.equals(granted);
+                    if (!managerGranted) {
+                        prefs.edit().putBoolean("authorized", false).commit();
+                        discoveryFailed(call, new Exception("Wear Engine DEVICE_MANAGER permission is not granted"));
+                        return;
+                    }
+                    discoverAuthorized(call);
+                })).addOnFailureListener(e -> main.post(() -> {
+                    managerGranted = null;
+                    discoveryFailed(call, new Exception("Wear Engine permission check failed: " + e.getMessage(), e));
+                }));
+    }
+    private void discoverAuthorized(PluginCall call) {
         HiWear.getDeviceClient(getActivity()).getBondedDevices().addOnSuccessListener(devices -> main.post(() -> {
             ArrayList<Device> connected = new ArrayList<>();
             for (Device d : devices) if (d.isConnected()) connected.add(d);
-            if (connected.size() != 1) { refreshing = false; device = null; installed = false; if (call != null) call.reject("Connect exactly one compatible watch in Huawei Health, then retry"); notifyListeners("watchState", link()); return; }
-            if (device != null) client.unregisterReceiver(receiver);
-            device = connected.get(0); installed = false;
-            client.setPeerPkgName(prefs.getString("package", ""));
-            client.setPeerFingerPrint(prefs.getString("fingerprint", ""));
-            client.registerReceiver(device, receiver).addOnSuccessListener(v -> main.post(() -> {
-                // Installation is proved by a hello from the watch, not merely Bluetooth pairing.
-                refreshing = false; if (call != null) call.resolve(link()); notifyListeners("watchState", link());
-            })).addOnFailureListener(e -> main.post(() -> discoveryFailed(call, e)));
+            if (connected.size() != 1) { discoveryFailed(call, new Exception("Connect exactly one compatible watch in Huawei Health, then retry")); return; }
+            boolean replaceReceiver = receiverRegistered;
+            receiverRegistered = false; device = connected.get(0); installed = false;
+            Runnable register = () -> {
+                client.setPeerPkgName(prefs.getString("package", ""));
+                client.setPeerFingerPrint(prefs.getString("fingerprint", ""));
+                client.registerReceiver(device, receiver).addOnSuccessListener(v -> main.post(() -> {
+                    // A connected receiver is retained while waiting for the watch's hello.
+                    refreshing = false; receiverRegistered = true; communicationError = "";
+                    lastHelloRequest = 0; requestHello();
+                    if (call != null) call.resolve(link()); notifyListeners("watchState", link());
+                    probeWatch();
+                })).addOnFailureListener(e -> main.post(() -> discoveryFailed(call, e)));
+            };
+            // Await teardown: an asynchronous unregister can otherwise remove the new receiver.
+            if (replaceReceiver) client.unregisterReceiver(receiver).addOnSuccessListener(v -> main.post(register))
+                    .addOnFailureListener(e -> main.post(() -> discoveryFailed(call, e)));
+            else register.run();
         })).addOnFailureListener(e -> main.post(() -> discoveryFailed(call, e)));
     }
+    private void probeWatch() {
+        if (device == null) return;
+        lastPingCode = null; probeError = "";
+        try {
+            client.ping(device, code -> main.post(() -> {
+                lastPingCode = code; notifyListeners("watchState", link());
+            })).addOnFailureListener(e -> main.post(() -> {
+                probeError = String.valueOf(e.getMessage()); notifyListeners("watchState", link());
+            }));
+            client.getAppVersion(device, prefs.getString("package", "")).addOnSuccessListener(version -> main.post(() -> {
+                watchVersion = version; notifyListeners("watchState", link());
+            })).addOnFailureListener(e -> main.post(() -> {
+                probeError = "App version: " + e.getMessage(); notifyListeners("watchState", link());
+            }));
+        } catch (Exception e) { probeError = String.valueOf(e.getMessage()); }
+    }
     private void discoveryFailed(PluginCall call, Exception e) {
-        refreshing = false; device = null; installed = false;
+        refreshing = false; device = null; installed = false; receiverRegistered = false;
+        communicationError = String.valueOf(e.getMessage());
         if (call != null) call.reject(e.getMessage());
         notifyListeners("watchState", link());
     }
     private JSObject link() {
         JSObject out = new JSObject();
         out.put("paired", device != null && device.isConnected()); out.put("installed", installed);
+        out.put("receiverRegistered", receiverRegistered); out.put("receivedPackets", receivedPackets);
+        out.put("lastSendCode", lastSendCode == null ? JSONObject.NULL : lastSendCode);
+        out.put("managerGranted", managerGranted == null ? JSONObject.NULL : managerGranted);
+        out.put("lastPingCode", lastPingCode == null ? JSONObject.NULL : lastPingCode);
+        out.put("watchVersion", watchVersion == null ? JSONObject.NULL : watchVersion);
+        out.put("probeError", probeError);
+        out.put("watchBoot", watchBoot);
+        if (device != null) { out.put("deviceName", device.getName()); out.put("p2pCapability", device.getP2pCapability()); }
+        out.put("communicationError", communicationError);
         out.put("activated", !refreshing); out.put("configured", !prefs.getString("package", "").isEmpty());
         out.put("bundleName", prefs.getString("package", "")); out.put("fingerprint", prefs.getString("fingerprint", ""));
-        out.put("restNotifications", WatchRestAlerts.enabled(getContext()));
-        out.put("restNotificationExact", RestAlert.exactAllowed(getContext()));
-        out.put("restNotificationError", WatchRestAlerts.prefs(getContext()).getString("error", ""));
         out.put("transport", "huawei"); return out;
-    }
-    @PluginMethod public void setRestNotifications(PluginCall call) {
-        if (!Boolean.TRUE.equals(call.getBoolean("enabled", false))) {
-            WatchRestAlerts.enable(getContext(), false); call.resolve(link()); return;
-        }
-        if (device == null || !device.isConnected()) { call.reject("Connect the watch first"); return; }
-        getActivity().runOnUiThread(() -> HiWear.getAuthClient(getActivity()).requestPermission(new AuthCallback() {
-            @Override public void onOk(Permission[] granted) {
-                boolean notify = false, manager = false;
-                for (Permission p : granted) {
-                    notify |= Permission.NOTIFY.getName().equals(p.getName());
-                    manager |= Permission.DEVICE_MANAGER.getName().equals(p.getName());
-                }
-                if (!notify || !manager) { WatchRestAlerts.enable(getContext(), false); call.reject("Wear Engine NOTIFY and DEVICE_MANAGER permissions are required"); return; }
-                WatchRestAlerts.enable(getContext(), true); WatchRestAlerts.boot(getContext(), watchBoot);
-                call.resolve(link());
-            }
-            @Override public void onCancel() { call.reject("Watch notification authorization cancelled"); }
-        }, Permission.DEVICE_MANAGER, Permission.NOTIFY).addOnFailureListener(e -> call.reject("Wear Engine notification authorization failed: " + e.getMessage())));
-    }
-    @PluginMethod public void testRestNotification(PluginCall call) {
-        if (!WatchRestAlerts.enabled(getContext()) || device == null) { call.reject("Enable watch rest notifications first"); return; }
-        try { WatchRestAlerts.send(getContext(), device, prefs.getString("package", ""), () -> call.resolve(), e -> call.reject(e.getMessage())); }
-        catch (Exception e) { call.reject(e.getMessage()); }
-    }
-    @PluginMethod public void openRestAlarmSettings(PluginCall call) {
-        if (android.os.Build.VERSION.SDK_INT >= 31) getActivity().startActivity(new android.content.Intent(
-                android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:" + getContext().getPackageName())));
-        call.resolve();
     }
     @PluginMethod public void status(PluginCall call) { main.post(() -> {
         if (!refreshing && prefs.getBoolean("authorized", false) && !prefs.getString("package", "").isEmpty()
-                && (device == null || !device.isConnected() || !installed) && System.currentTimeMillis() - lastDiscovery > 10000) discover(null);
+                && (device == null || !device.isConnected() || !receiverRegistered) && System.currentTimeMillis() - lastDiscovery > 10000) discover(null);
+        if (!refreshing && receiverRegistered && !installed) requestHello();
         call.resolve(link());
     }); }
+    private void requestHello() {
+        if (device == null || !device.isConnected() || System.currentTimeMillis() - lastHelloRequest < 15000) return;
+        lastHelloRequest = System.currentTimeMillis();
+        try { enqueue(new JSONObject().put("kind", "helloRequest"), UUID.randomUUID().toString()); }
+        catch (Exception e) { communicationError = String.valueOf(e.getMessage()); }
+    }
     private JSONArray events() throws JSONException { return new JSONArray(prefs.getString("events", "[]")); }
     @PluginMethod public void drain(PluginCall call) {
         main.post(() -> { try { JSObject out = new JSObject(); out.put("events", events()); call.resolve(out); }
@@ -166,7 +209,7 @@ public class HuaweiWatchPlugin extends Plugin {
                 String id = UUID.randomUUID().toString();
                 JSONObject snapshot = new JSONObject(call.getString("json", ""));
                 snapshots.put(id, call);
-                enqueue(new JSONObject().put("kind", "snapshot").put("snapshot", snapshot), id);
+                enqueue(stamped(new JSONObject().put("kind", "snapshot").put("snapshot", snapshot)), id);
                 main.postDelayed(() -> { PluginCall pending = snapshots.remove(id); if (pending != null) pending.reject("Watch snapshot acknowledgement timed out"); }, 60000);
             } catch (Exception e) { call.reject("Cannot send snapshot", e); }
         });
@@ -212,12 +255,41 @@ public class HuaweiWatchPlugin extends Plugin {
         File[] files = directory.listFiles(); if (files != null) for (File f : files) f.delete(); directory.delete(); frameDirectories.remove(directory);
     }
     @PluginMethod public void dropClips(PluginCall call) { main.post(() -> { clipGeneration++; call.resolve(); }); }
-    @PluginMethod public void openOnWatch(PluginCall call) { call.reject("Open openGym on the FIT watch manually"); }
-    private void enqueue(JSONObject payload, String id) throws JSONException {
+    @PluginMethod public void openOnWatch(PluginCall call) {
+        main.post(() -> {
+            if (device == null || !device.isConnected() || !receiverRegistered) { call.reject("Watch not connected"); return; }
+            try {
+                client.ping(device, code -> main.post(() -> {
+                    lastPingCode = code; notifyListeners("watchState", link());
+                    if (code != 201 && code != 202) { call.reject("Cannot open watch app: " + code); return; }
+                    lastHelloRequest = 0; requestHello();
+                    JSObject result = new JSObject(); result.put("requested", true); result.put("code", code); call.resolve(result);
+                })).addOnFailureListener(e -> main.post(() -> call.reject("Cannot open watch app", e)));
+            } catch (Exception e) { call.reject("Cannot open watch app", e); }
+        });
+    }
+    @PluginMethod public void sendRest(PluginCall call) {
+        main.post(() -> {
+            if (device == null || !installed) { call.reject("Watch not connected"); return; }
+            try {
+                JSONObject payload = stamped(new JSONObject().put("kind", "restState").put("wid", call.getString("wid", ""))
+                        .put("rest", call.getObject("rest") == null ? JSONObject.NULL : call.getObject("rest")));
+                enqueue(payload, UUID.randomUUID().toString(), true);
+                JSObject out = new JSObject(); out.put("queued", true); call.resolve(out);
+            } catch (Exception e) { call.reject("Cannot send rest state", e); }
+        });
+    }
+    private JSONObject stamped(JSONObject payload) throws JSONException {
+        return payload.put("session", phoneSession).put("rev", ++stateRevision);
+    }
+    private void enqueue(JSONObject payload, String id) throws JSONException { enqueue(payload, id, false); }
+    private void enqueue(JSONObject payload, String id, boolean priority) throws JSONException {
         String text = Uri.encode(payload.toString(), "!'()*-._~");
         int n = (text.length() + 599) / 600;
-        for (int i = 0; i < n; i++) outgoing.add(new Outbound(new Message.Builder().setPayload(new JSONObject().put("v", 1).put("id", id).put("i", i).put("n", n)
+        List<Outbound> packets = new ArrayList<>();
+        for (int i = 0; i < n; i++) packets.add(new Outbound(new Message.Builder().setPayload(new JSONObject().put("v", 1).put("id", id).put("i", i).put("n", n)
                 .put("data", text.substring(i * 600, Math.min(text.length(), (i + 1) * 600))).toString().getBytes(StandardCharsets.UTF_8)).build(), null));
+        if (priority) WatchSendQueue.prioritize(outgoing, packets, sending); else outgoing.addAll(packets);
         pump();
     }
     private void pump() {
@@ -230,13 +302,20 @@ public class HuaweiWatchPlugin extends Plugin {
             if (settled[0]) return; settled[0] = true; sending = false;
             if (ok) { outgoing.poll(); if (packet.delivered != null) packet.delivered.run(); pump(); } else { outgoing.clear(); for (File dir : new ArrayList<>(frameDirectories)) deleteFrames(dir); if (activeClipCall != null) { activeClipCall.reject("Animation transport interrupted"); activeClipCall = null; clipGeneration++; } installed = false; notifyListeners("watchState", link()); }
         });
-        main.postDelayed(() -> end.accept(false), 10000);
+        main.postDelayed(() -> { if (!settled[0]) { communicationError = "Wear Engine send timed out"; end.accept(false); } }, 10000);
         client.send(device, message, new SendCallback() {
-            @Override public void onSendResult(int code) { end.accept(code == com.huawei.wearengine.common.WearEngineErrorCode.ERROR_CODE_COMM_SUCCESS); }
+            @Override public void onSendResult(int code) { main.post(() -> {
+                if (settled[0]) return;
+                lastSendCode = code;
+                boolean ok = code == com.huawei.wearengine.common.WearEngineErrorCode.ERROR_CODE_COMM_SUCCESS;
+                communicationError = ok ? "" : "Wear Engine send failed: " + code;
+                end.accept(ok);
+            }); }
             @Override public void onSendProgress(long count) {}
-        }).addOnFailureListener(e -> end.accept(false));
+        }).addOnFailureListener(e -> main.post(() -> { if (!settled[0]) { communicationError = String.valueOf(e.getMessage()); end.accept(false); } }));
     }
     private void receive(String raw) {
+        receivedPackets++;
         try {
             long now = System.currentTimeMillis();
             transfers.entrySet().removeIf(e -> now - e.getValue().at > 60000);
@@ -255,13 +334,11 @@ public class HuaweiWatchPlugin extends Plugin {
             if (kind.equals("hello")) {
                 boolean was = installed; installed = true;
                 String boot = payload.optString("boot", ""); boolean restarted = !boot.equals(watchBoot); watchBoot = boot;
-                WatchRestAlerts.boot(getContext(), boot);
                 if (!was || restarted) notifyListeners("watchState", link());
             } else if (kind.equals("snapshotAck")) {
                 PluginCall call = snapshots.remove(payload.getString("id"));
                 if (call != null) { JSObject out = new JSObject(); out.put("sent", true); call.resolve(out); }
-            } else if (kind.equals("restAlarm")) {
-                WatchRestAlerts.receive(getContext(), payload, device, prefs.getString("package", ""));
+
             } else if (kind.equals("events")) {
                 JSONArray queue = events(), incoming = payload.getJSONArray("events");
                 Set<String> seen = new HashSet<>();
