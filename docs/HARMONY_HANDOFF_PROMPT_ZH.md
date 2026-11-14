@@ -4,19 +4,19 @@
 
 请接手本项目，先阅读本文件、项目 AGENTS.md 和 CLAUDE.md，再根据用户的新要求继续开发。本记录覆盖 2026-10-31 至 2026-11-14，汇总开发进度、网页操作、当前产物、清理结果和接续工作。最新进度见下一节；缺陷明细见 [未解决缺陷清单](HARMONY_OPEN_BUGS_ZH.md)。
 
-## 2026-11-14 最新进度：启动恢复，通信回归修正待实机验证（B14）
+## 2026-11-14 最新进度：启动与通信恢复已获实机确认（B13 / B14）
 
-用户确认 `boot-return` 包正常打开、原有 Full Body 计划可显示；调试页为 `sdk:? rx:off tx:-`，后面没有错误文字。B13 启动黑屏已通过本轮实机复测；当前阻塞是 B14 通信初始化回归。
+用户确认 `boot-return` 包正常打开、原有 Full Body 计划可显示；调试页为 `sdk:? rx:off tx:-`，后面没有错误文字。这是修正前的读数。安装 SDK 回调修正包后，用户回复“好了”，确认本轮通信恢复；B13 启动黑屏与 B14 通信初始化回归均已通过实机反馈。修正后的具体 sdk/rx/tx 数值尚未回传。
 
 已定位到构建后的实际代码：SDK 原始版本查询传入有效 `complete` 回调，二次 Terser 压缩后变成 `complete:function(){}`。回调无法写入客户端版本，SDK 就绪等待超时，接收器未注册，手机发送返回 206。旧 training-fix 包保留有效回调。逐项关闭优化验证后，`reduce_vars=false` 保留回调；SDK 源文件保持原始字节。
 
 构建流程已关闭 `reduce_vars`，新增实际编译 app.js 的异步通信门禁：延迟返回版本 402，再验证接收器注册与 hello 发送 207。旧故障产物在同一门禁得到 `sdk:? rx:off tx:-` 并超时；修正后压缩前、后均为 `sdk:402 rx:ok tx:207`。手表 133 项通过，原生启动 2 帧、3197 可见像素、无 JS 异常。app 47,743 B、页面 49,097 B；每份上限 49,152 B，页面余量 55 B。
 
-修正包 `/sdcard/haps/openGym-HuaweiWatch-sdk-callback-signed.hap` 已签名校验并通过 ADB 推送，手机端文件哈希一致；大小 685,186 B，SHA-256 `591b5dd463742ce7279711b7735ce65bc4c62635ce333e591470dece99f2a90e`。HAP 内 BIN 与独立签名 BIN 一致，BIN 包含本次编译 JS。等待用户覆盖安装后确认 sdk/rx/tx 和手机 206 是否恢复。
+修正包 `/sdcard/haps/openGym-HuaweiWatch-sdk-callback-signed.hap` 已签名校验并通过 ADB 推送，手机端文件哈希一致；大小 685,186 B，SHA-256 `591b5dd463742ce7279711b7735ce65bc4c62635ce333e591470dece99f2a90e`。HAP 内 BIN 与独立签名 BIN 一致，BIN 包含本次编译 JS。用户随后回复“好了”，本轮通信恢复已确认。对应代码提交为 `c97c781e9`。
 
-手机继续使用已安装的合并版 APK。本轮已核验实际 APK 签名、已授权权限、保存的 112 字符 Lite 对端身份与手表配置一致；手机接收器已注册，收到 0 条、发送 206。证据：`harmonywatch/artifacts/BUILD_20261114_SDK_CALLBACK.json`、同名 `.log`、`TEST_20261114_SDK_CALLBACK_WATCH.log`、`SIGN_20261114_SDK_CALLBACK.log`、`PHONE_STATUS_20261114_BOOT_RETURN_206.json`。签名、身份配置和设备日志保留本地。
+手机继续使用已安装的合并版 APK。本轮已核验实际 APK 签名、已授权权限、保存的 112 字符 Lite 对端身份与手表配置一致；修正前手机接收器已注册，收到 0 条、发送 206；修正后用户确认恢复。证据：`harmonywatch/artifacts/BUILD_20261114_SDK_CALLBACK.json`、同名 `.log`、`TEST_20261114_SDK_CALLBACK_WATCH.log`、`SIGN_20261114_SDK_CALLBACK.log`、`PHONE_STATUS_20261114_BOOT_RETURN_206.json`。签名、身份配置和设备日志保留本地。
 
-接续顺序：先验证新包通信；恢复后复测手机开始训练时手表自动进入与震动、双向 ±15 秒和暂停/继续，再继续 B3/B5/B6/B7/B8 的训练稳定性与计时测试。
+接续顺序：使用已确认恢复通信的 SDK 回调修正包，复测手机开始训练时手表自动进入与震动、双向 ±15 秒和暂停/继续，再继续 B3/B5/B6/B7/B8 的训练稳定性与计时测试。
 
 ## 2026-11-14 启动黑屏排查记录（B13，后续实机已确认打开）
 
@@ -28,14 +28,14 @@
 
 修正版手表 131 项通过；原生启动 2 帧、可见像素 3197、无 JS 异常。app 47,574 B、页面 49,045 B，均低于 49,152 B。手机 APK 继续使用已安装的合并版；修正版 `openGym-HuaweiWatch-boot-return-signed.hap` 已签名推送到 `/sdcard/haps/`，设备文件 SHA-256 与本机一致：`3b644308467bdc78dbcae23a8d00ba13319715d98b9038942423c6e4b19e3a8b`。实机随后确认正常打开，通信仍为 206；当前修正见 B14。证据：`harmonywatch/artifacts/BUILD_20261114_BOOT_RETURN.json`、`BOOT_RETURN_NATIVE_PREVIEW.log`、`TEST_20261114_BOOT_RETURN_WATCH.log`。
 
-## 本轮交付与验收（当前以 B14 通信恢复为先）
+## 本轮交付与验收（通信已恢复，继续训练功能验收）
 
 | 事项 | 当前状态 | 依据 |
 |---|---|---|
 | 本轮代码与上游同步 | 已合并上游 main `68dad18f8` 并推送 GitHub | 合并提交 `e515ee44f`，随后安装记录提交 `9b71c53dc` |
 | 手机 APK | 合并版已 ADB 覆盖安装 | `openGym-HuaweiWatch-merged-debug.apk`；versionCode 31、versionName 1.4.4，安装时间 16:12:27 |
-| 手表 HAP | boot-return 实机正常打开；SDK 回调修正版已推送待验收 | `/sdcard/haps/openGym-HuaweiWatch-sdk-callback-signed.hap` |
-| 基础通信 | 手机已配对且接收器注册；当前手表 SDK 未就绪、发送 206 | `receivedPackets=0`；B14 修正待实机确认 |
+| 手表 HAP | SDK 回调修正版通信恢复已获用户确认 | `/sdcard/haps/openGym-HuaweiWatch-sdk-callback-signed.hap` |
+| 基础通信 | SDK 回调修正后用户确认通信恢复 | 用户反馈“好了”；具体新读数尚未回传 |
 | 自动验证 | 手机/服务端沿用合并回归；SDK 回调修正版完成新增验证 | 手机 7862、服务端 804、MCP 138；手表 133，原生启动通过 |
 | B1 / B2 | 退出与计划保存恢复已由用户验收 | 恢复表冠与通信的普通包退出正常；Full Body 计划正确，重开仍在 |
 | B9 动作导航 | 已由用户确认两端一致 | training-fix 实机反馈 |
