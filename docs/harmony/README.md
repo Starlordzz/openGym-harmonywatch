@@ -4,6 +4,7 @@
 
 | 文档 | 用途 |
 |---|---|
+| [Apple Watch 与华为手表功能对比](WATCH_FEATURE_COMPARISON_ZH.md) | 功能、平台差异、实现与实机验证状态 |
 | [兼容性与多型号适配](COMPATIBILITY_ZH.md) | 目标范围、实际验证设备、圆屏与不同运行时待办 |
 | [开发与构建](../HARMONY_FIT.md) | 手机桥接、手表源码、身份配置与构建校验 |
 | [用户需求](../HARMONY_USER_REQUIREMENTS_ZH.md) | 当前功能与交互要求 |

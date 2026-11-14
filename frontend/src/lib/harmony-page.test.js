@@ -4,7 +4,7 @@ vi.mock('../../harmony/watch/entry/src/main/js/default/common/runtime.js', () =>
   runtime(changed) {
     port.changed = changed
     return { load() { changed(port.state) }, change(fn) { fn(port.state); changed(port.state); changed(port.state) },
-      samples: () => [], heart: () => null, heartStart: vi.fn(), heartStop: vi.fn(), vibrate: vi.fn(),
+      samples: () => [], heart: () => null, heartState: () => 'measuring', heartStart: vi.fn(), heartStop: vi.fn(), vibrate: vi.fn(),
       // The page holds the screen on while it is shown (pages/index/index.js onShow/onHide) and the
       // app releases it on teardown; both go through the runtime's brightness call.
       keepScreenOn: vi.fn(), stop() {} }
@@ -51,21 +51,12 @@ it('a repeated tap cannot complete the following set', () => {
   expect(port.state.outbox.filter(e => e.type === 'setDone')).toHaveLength(1)
   expect(port.state.workout.entries[0].sets[1].done).not.toBe(true)
 })
-it('app touch lock blocks edits and set completion until unlocked', () => {
-  vm.lockPage(); const weight = vm.weight
-  expect(vm.touchLocked).toBe(true)
-  adjust('weight'); vm.complete()
-  expect(vm.weight).toBe(weight); expect(port.state.outbox).toHaveLength(0)
-  vm.unlockPage(); adjust('weight'); vm.complete()
-  expect(port.state.outbox.filter(e => e.type === 'setDone')).toHaveLength(1)
-})
-it('a timed hold still finishes automatically while touch is locked', async () => {
+it('a timed hold finishes automatically with the touch lock feature removed', async () => {
   port.state.workout.entries[0].mode = 'time'; port.changed(port.state)
-  vm.seconds = 2; vm.done(); vm.lockPage()
+  vm.seconds = 2; vm.done()
   await vi.advanceTimersByTimeAsync(2500)
   expect(port.state.workout.entries[0].sets[0].done).toBe(true)
   expect(port.state.workout.entries[0].sets[0].sec).toBe(2)
-  expect(vm.touchLocked).toBe(true)
 })
 it('late resume records a timed hold at its deadline and alerts only once', () => {
   port.state.workout.entries[0].mode = 'time'; port.changed(port.state)

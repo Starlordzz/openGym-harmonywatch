@@ -96,3 +96,19 @@ test('incoming task buzz waits for durable commit and is suppressed if the task 
   assert.deepEqual(f.buzzes, ['long'])
   f.rt.stop()
 })
+
+test('remote finish publishes summary before slow disk commits, then acknowledges durably', () => {
+  const f = io(true)
+  const active = savedState().workout
+  active.rest = { endsAt: Date.now() + 90000 }
+  f.receive({ kind: 'snapshot', snapshot: { v: 1, active } })
+  f.pending.shift()()
+  f.receive({ kind: 'workoutEnd', wid: active.id })
+  assert.equal(f.state.workout, null)
+  assert.equal(f.state.summary.endedOnPhone, true)
+  while (f.pending.length) f.pending.shift()()
+  assert.equal(f.saved.workout, null)
+  f.receive({ kind: 'snapshot', snapshot: { v: 1, active } })
+  assert.equal(f.state.workout, null)
+  f.rt.stop()
+})

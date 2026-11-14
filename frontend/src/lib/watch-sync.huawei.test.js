@@ -117,3 +117,18 @@ it('sends priority rest controls while a full snapshot is pending, including pau
   expect(b.sendRest).toHaveBeenLastCalledWith({ wid: 'w', rest: { endsAt: 0, paused: true, left: 90, total: 105 } })
   expect(b.sendSnapshot).toHaveBeenCalledTimes(1)
 })
+
+it('sends an explicit workout end immediately while an older snapshot is waiting for disk acknowledgement', async () => {
+  let listener, state = { S: { unit: 'kg', active: { id: 'w', start: Date.now(), entries: [] }, routines: [], workouts: [] } }
+  const b = { status: vi.fn(async () => ({ paired: true, installed: true })),
+    sendSnapshot: vi.fn(() => new Promise(() => {})), endWorkout: vi.fn(async () => ({ queued: true })),
+    drain: vi.fn(async () => ({ events: [] })), addListener: vi.fn(async () => ({ remove() {} })) }
+  _setWatchPluginForTest(b)
+  stop = await startWatchSync({ useStore: { getState: () => state, subscribe: fn => { listener = fn; return () => {} } },
+    useUI: { getState: () => ({}), subscribe: () => () => {} } })
+  await vi.advanceTimersByTimeAsync(500)
+  const prev = state; state = { S: { ...state.S, active: null, workouts: [{ id: 'w' }] } }; listener(state, prev)
+  await vi.advanceTimersByTimeAsync(0)
+  expect(b.endWorkout).toHaveBeenCalledWith({ wid: 'w', discard: false })
+  expect(b.sendSnapshot).toHaveBeenCalledTimes(1)
+})

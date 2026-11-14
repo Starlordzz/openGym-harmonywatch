@@ -2184,6 +2184,16 @@ function ActiveWorkout() {
       if (at && rest && rest !== restBefore && !rest.paused) useUI.getState().alignRest(at + rest.total * 1000)
       if (at || hr) mutEntry(idx, en => { const set = en.sets[i]; if (!(oneSide ? set?.sides?.[oneSide]?.done : set?.done)) return; if (at) set.at = at; if (hr) set.hr = hr })
     },
+    addSets: (idx, count) => {
+      if (useStore.getState().S.active?.editingWorkoutId) return
+      let before = useStore.getState().S.active?.entries?.[idx]?.sets?.length || 0
+      while (before < count) {
+        addSet(idx)
+        const after = useStore.getState().S.active?.entries?.[idx]?.sets?.length || 0
+        if (after <= before) break
+        before = after
+      }
+    },
     restChange: rest => useUI.getState().followWatchRest(rest),
     navigate: (idx, skipRest) => {
       update(s => { if (s.active && !s.active.editingWorkoutId && s.active.entries?.[idx]) s.active.cur = idx })

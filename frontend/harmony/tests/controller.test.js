@@ -131,7 +131,7 @@ test('a workout the phone ends keeps the heart rate the watch measured', () => {
 })
 test('heart rate display expires after sampling stops and does not invent missed samples', () => {
   const f = fixture(); f.runtime.load(); f.runtime.heartStart()
-  f.sample(120, 10000); assert.deepEqual(f.runtime.heart(0), { avg: 120, max: 120 })
+  f.sample(120, 10000); assert.deepEqual(f.runtime.heart(0), { avg: 120, max: 120, current: 120 })
   f.time(30000); assert.equal(f.runtime.heart(0), null)
   assert.deepEqual(f.runtime.samples(), [{ at: 10000, value: 120 }])
   f.runtime.stop()

@@ -3,6 +3,12 @@ import org.junit.Test;
 import java.util.*;
 import static org.junit.Assert.*;
 public class WatchSendQueueTest {
+    @Test public void finishCancelsQueuedFramesButKeepsActiveHeadAndControlFragments() {
+        ArrayDeque<String> q = new ArrayDeque<>(Arrays.asList("frame-active", "frame-next", "snapshot1", "snapshot2"));
+        WatchSendQueue.removePending(q, p -> p.startsWith("frame"), true);
+        WatchSendQueue.prioritize(q, Arrays.asList("end1", "end2"), true);
+        assertEquals(Arrays.asList("frame-active", "end1", "end2", "snapshot1", "snapshot2"), new ArrayList<>(q));
+    }
     @Test public void controlsFollowActiveHeadInFragmentOrder() {
         ArrayDeque<String> q = new ArrayDeque<>(Arrays.asList("active", "frame1", "frame2"));
         WatchSendQueue.prioritize(q, Arrays.asList("rest1", "rest2"), true);

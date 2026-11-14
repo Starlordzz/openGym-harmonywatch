@@ -62,6 +62,20 @@ export default {
   heartRate(since) { return this.rt.heart(since) },
   heartStart() { this.rt.heartStart() },
   heartStop(keep) { this.rt.heartStop(keep) },
+  heartState() { return this.rt.heartState() },
+  drawRest(page, percent) {
+    var element = page.$refs && page.$refs.restArc
+    if (!element) return
+    var c = element.getContext('2d'), end = Math.PI * (percent / 50 - 0.5)
+    if (c.clearRect) c.clearRect(0, 0, 240, 240)
+    else c.cleanRect(0, 0, 240, 240)
+    c.lineWidth = 12; c.lineCap = 'round'; c.strokeStyle = '#262626'
+    c.beginPath(); c.arc(120, 120, 106, 0, Math.PI * 2); c.stroke()
+    if (percent <= 0) return
+    c.strokeStyle = '#30d158'
+    c.beginPath(); c.arc(120, 120, 106, -Math.PI / 2, end)
+    c.lineTo(120 + 106 * Math.cos(end), 120 + 106 * Math.sin(end)); c.stroke()
+  },
   clipFrame(exId, at) { return this.state ? clipAt(this.state, exId, at) : '' },
   summaryAt(at) { return this.state ? summary(this.state, at) : null },
   idleAt(now) { return this.state ? idle(this.state, now) : '' },
@@ -110,7 +124,7 @@ export default {
     s.entryIndex = ei
     event(s, 'navigate', { wid: s.workout.id, exId: s.workout.entries[ei].id, entryIdx: ei }, Date.now())
   }) },
-  lock(on) { this.rt.change(function(s) { s.touchLocked = on }) },
+  recordEvent(s, type, fields, at) { return event(s, type, fields, at) },
   snooze() { this.rt.change(function(s) { s.snooze = Date.now() }) },
   sensor(on) { this.rt.change(function(s) { s.sensorEnabled = on }) },
   clearSummary() { this.rt.change(function(s) { s.summary = null }) }

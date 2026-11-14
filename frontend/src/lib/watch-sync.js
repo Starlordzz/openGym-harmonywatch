@@ -388,6 +388,10 @@ function applyEach (events, getState) {
       const idx = entryIndexOf(A, ev)
       const set = idx >= 0 ? A.entries[idx].sets?.[ev.setIdx] : null
       if (set) handlers.setDone(idx, ev.setIdx, { w: num(ev.w), r: num(ev.r), at: num(ev.at), hr: sanitizeHr(ev.hr), ...extraOf(ev) })
+    } else if (ev.type === 'addSet' && ours) {
+      if (!handlers?.addSets) { appHandlers?.openWorkout?.(); break }
+      const idx = entryIndexOf(A, ev), count = num(ev.count)
+      if (idx >= 0 && Number.isInteger(count) && count > 0 && count <= 60) handlers.addSets(idx, count)
     } else if (ev.type === 'restChange' && ours) {
       if (!handlers?.restChange) { appHandlers?.openWorkout?.(); break }
       const r = ev.rest
@@ -778,6 +782,11 @@ async function runLink (p, { useStore, useUI }, { health = true, clips: withClip
     // Boot done: what the watch sent meanwhile is applied now, and the watch hears the real state.
     if (s.ready && !prev.ready) { drainWatchEvents(); schedule() }
     if (s.S === prev.S) return
+    if (huawei && linked && !s.tourSandbox && prev.S?.active && !s.S?.active) {
+      // End controls pass old snapshots/animations; a full snapshot still supplies durable recovery.
+      const wid = prev.S.active.id
+      Promise.resolve(p.WatchBridge.endWorkout?.({ wid, discard: !s.S.workouts?.some(w => w.id === wid) })).catch(() => {})
+    }
     // Not while the store boots (its first copy replaces an empty one).
     if (s.ready !== false && prev.ready !== false) {
       // The running workout changed here (a tick, an edit): the watch's idle clock starts again.

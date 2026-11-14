@@ -8,9 +8,9 @@ import { readFileSync } from 'node:fs'
 test('all decoded languages retain their exact text after shared-pack compression', () => {
   const before = JSON.parse(readFileSync(new URL('./locale-hashes.json', import.meta.url)))
   for (const lang of Object.keys(data.packs)) {
-    const { on, off, pause, resumeRest, swipe, ...legacy } = wordsFor(lang)
+    const { on, off, pause, resumeRest, swipe, addSet, noData, unavailable, ...legacy } = wordsFor(lang)
     assert.equal(createHash('sha256').update(JSON.stringify(legacy)).digest('hex'), before[lang], lang)
-    assert.ok(on && off && pause && resumeRest && swipe)
+    assert.ok(on && off && pause && resumeRest && swipe && addSet)
   }
 })
 test('existing watch translations map phone locale and keep the Apple-only copy out', () => {

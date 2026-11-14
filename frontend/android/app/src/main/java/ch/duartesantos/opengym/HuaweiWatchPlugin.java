@@ -46,10 +46,13 @@ public class HuaweiWatchPlugin extends Plugin {
     private long stateRevision;
     private PluginCall activeClipCall;
     private final Set<File> frameDirectories = new HashSet<>();
+    private final Set<File> retiredFrameDirectories = new HashSet<>();
     private static final class Outbound {
         final Message message;
         final Runnable delivered;
-        Outbound(Message message, Runnable delivered) { this.message = message; this.delivered = delivered; }
+        final int generation;
+        Outbound(Message message, Runnable delivered) { this(message, delivered, -1); }
+        Outbound(Message message, Runnable delivered, int generation) { this.message = message; this.delivered = delivered; this.generation = generation; }
     }
     private final Receiver receiver = message -> {
         if (message.getData() != null) main.post(() -> receive(new String(message.getData(), StandardCharsets.UTF_8)));
@@ -209,7 +212,7 @@ public class HuaweiWatchPlugin extends Plugin {
                 String id = UUID.randomUUID().toString();
                 JSONObject snapshot = new JSONObject(call.getString("json", ""));
                 snapshots.put(id, call);
-                enqueue(stamped(new JSONObject().put("kind", "snapshot").put("snapshot", snapshot)), id);
+                enqueue(stamped(new JSONObject().put("kind", "snapshot").put("snapshot", snapshot)), id, true);
                 main.postDelayed(() -> { PluginCall pending = snapshots.remove(id); if (pending != null) pending.reject("Watch snapshot acknowledgement timed out"); }, 60000);
             } catch (Exception e) { call.reject("Cannot send snapshot", e); }
         });
@@ -242,19 +245,39 @@ public class HuaweiWatchPlugin extends Plugin {
                 for (int i = 0; i < files.size(); i++) {
                     final boolean last = i == files.size() - 1;
                     outgoing.add(new Outbound(new Message.Builder().setPayload(files.get(i)).build(), () -> {
+                        if (generation != clipGeneration) return;
                         if (!last) return;
                         deleteFrames(directory);
                         try { sendClipAt(call, clips, index + 1, generation); } catch (Exception e) { call.reject("Cannot transfer animation", e); }
-                    }));
+                    }, generation));
                 }
                 pump();
             } catch (Exception e) { deleteFrames(directory); call.reject("Cannot transfer animation", e); }
         }, e -> { deleteFrames(directory); call.reject("Cannot decode animation: " + e.getMessage(), e); });
     }
     private void deleteFrames(File directory) {
-        File[] files = directory.listFiles(); if (files != null) for (File f : files) f.delete(); directory.delete(); frameDirectories.remove(directory);
+        File[] files = directory.listFiles(); if (files != null) for (File f : files) f.delete(); directory.delete(); frameDirectories.remove(directory); retiredFrameDirectories.remove(directory);
     }
-    @PluginMethod public void dropClips(PluginCall call) { main.post(() -> { clipGeneration++; call.resolve(); }); }
+    private void cancelClips() {
+        clipGeneration++;
+        retiredFrameDirectories.addAll(frameDirectories);
+        WatchSendQueue.removePending(outgoing, packet -> packet.generation >= 0, sending);
+        if (activeClipCall != null) { activeClipCall.reject("Animation transfer cancelled"); activeClipCall = null; }
+        if (!sending || outgoing.isEmpty() || outgoing.peek().generation < 0)
+            for (File dir : new ArrayList<>(retiredFrameDirectories)) deleteFrames(dir);
+    }
+    @PluginMethod public void dropClips(PluginCall call) { main.post(() -> { cancelClips(); call.resolve(); }); }
+    @PluginMethod public void endWorkout(PluginCall call) {
+        main.post(() -> {
+            if (device == null || !installed) { call.reject("Watch not connected"); return; }
+            try {
+                cancelClips();
+                enqueue(stamped(new JSONObject().put("kind", "workoutEnd").put("wid", call.getString("wid", ""))
+                        .put("discard", call.getBoolean("discard", false))), UUID.randomUUID().toString(), true);
+                JSObject out = new JSObject(); out.put("queued", true); call.resolve(out);
+            } catch (Exception e) { call.reject("Cannot end watch workout", e); }
+        });
+    }
     @PluginMethod public void openOnWatch(PluginCall call) {
         main.post(() -> {
             if (device == null || !device.isConnected() || !receiverRegistered) { call.reject("Watch not connected"); return; }
@@ -288,7 +311,7 @@ public class HuaweiWatchPlugin extends Plugin {
         int n = (text.length() + 599) / 600;
         List<Outbound> packets = new ArrayList<>();
         for (int i = 0; i < n; i++) packets.add(new Outbound(new Message.Builder().setPayload(new JSONObject().put("v", 1).put("id", id).put("i", i).put("n", n)
-                .put("data", text.substring(i * 600, Math.min(text.length(), (i + 1) * 600))).toString().getBytes(StandardCharsets.UTF_8)).build(), null));
+                .put("data", text.substring(i * 600, Math.min(text.length(), (i + 1) * 600))).toString().getBytes(StandardCharsets.UTF_8)).build(), null, payload.optString("kind").equals("clip") ? clipGeneration : -1));
         if (priority) WatchSendQueue.prioritize(outgoing, packets, sending); else outgoing.addAll(packets);
         pump();
     }
@@ -300,7 +323,12 @@ public class HuaweiWatchPlugin extends Plugin {
         final boolean[] settled = {false};
         java.util.function.Consumer<Boolean> end = ok -> main.post(() -> {
             if (settled[0]) return; settled[0] = true; sending = false;
-            if (ok) { outgoing.poll(); if (packet.delivered != null) packet.delivered.run(); pump(); } else { outgoing.clear(); for (File dir : new ArrayList<>(frameDirectories)) deleteFrames(dir); if (activeClipCall != null) { activeClipCall.reject("Animation transport interrupted"); activeClipCall = null; clipGeneration++; } installed = false; notifyListeners("watchState", link()); }
+            if (ok) {
+                outgoing.poll();
+                if (packet.generation >= 0 && packet.generation != clipGeneration) { for (File dir : new ArrayList<>(retiredFrameDirectories)) deleteFrames(dir); }
+                else if (packet.delivered != null) packet.delivered.run();
+                pump();
+            } else { outgoing.clear(); for (File dir : new ArrayList<>(frameDirectories)) deleteFrames(dir); if (activeClipCall != null) { activeClipCall.reject("Animation transport interrupted"); activeClipCall = null; clipGeneration++; } installed = false; notifyListeners("watchState", link()); }
         });
         main.postDelayed(() -> { if (!settled[0]) { communicationError = "Wear Engine send timed out"; end.accept(false); } }, 10000);
         client.send(device, message, new SendCallback() {

@@ -9,7 +9,7 @@ export function bundleShape(source) {
   const shape = { names: Object.keys(options).sort(), data: options.data, style: options.styleSheet, words: [] }
   if (options.words) for (const lang of ['en', 'zh-Hans', 'zh-Hant', 'pt-PT', 'pt-BR', 'es', 'fr', 'de', 'it', 'ru', 'uk', 'pl']) shape.words.push(options.words(lang))
   if (options.restView) {
-    const page = { ...options.data, words: { next: 'Next: %@, set %lld' }, app: {}, picked: -1, showNext: true }
+    const page = { ...options.data, words: { next: 'Next: %@, set %lld' }, app: { drawRest() {} }, picked: -1, showNext: true }
     options.restView.call(page, { workout: { rest: { paused: true, left: 75, total: 90 }, entries: [], restSec: 90 }, entryIndex: 0, settings: {}, skipped: [] })
     shape.rest = { digits: page.digits, paused: page.restPaused, percent: page.ringPercent }
   }

@@ -113,12 +113,12 @@ test('starting a routine clears the set picked in the previous one', t => {
   assert.equal(f.vm.picked, -1)
   assert.equal(f.vm.screen, 'weigh')
 })
-test('the lock screen only shows a clock while a rest or hold runs', t => {
-  const f = mount(t)
-  f.app.change(s => { s.touchLocked = true })
-  assert.equal(f.vm.lockDigits, '')
-  f.app.change(s => { s.workout = { id: 'w', name: 'Training', start: 1000, restSec: 90, rest: { endsAt: 70000 }, entries: [{ id: 'a', name: 'a', mode: 'reps', sets: [{ w: 20, r: 8, done: false }] }] } })
-  assert.match(f.vm.lockDigits, /^\d+:\d\d$/)
+test('a persisted legacy touch lock does not block training after the feature is removed', t => {
+  const state = savedState(); state.touchLocked = true
+  const f = mount(t, state)
+  assert.equal(f.app.state.touchLocked, undefined)
+  f.vm.done()
+  assert.equal(f.stored.workout.entries[0].sets[0].done, true)
 })
 
 test('a per-side set reloads its own numbers when the side changes', t => {

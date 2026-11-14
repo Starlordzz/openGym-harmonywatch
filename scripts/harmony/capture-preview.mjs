@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url'
 const args = process.argv.slice(2)
 const option = name => { const i = args.indexOf(name); return i < 0 ? null : args[i + 1] }
 if (args.includes('--help')) {
-  console.log('Windows Node: capture-preview.mjs --deveco <DevEco directory> [--project <Lite project>] [--bundle <compiled MainAbility or .demo>] [--out <capture directory>]')
+  console.log('Windows Node: capture-preview.mjs --deveco <DevEco directory> [--project <Lite project>] [--bundle <compiled MainAbility or .demo>] [--out <capture directory>] [--duration <3500–30000 ms>]')
   process.exit(0)
 }
 if (process.platform !== 'win32') throw Error('Run with Windows Node (DevEco tools/node/node.exe), including when called from WSL')
@@ -84,7 +84,7 @@ try {
       ws.onerror = () => { if (!finished) retry = setTimeout(connect, 100) }
     }
     retry = setTimeout(connect, 25)
-    deadline = setTimeout(resolve, 3500)
+    deadline = setTimeout(resolve, Math.max(3500, Math.min(30000, Number(option('--duration')) || 3500)))
   })
 } finally {
   cleanup()

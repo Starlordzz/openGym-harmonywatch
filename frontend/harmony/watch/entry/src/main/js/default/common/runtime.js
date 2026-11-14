@@ -8,11 +8,12 @@ import peer from './peer.js'
 import { waitForSdk } from './sdk-ready.js'
 import { createRuntime } from './controller.js'
 import { stateStorage } from './state-storage.js'
+import { fileCleaner } from './file-cleaner.js'
 
 export function runtime(changed, failure) {
   var client = new P2pClient()
   return createRuntime({ ready: function(done, fail) { return waitForSdk(client, setTimeout, done, fail, clearTimeout) }, storage: stateStorage(storage, file), vibrator: vibrator, sensor: sensor, brightness: brightness,
-    remove: function(uri) { file.delete({ uri: uri, fail: function() {} }) },
+    remove: fileCleaner(file, setTimeout),
     client: client, peer: peer, Message: Message, Builder: Builder,
     setTimeout: setTimeout, clearTimeout: clearTimeout, setInterval: setInterval, clearInterval: clearInterval }, changed, failure)
 }
