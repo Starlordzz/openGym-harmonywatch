@@ -4,7 +4,7 @@ import { resolve, join, dirname } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const source = join(root, 'frontend/ios/App/Watch')
-const keys = { lock: 'Lock', today: 'Today', done: 'Done', warmup: 'Warm-up', reps: 'Reps', rest: 'Rest', skip: 'Skip',
+const keys = { today: 'Today', done: 'Done', warmup: 'Warm-up', reps: 'Reps', rest: 'Rest', skip: 'Skip',
   finish: 'Finish workout', save: 'Finish and save', discard: 'Discard workout', resume: 'Continue workout', cancel: 'Cancel',
   left: 'Left', right: 'Right', bodyweight: 'Bodyweight', weight: 'Weight', sets: 'Sets', volume: 'Volume', time: 'Time',
   skipSet: 'Skip set', records: 'Personal records', saveStart: 'Save & start workout', noWeight: 'Start without weighing in',
@@ -21,7 +21,6 @@ const keys = { lock: 'Lock', today: 'Today', done: 'Done', warmup: 'Warm-up', re
 const phones = { en: 'phone', 'zh-Hans': '手机', 'zh-Hant': '手機', de: 'Smartphone', fr: 'téléphone',
   es: 'móvil', it: 'telefono', pt: 'telemóvel', 'pt-PT': 'telemóvel', 'pt-BR': 'celular', ru: 'телефоне', uk: 'телефоні',
   ar: 'الهاتف', ko: '휴대전화', hi: 'फ़ोन', bn: 'ফোন', hu: 'telefon', pl: 'telefon', th: 'โทรศัพท์', tr: 'telefon' }
-const unlock = { en: 'Hold to unlock', de: 'Zum Entsperren gedrückt halten', fr: 'Maintenir pour déverrouiller', es: 'Mantén pulsado para desbloquear', it: 'Tieni premuto per sbloccare', 'pt-PT': 'Mantenha premido para desbloquear', 'pt-BR': 'Toque e segure para desbloquear', ru: 'Удерживайте для разблокировки', uk: 'Утримуйте для розблокування', ar: 'اضغط مطولاً لإلغاء القفل', ko: '길게 눌러 잠금 해제', hi: 'अनलॉक करने के लिए दबाकर रखें', bn: 'আনলক করতে চেপে ধরে রাখুন', hu: 'Tartsa nyomva a feloldáshoz', pl: 'Przytrzymaj, aby odblokować', th: 'กดค้างเพื่อปลดล็อก', tr: 'Kilidi açmak için basılı tutun', 'zh-Hans': '长按解锁', 'zh-Hant': '長按解鎖' }
 // The watch ships 12 of the Watch app's 19 languages: the device refuses a JS file over 48 KB and
 // every pack costs about 1.3 KB in app.js. Arabic is out (Lite has no right-to-left layout), and
 // Bengali, Hungarian, Thai, Turkish, Korean and Hindi fall back to English. Pass --langs=… to change.
@@ -38,12 +37,13 @@ for (const dir of (await readdir(source)).filter(v => v.endsWith('.lproj') && (!
   for (const m of raw.matchAll(/^\s*("(?:[^"\\]|\\.)*")\s*=\s*("(?:[^"\\]|\\.)*")\s*;/gm)) strings[JSON.parse(m[1])] = JSON.parse(m[2])
   packs[lang] = Object.fromEntries(Object.entries(keys).map(([alias, key]) => [alias, (strings[key] || key).replaceAll('iPhone', phones[lang] || 'phone')]))
 }
-for (const lang of Object.keys(packs)) packs[lang].holdUnlock = unlock[lang] || unlock.en
 for (const [lang, pack] of Object.entries(packs)) {
   const name = { 'zh-Hans': 'zh', 'zh-Hant': 'zh-TW', 'pt-PT': 'pt' }[lang] || lang
   const phone = lang === 'en' ? {} : (await import(pathToFileURL(join(root, 'frontend/src/locales', name + '.js')))).default
-  for (const [alias, key] of Object.entries({ on: 'On', off: 'Off', pause: 'Pause', resumeRest: 'Resume' })) pack[alias] = phone[key] || key
+  for (const [alias, key] of Object.entries({ on: 'On', off: 'Off', pause: 'Pause', resumeRest: 'Resume', addSet: 'Add set', noData: 'No data yet' })) pack[alias] = phone[key] || key
 }
+const unavailable = { en: 'Unavailable', 'zh-Hans': '不可用', 'zh-Hant': '無法使用', de: 'Nicht verfügbar', fr: 'Indisponible', es: 'No disponible', it: 'Non disponibile', 'pt-PT': 'Indisponível', 'pt-BR': 'Indisponível', ru: 'Недоступно', uk: 'Недоступно', pl: 'Niedostępne' }
+for (const lang of Object.keys(packs)) packs[lang].unavailable = unavailable[lang] || unavailable.en
 const swipe = { en: 'Swipe to choose a plan', 'zh-Hans': '上下滑动选择计划', 'zh-Hant': '上下滑動選擇計劃', de: 'Wischen: Plan wählen', fr: 'Balayez pour choisir', es: 'Desliza para elegir', it: 'Scorri per scegliere', 'pt-PT': 'Deslize para escolher', 'pt-BR': 'Deslize para escolher', ru: 'Листайте планы', uk: 'Гортайте плани', pl: 'Przesuń, wybierz plan' }
 for (const lang of Object.keys(packs)) packs[lang].swipe = swipe[lang] || swipe.en
 // Positional packs: the key names are stored once, not once per language (the page bundle and the

@@ -1,0 +1,32 @@
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import { mount } from './helpers/watch.js'
+import { fileCleaner } from '../watch/entry/src/main/js/default/common/file-cleaner.js'
+
+test('heart feedback shows off, measuring, real bpm, stale data and unavailable on training/rest screens', t => {
+  const f = mount(t)
+  assert.match(f.vm.hr, /关/)
+  f.vm.toggleSensor()
+  assert.match(f.vm.hr, /测量/)
+  f.sampleHeart(128); f.time(11000); f.vm.tickClock()
+  assert.match(f.vm.hr, /128 bpm/)
+  f.vm.done()
+  assert.equal(f.vm.screen, 'rest')
+  assert.match(f.vm.hr, /128 bpm/)
+  f.time(30000); f.vm.tickClock()
+  assert.match(f.vm.hr, /暂无/)
+  f.failHeart()
+  assert.match(f.vm.hr, /不可用/)
+})
+test('animation cleanup waits for each native delete callback and spaces subsequent requests', () => {
+  const requests = [], tasks = []
+  const remove = fileCleaner({ delete(o) { requests.push(o) } }, fn => tasks.push(fn))
+  remove('first'); remove('second')
+  assert.equal(requests.length, 1)
+  requests[0].success()
+  assert.equal(requests.length, 1)
+  tasks.shift()()
+  assert.equal(requests[1].uri, 'second')
+  requests[1].fail(); tasks.shift()()
+  assert.equal(requests.length, 2)
+})

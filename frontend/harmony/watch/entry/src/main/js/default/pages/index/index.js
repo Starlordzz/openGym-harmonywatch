@@ -1,6 +1,7 @@
 import { fill, formatNumber, numberFont, numberWidth, clock, effortName, effortPosition, effortValue, effortColor, effortStart } from '../../common/format.js'
 import { tagsOf, numbers, dots, progress, setsOf, summaryStats } from '../../common/view.js'
 import { setIndex, sideUp } from '../../common/model.js'
+import { addSet } from '../../common/add-set.js'
 
 // One page, one state at a time: the same precedence as the Apple Watch app's RootView. The state,
 // the radio and every mutation live in app.js (getApp()); this file only draws and dispatches.
@@ -8,13 +9,13 @@ export default {
   data: { words: {}, title: 'openGym', line: '正在读取记录', screen: 'loading', error: '', pending: '', offline: '',
     restPaused: false, sensorOn: false, routines: [], todayName: '', others: [], idleTitle: '', idleHint: '',
     bwWhole: '70', bwTenth: '0', bwWholeColor: '#30d158', bwTenthColor: '#ffffff', bwWholeBg: '#262626', bwTenthBg: '#000000', unit: 'kg',
-    remaining: 3, ringPercent: 100, ringColor: '#30d158', digits: '3', restRing: true, nextText: '', holdName: '',
+    remaining: 3, ringPercent: 100, digits: '3', restRing: true, nextText: '', holdName: '',
     pageNo: 1, pageCount: 1, exName: '', extras: '', hr: '', clipSrc: '', warmup: false, left: false, right: false, superset: false,
     cardio: false, timed: false, bodyweight: false, weight: '0', added: '', reps: '0', seconds: '30', weightFont: 68, repsFont: 68, secondsFont: 84, weightWidth: 76, secondsWidth: 94, effortName: '', effortText: '–',
-    effortColor: '#ffffff', last: '', dots: [], noSet: false, noSetText: '', noSetIcon: '', hrWaiting: '', hrWanted: true,
+    effortColor: '#ffffff', last: '', dots: [], noSet: false, noSetText: '', noSetIcon: '', hrWanted: true,
     editField: '', editTitle: '', editValue: '0', editSuffix: '', alarmOn: false,
     workoutName: '', setsLine: '', summaryName: '', savedTitle: '', stats: [], records: [],
-    debugLines: [], lockDigits: '', touchLocked: false, confirm: false, skipConfirm: false, asking: false },
+    debugLines: [], confirm: false, skipConfirm: false, asking: false },
   onInit() {
     this.visible = true
     this.app = getApp()
@@ -99,13 +100,14 @@ export default {
       var src = page.screen === 'exercise' && e ? page.app.clipFrame(e.id, Date.now()) : ''
       if (src !== page.clipSrc) page.clipSrc = src
     }, 250)
+    this.motionClock = setInterval(function() { if (page.visible && !page.dead && page.screen === 'rest' && page.session && page.session.workout) page.restView(page.session) }, 100)
     this.clock = setInterval(function() { if (!page.dead && page.visible) page.tickClock() }, 1000)
     try { if (!this.crownWatching && typeof setMonitorForCrownEvents === 'function') {
       setMonitorForCrownEvents(function(evt) { return page.crown(evt) }); this.crownWatching = true
     } } catch (e) {}
     if (this.session) this.tickClock()
   },
-  stopClocks() { clearInterval(this.animationClock); clearInterval(this.clock) },
+  stopClocks() { clearInterval(this.animationClock); clearInterval(this.motionClock); clearInterval(this.clock) },
 
   // ---- state → screen -------------------------------------------------------------------------
   sync() {
@@ -118,8 +120,8 @@ export default {
     this.pending = s.outbox.length ? this.words.savedLater : ''
     // Apple's rule: what is queued is only "offline" while the phone is not answering.
     this.offline = s.outbox.length && s.online === false ? this.words.savedLater : ''
-    this.touchLocked = !!s.touchLocked && !!s.workout
     if (!s.workout) {
+      this.clipSrc = ''; this.workoutId = ''
       this.ackRest()
       if (this.sensing) this.app.heartStop()
       this.sensing = false
@@ -141,9 +143,9 @@ export default {
     var r = s.workout.rest, restEnd = r && (r.paused || r.endsAt > now)
     this.screen = s.hold ? 'hold' : restEnd ? 'rest' : 'exercise'
     if (!this.exerciseView(s, now)) return
+    this.hr = this.heartLabel(s)
     if (this.screen === 'rest') this.restView(s)
     else if (this.screen === 'hold' && s.hold) this.holdView(s.hold, now)
-    this.lockDigits = this.screen === 'rest' || this.screen === 'hold' ? this.digits : ''
   },
   idleView(s) {
     this.screen = 'idle'
@@ -192,29 +194,30 @@ export default {
     this.last = !s.settings.show || s.settings.show.last !== false ? (e.last ? fill(this.words.last, [e.last]) : '') : ''
     this.dots = dots(e, si, s.skipped, ei)
     this.extras = s.settings.show && s.settings.show.elapsed ? clock((now - s.workout.start) / 1000) : ''
-    var h = this.app.heartRate(this.lastTick || s.workout.start)
     this.hrWanted = !s.settings.show || s.settings.show.hr !== false
-    this.hr = h && this.hrWanted ? String(h.avg) : ''
-    this.hrWaiting = !h && this.hrWanted && s.sensorEnabled && this.sensing ? this.words.measuring : ''
+    this.hr = this.heartLabel(s)
     this.showNext = !s.settings.show || s.settings.show.next !== false
     return true
   },
   restView(s) {
     var r = s.workout.rest, left = r.paused ? r.left : (r.endsAt - Date.now()) / 1000, total = r.total || s.restDurationSec || s.workout.restSec
     this.restPaused = !!r.paused
-    this.ringColor = '#30d158'
     this.digits = clock(left)
-    this.ringPercent = Math.min(100, Math.max(0, Math.round(100 * left / Math.max(1, total))))
+    this.ringPercent = Math.min(100, Math.max(0, 100 * left / Math.max(1, total)))
     this.restRing = !s.settings.show || s.settings.show.rest !== 'plain'
     var e = s.workout.entries[s.entryIndex], si = setIndex(s, s.entryIndex, this.picked)
     this.nextText = this.showNext && e && si >= 0 ? fill(this.words.next, [e.name, si + 1]) : ''
+    if (this.restRing) this.app.drawRest(this, this.ringPercent)
+  },
+  heartLabel(s) {
+    var words = this.words, h = this.app.heartRate(0)
+    return words.heart + ': ' + (!s.sensorEnabled ? words.off : h ? h.current + ' bpm' : words[this.app.heartState()])
   },
   holdView(hold, now) {
     var s = this.session, e = s.workout.entries[hold.ei]
     this.holdName = e ? e.name : ''
     this.digits = clock((hold.endsAt - now) / 1000)
     this.ringPercent = Math.min(100, Math.max(0, Math.round(100 * (hold.endsAt - now) / Math.max(1000, hold.endsAt - hold.start))))
-    this.ringColor = '#64d2ff'
   },
   finishView(s) {
     this.screen = 'finish'
@@ -246,6 +249,7 @@ export default {
       return
     }
     if (!s.workout) return
+    this.hr = this.heartLabel(s)
     var ends = s.hold ? s.hold.endsAt : s.workout.rest && !s.workout.rest.paused && s.workout.rest.endsAt
     if (ends && ends <= now) {
       if (s.hold) { this.complete(true); return }
@@ -263,18 +267,13 @@ export default {
     else if (this.screen === 'hold' && s.hold) this.holdView(s.hold, now)
     else if (this.screen === 'exercise' || this.screen === 'edit') {
       this.extras = s.settings.show && s.settings.show.elapsed ? clock((now - s.workout.start) / 1000) : ''
-      var h = this.app.heartRate(this.lastTick || s.workout.start)
-      this.hr = h && this.hrWanted ? String(h.avg) : ''
-      this.hrWaiting = !h && this.hrWanted && s.sensorEnabled && this.sensing ? this.words.measuring : ''
     }
-    this.lockDigits = this.screen === 'rest' || this.screen === 'hold' ? this.digits : ''
   },
 
   // ---- idle -----------------------------------------------------------------------------------
   startToday() { if (this.today) this.startRoutine(this.today) },
   startOther(i) { if (this.others[i]) this.startRoutine(this.others[i]) },
   startRoutine(routine) {
-    if (this.touchLocked) return
     this.picked = -1
     this.choice = routine
     this.bw = this.session.settings.lastBw || (this.unit === 'lb' ? 160 : 70)
@@ -332,7 +331,7 @@ export default {
   // ---- editing a number -----------------------------------------------------------------------
   edit(field) {
     var s = this.session
-    if (this.touchLocked || !s || !s.workout || !s.workout.entries[this.ei]) return
+    if (!s || !s.workout || !s.workout.entries[this.ei]) return
     var e = s.workout.entries[this.ei]
     if (!this.live) this.live = { weight: Number(this.weight) || 0, reps: Number(this.reps) || 0, seconds: Number(this.seconds) || 30 }
     this.editField = field
@@ -356,14 +355,14 @@ export default {
 
   // ---- a set ----------------------------------------------------------------------------------
   done() {
-    if (this.touchLocked || !this.session || !this.session.workout) return
+    if (!this.session || !this.session.workout) return
     if (this.timed) {
       var seconds = Number(this.seconds) || 30
       this.app.startHold(this.ei, this.si, { w: Number(this.weight) || 0, sec: seconds }, seconds * 1000)
     } else this.complete()
   },
   complete(automatic) {
-    if (!this.session || this.touchLocked && automatic !== true) return
+    if (!this.session) return
     var s = this.session, hold = s.hold
     var values = this.cardio ? {} : { w: Number(this.weight) || 0, r: Number(this.reps) || 0 }
     var now = hold && automatic === true ? Math.min(Date.now(), hold.endsAt) : Date.now()
@@ -377,12 +376,12 @@ export default {
     var completed = this.app.tickSet(ei, si, values, now)
     if (completed) { this.lastTick = Date.now(); this.app.vibrate(); this.effort = null }
   },
-  askSkip() { if (!this.touchLocked && !this.noSet && this.si >= 0) this.skipConfirm = true },
-  skipConfirmed() { this.skipConfirm = false; if (!this.touchLocked && !this.noSet && this.si >= 0) this.app.skipSet(this.ei, this.si) },
+  askSkip() { if (!this.noSet && this.si >= 0) this.skipConfirm = true },
+  skipConfirmed() { this.skipConfirm = false; if (!this.noSet && this.si >= 0) this.app.skipSet(this.ei, this.si) },
   cancelSkip() { this.skipConfirm = false },
-  pickDot(i) { if (this.touchLocked) return; this.ackRest(); this.picked = i; this.screen = 'exercise'; this.sync() },
+  pickDot(i) { this.ackRest(); this.picked = i; this.screen = 'exercise'; this.sync() },
   onSwipe(evt) {
-    if (this.touchLocked || !this.session || !this.session.workout || typeof this.ei !== 'number') return
+    if (!this.session || !this.session.workout || typeof this.ei !== 'number') return
     var dir = evt && evt.direction
     var ei = this.ei + (dir === 'down' || dir === 'right' ? -1 : 1)
     if (ei < 0 || ei >= this.session.workout.entries.length) return
@@ -417,15 +416,15 @@ export default {
     this.alarmPulses = []
     if (this.alarmTimer) { clearTimeout(this.alarmTimer); this.alarmTimer = null }
   },
-  restMore() { if (!this.touchLocked) this.app.restMore(15000) },
-  restLess() { if (!this.touchLocked) this.app.restMore(-15000) },
-  restPause() { if (!this.touchLocked) this.app.restMore(0, true) },
-  restSkip() { if (!this.touchLocked) this.app.closeRestAt(Date.now()) },
+  restMore() { this.app.restMore(15000) },
+  restLess() { this.app.restMore(-15000) },
+  restPause() { this.app.restMore(0, true) },
+  restSkip() { this.app.closeRestAt(Date.now()) },
 
   // ---- finish ---------------------------------------------------------------------------------
-  finishPage() { if (this.touchLocked || !this.session || !this.session.workout) return; this.manualFinish = true; this.finishView(this.session); this.screen = 'finish' },
-  save() { if (this.touchLocked || !this.session || !this.session.workout) return; this.manualFinish = false; this.screen = 'summary'; this.app.finishWorkout(Date.now(), false) },
-  discard() { if (this.touchLocked || !this.session || !this.session.workout) return; this.confirm = true },
+  finishPage() { if (!this.session || !this.session.workout) return; this.manualFinish = true; this.finishView(this.session); this.screen = 'finish' },
+  save() { if (!this.session || !this.session.workout) return; this.manualFinish = false; this.screen = 'summary'; this.app.finishWorkout(Date.now(), false) },
+  discard() { if (!this.session || !this.session.workout) return; this.confirm = true },
   confirmDiscard() { this.confirm = false; this.screen = 'idle'; this.app.finishWorkout(Date.now(), true) },
   cancelDiscard() { this.confirm = false; this.finishView(this.session); this.screen = 'finish' },
   resume() { this.manualFinish = false; this.confirm = false; this.screen = 'exercise'; this.sync() },
@@ -435,9 +434,12 @@ export default {
   keepGoing() { this.asking = false; this.app.snooze() },
   askFinish() { this.asking = false; this.finishPage() },
 
-  // ---- lock -----------------------------------------------------------------------------------
-  lockPage() { if (this.session.workout) this.app.lock(true) },
-  unlockPage() { this.app.lock(false) },
+  addSet() {
+    if (!this.session || !this.session.workout) return
+    this.picked = -1; this.manualFinish = false
+    var ei = this.ei, app = this.app
+    app.change(function(s) { addSet(s, ei, Date.now(), app.recordEvent) })
+  },
   // The idle screen is live before the first state arrives, so a tap can land with no session yet.
   // app.sensor would be refused there anyway: writes wait for the storage read to settle.
   toggleSensor() { if (this.session) this.app.sensor(!this.session.sensorEnabled) }

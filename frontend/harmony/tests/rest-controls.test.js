@@ -2,6 +2,18 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { mount, copy } from './helpers/watch.js'
 
+test('rest ring advances between second ticks while its numeric countdown keeps whole seconds', t => {
+  const f = mount(t)
+  f.vm.done(); f.vm.onShow()
+  const before = f.vm.ringPercent, digits = f.vm.digits
+  f.time(10100)
+  const frame = f.intervals.find(i => i.active && i.ms <= 100)
+  assert.ok(frame, 'visible countdown needs an animation-rate clock')
+  frame.fn()
+  assert.ok(f.vm.ringPercent < before)
+  assert.equal(f.vm.digits, digits)
+})
+
 test('watch +/-15 and pause/resume survive clock time and emit durable absolute state', t => {
   const f = mount(t, undefined, { radio: true })
   f.vm.done(); const original = f.app.state.workout.rest.endsAt

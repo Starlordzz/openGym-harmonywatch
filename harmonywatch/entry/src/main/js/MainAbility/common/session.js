@@ -9,6 +9,7 @@ function copy(v) { return JSON.parse(JSON.stringify(v)) }
 export function restoreState(value) {
   if (!Array.isArray(value.outbox)) throw Error('Invalid state')
   var s = Object.assign(initialState(), value)
+  delete s.touchLocked
   // Old keys omitted the entry index. Recover pending events from their recorded entryIdx;
   // an ambiguous old skip belongs only to its first occurrence, never every duplicate.
   if (s.workout) s.workout.entries.forEach(function(e, ei) {
@@ -64,17 +65,22 @@ export function applySnapshot(state, snap) {
         if (s.summary) s.summary.endedOnPhone = true
         s.finishedHere.push(ended); s.finishedHere = s.finishedHere.slice(-5)
       }
-      s.workout = null; s.pending = {}; s.hold = null; s.restAfter = null; s.setStartedAt = null
+      s.workout = null; s.pending = {}; s.hold = null; s.restAfter = null; s.setStartedAt = null; s.additions = {}
     }
     return s
   }
   var same = s.workout && next.id === s.workout.id
   if (next.id === s.startedHere) s.startedHere = null
   if (!same && unconfirmed) return s
-  if (!same) { s.pending = {}; s.skipped = []; s.entryIndex = next.cur || 0; s.hold = null; s.touchLocked = false; s.closedRestAt = 0 }
+  if (!same) { s.pending = {}; s.skipped = []; s.entryIndex = next.cur || 0; s.hold = null; s.closedRestAt = 0; s.additions = {} }
   if (same && s.outbox.some(function(e) { return e.type === 'restChange' })) next.rest = copy(s.workout.rest)
   if (same && next.rest && !next.rest.paused && next.rest.endsAt <= (s.closedRestAt || 0)) next.rest = null
   next.entries.forEach(function(e, ei) {
+    var addition = same && s.additions && s.additions[ei], old = same && s.workout.entries[ei]
+    if (addition && old && addition.id === e.id) {
+      if (e.sets.length >= addition.count) delete s.additions[ei]
+      else e.sets = e.sets.concat(copy(old.sets.slice(e.sets.length, addition.count)))
+    }
     e.sets.forEach(function(row, i) {
       var old = same && s.workout.entries[ei], prior = old && old.id === e.id && old.sets[i]
       if (prior && prior.done && (prior.at || 0) > (row.at || 0)) { row = copy(prior); e.sets[i] = row }
@@ -119,7 +125,7 @@ export function start(s, routine, at, bw) {
   var wid = 'fit-workout-' + at + '-' + (s.sequence + 1)
   s.workout = { id: wid, name: routine.name, unit: s.unit, start: at, cur: 0,
     restSec: s.restSec, entries: copy(routine.entries), rest: null, healthType: routine.healthType || null }
-  s.startedHere = wid; s.pending = {}; s.skipped = []; s.entryIndex = 0; s.hold = null; s.touchLocked = false; s.summary = null
+  s.startedHere = wid; s.pending = {}; s.skipped = []; s.entryIndex = 0; s.hold = null; s.summary = null; s.additions = {}
   s.restAfter = null; s.setStartedAt = at
   if (bw > 0 && bw < 700) event(s, 'weighIn', { w: Math.round(bw * 10) / 10 }, at)
   event(s, 'start', { wid: wid, routineIds: routine.routineIds }, at)
@@ -180,7 +186,7 @@ export function finish(s, at, discard) {
   s.summary = discard ? null : summary(s, at)
   event(s, discard ? 'discard' : 'finish', { wid: s.workout.id }, at)
   s.finishedHere.push(s.workout.id); s.finishedHere = s.finishedHere.slice(-5)
-  s.workout = null; s.pending = {}; s.skipped = []; s.startedHere = null; s.hold = null; s.touchLocked = false
+  s.workout = null; s.pending = {}; s.skipped = []; s.startedHere = null; s.hold = null
   s.restAfter = null; s.setStartedAt = null
 }
 export function acknowledge(s, ids) {

@@ -10,33 +10,25 @@
     <input class="wide accent" type="button" value="{{words.resume}}" onclick="ackRest" />
   </div>
 
-  <!-- touch lock: the only screen while it is on -->
-  <div class="screen" if="{{touchLocked && !alarmOn}}">
-    <text class="h2">{{words.lock}}</text>
-    <text class="note">{{title}}</text>
-    <text class="digits" if="{{!!lockDigits}}">{{lockDigits}}</text>
-    <input class="roundSmall" type="button" value="{{words.holdUnlock}}" onlongpress="unlockPage" />
-  </div>
-
   <!-- confirmations, one panel at a time (Lite has no dialogs) -->
-  <div class="screen" if="{{!alarmOn && !touchLocked && confirm}}">
+  <div class="screen" if="{{!alarmOn && confirm}}">
     <text class="h2">{{words.finishQ}}</text>
     <input class="wide accent" type="button" value="{{words.save}}" onclick="save" />
     <input class="wide" type="button" value="{{words.discard}}" onclick="confirmDiscard" />
     <input class="wide" type="button" value="{{words.cancel}}" onclick="cancelDiscard" />
   </div>
-  <div class="screen" if="{{!alarmOn && !touchLocked && !confirm && skipConfirm}}">
+  <div class="screen" if="{{!alarmOn && !confirm && skipConfirm}}">
     <text class="h2">{{words.skipQ}}</text>
     <input class="wide" type="button" value="{{words.skipSet}}" onclick="skipConfirmed" />
     <input class="wide" type="button" value="{{words.cancel}}" onclick="cancelSkip" />
   </div>
-  <div class="screen" if="{{!alarmOn && !touchLocked && !confirm && !skipConfirm && asking}}">
+  <div class="screen" if="{{!alarmOn && !confirm && !skipConfirm && asking}}">
     <text class="h2">{{words.allDoneQ}}</text>
     <input class="wide" type="button" value="{{words.resume}}" onclick="keepGoing" />
     <input class="wide" type="button" value="{{words.finish}}" onclick="askFinish" />
   </div>
 
-  <div class="body" if="{{!alarmOn && !error && !touchLocked && !confirm && !skipConfirm && !asking}}">
+  <div class="body" if="{{!alarmOn && !error && !confirm && !skipConfirm && !asking}}">
     <!-- loading -->
     <div class="screen" if="{{screen === 'loading'}}">
       <text class="logo">openGym</text>
@@ -106,7 +98,7 @@
       <div class="head">
         <text class="name">{{exName}}</text>
         <div class="headerStatus">
-          <div class="heartRow" if="{{!!hr || !!hrWaiting}}"><image class="heartIcon" src="/common/icons/heart.png" /><text class="heartText">{{hr || hrWaiting}}</text></div>
+          <text class="heartText" if="{{hrWanted}}" onclick="toggleSensor">{{hr}}</text>
           <image class="offlineIcon" src="/common/icons/offline.png" if="{{!!offline}}" />
         </div>
       </div>
@@ -156,7 +148,7 @@
         <div class="sideRail">
           <text class="pageCount">{{pageNo}} / {{pageCount}}</text>
           <div class="actionBtn" onclick="finishPage"><text class="actionText">{{words.finish}}</text></div>
-          <div class="actionBtn" onclick="lockPage"><text class="actionText">{{words.lock}}</text></div>
+          <div class="actionBtn" onclick="addSet"><text class="actionText">{{words.addSet}}</text></div>
         </div>
       </div>
       <div class="dots">
@@ -166,7 +158,7 @@
       </div>
       <div class="row" if="{{noSet}}">
         <input class="link" type="button" value="{{words.finish}}" onclick="finishPage" />
-        <input class="link" type="button" value="{{words.lock}}" onclick="lockPage" />
+        <input class="link" type="button" value="{{words.addSet}}" onclick="addSet" />
       </div>
     </div>
 
@@ -186,24 +178,25 @@
     </div>
 
     <!-- rest -->
-    <div class="screen" if="{{screen === 'rest'}}">
+    <div class="screen restScreen" if="{{screen === 'rest'}}">
       <stack class="ringWrap restWrap">
-        <progress class="ring restArc" type="arc" percent="{{ringPercent}}" if="{{restRing}}" />
+        <canvas ref="restArc" class="restArc" if="{{restRing}}"></canvas>
         <div class="ringText restText">
           <text class="ringCap">{{words.rest}}</text>
-          <text class="ringDigits">{{digits}}</text>
+          <text class="ringDigits restDigits">{{digits}}</text>
         </div>
       </stack>
-      <text class="statusNote">{{nextText}}</text>
-      <text class="statusNote" if="{{!!offline}}">{{offline}}</text>
-      <div class="row">
+      <text class="restNext">{{nextText}}</text>
+      <text class="restHeart" if="{{hrWanted}}" onclick="toggleSensor">{{hr}}</text>
+      <text class="restOffline" if="{{!!offline}}">{{offline}}</text>
+      <div class="row restRow">
         <input class="edgeBtn" type="button" value="-15s" onclick="restLess" />
         <input class="edgeBtn" type="button" value="+15s" onclick="restMore" />
         <input class="edgeBtn" type="button" value="{{restPaused ? words.resumeRest : words.pause}}" onclick="restPause" />
       </div>
-      <div class="row">
-        <input class="edgeBtn" type="button" value="{{words.skip}}" onclick="restSkip" />
-        <input class="edgeBtn" type="button" value="{{words.lock}}" onclick="lockPage" />
+      <div class="row restRow">
+        <input class="wide restSkip" type="button" value="{{words.skip}}" onclick="restSkip" />
+
       </div>
     </div>
 
@@ -219,7 +212,7 @@
       </stack>
       <div class="row">
         <image class="edgeBtn" src="/common/icons/button-stop.png" onclick="complete" />
-        <input class="edgeBtn" type="button" value="{{words.lock}}" onclick="lockPage" />
+
       </div>
     </div>
 
@@ -236,7 +229,7 @@
         <input class="wide half accent" type="button" value="{{words.save}}" onclick="save" />
         <input class="wide half" type="button" value="{{words.discard}}" onclick="discard" />
       </div>
-      <div class="row finishLinks"><input class="link" type="button" value="{{words.resume}}" onclick="resume" /><input class="link" type="button" value="{{words.lock}}" onclick="lockPage" /></div>
+      <div class="row finishLinks"><input class="link" type="button" value="{{words.resume}}" onclick="resume" /><input class="link" type="button" value="{{words.addSet}}" onclick="addSet" /></div>
     </div>
 
     <!-- saved -->

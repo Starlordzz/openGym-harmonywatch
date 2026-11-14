@@ -79,3 +79,5 @@ node --test
 - 代码沿用 **AGPL-3.0-or-later**，以 [LICENSE](LICENSE) 和 [NOTICE.md](NOTICE.md) 为准。本版本对应源码位于[当前仓库](https://github.com/Starlordzz/openGym-harmonywatch)，分发构建时须提供对应提交的源码和必要构建说明。
 - Gym visual 图片、动画独立授权，范围见[素材声明](catalogue/media/NOTICE.md)；华为 SDK 保留[原许可与来源说明](frontend/harmony/watch/entry/src/main/js/default/vendor/README.md)。
 - 密钥、密码、调试 Profile、用户训练数据和安装包留在本地；配置从已提交示例复制，凭据通过本机文件或环境变量提供。
+
+功能差异与验证状态见 [Apple Watch 与华为手表功能对比](docs/harmony/WATCH_FEATURE_COMPARISON_ZH.md)。

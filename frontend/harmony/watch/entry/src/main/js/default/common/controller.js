@@ -14,7 +14,7 @@ export function createRuntime(platform, changed, failure) {
   var state = initialState(), receive = assembler(), writing = false
   var boot = 'boot-' + Date.now() + '-' + Math.random().toString(16).slice(2)
   var remove = platform.remove || function() {}
-  var saves = [], queue = [], sending = false, timer, stopped = false, hr = [], heartOn = false, loaded = false, registered = false, registering = false
+  var saves = [], queue = [], sending = false, timer, stopped = false, hr = [], heartOn = false, heartSince = 0, loaded = false, registered = false, registering = false
   var sendTimer, retryTimer, readWatchdog, cancelReady, screenOn = false, lastSend = '-'
   /*f*/
   // U13 forensics, second stream: the app side outlives the page, so its events (SDK readiness,
@@ -141,12 +141,17 @@ export function createRuntime(platform, changed, failure) {
         }
       } else if (p.kind === 'helloRequest') {
         lastHello = 0; flush()
-      } else if (p.kind === 'snapshot') {
+      } else if (p.kind === 'snapshot' || p.kind === 'workoutEnd') {
         var before = state.workout, hadSummary = state.summary
+        if (p.kind === 'workoutEnd') {
+          if (!before || before.id !== p.wid) return
+          state.startedHere = null
+          p.snapshot = { v: 1, active: null, ready: state.ready, discarded: p.discard ? [p.wid] : [] }
+        }
         if (stale && before && p.snapshot.active && p.snapshot.active.id === before.id) p.snapshot.active.rest = before.rest
         var next = applySnapshot(state, p.snapshot)
-        if (!next.workout || before && next.workout.id !== before.id) clearClips(state, remove)
-        next.clips = state.clips || {}
+        var retired = !next.workout || before && next.workout.id !== before.id ? { clips: state.clips } : null
+        next.clips = retired ? {} : state.clips || {}
         state = next
         mergeHeart(state, before, hr, Date.now())
         if (state.summary && !hadSummary) {
@@ -154,6 +159,11 @@ export function createRuntime(platform, changed, failure) {
           if (hs) { state.summary.hrAvg = hs.avg; state.summary.hrMax = hs.max }
         }
         var received = state.workout && (!before || before.id !== state.workout.id) && state.workout.id
+        // Detach visible image and stop rest/heart UI before native file cleanup or slow writes.
+        if (retired) {
+          changed(state)
+          setTimeout(function() { clearClips(retired, remove) }, 1000)
+        }
         save(function() { if (received && state.workout && state.workout.id === received) buzz('long', true); send({ kind: 'snapshotAck', id: result.id }) })
       } else if (p.kind === 'clip') {
         if (clipPlan(state, p)) {
@@ -223,7 +233,7 @@ export function createRuntime(platform, changed, failure) {
     },
     heartStart: function() {
       if (stopped || heartOn) return
-      heartOn = true
+      heartOn = true; heartSince = now()
       try { sensor.subscribeHeartRate({ success: function(v) {
       if (stopped || !heartOn) return
       if (v.heartRate >= 25 && v.heartRate <= 250) hr.push({ at: now(), value: v.heartRate })
@@ -232,13 +242,16 @@ export function createRuntime(platform, changed, failure) {
       catch (e) { heartOn = false; report(e) }
     },
     heartStop: function(keep) { stopHeart(); if (!keep) hr = [] },
+    heartState: function() { return !heartOn ? 'unavailable' : now() - (hr.length ? hr[hr.length - 1].at : heartSince) > 15000 ? 'noData' : 'measuring' },
     samples: function() { return hr.slice() },
     heart: function(since) {
       var at = now(), values = hr.filter(function(v) { return v.at >= since && v.at <= at })
       if (!values.length) return null
       // Lite's sensor normally calls back every five seconds. Never label a stalled stream current.
       if (at - values[values.length - 1].at > 15000) return null
-      return stats(values, since, at)
+      var result = stats(values, since, at)
+      result.current = values[values.length - 1].value
+      return result
     },
     /*f*/
     // U13 forensics trace: a tiny second storage key, written on every mark so a freeze keeps the

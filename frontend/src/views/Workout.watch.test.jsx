@@ -40,6 +40,14 @@ afterEach(() => {
 })
 
 describe('a set ticked on the watch', () => {
+  it('appends sets to the requested absolute count once and uses the normal phone targets', () => {
+    const ev = { id: 'extra-set', type: 'addSet', wid: 'w-watch', exId: '0025', entryIdx: 0, count: 3 }
+    act(() => { applyEvents([ev, ev], () => useStore.getState()) })
+    expect(useStore.getState().S.active.entries[0].sets).toHaveLength(3)
+    expect(useStore.getState().S.active.entries[0].sets[2]).toMatchObject({ w: 60, r: 8, done: false })
+    act(() => { applyEvents([{ ...ev, id: 'retry-extra' }], () => useStore.getState()) })
+    expect(useStore.getState().S.active.entries[0].sets).toHaveLength(3)
+  })
   it('does not end the rest half a second before its shared deadline', () => {
     act(() => useUI.getState().startRest(90, 0))
     const endsAt = useUI.getState().timer.endsAt

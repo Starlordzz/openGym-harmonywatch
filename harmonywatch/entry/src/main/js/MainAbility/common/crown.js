@@ -2,7 +2,7 @@
 // Lock the crown for 450 ms after a step so one turn is one step, never two. No haptic here:
 // the platform only offers notification-style short/long buzzes, which feel wrong per detent.
 export function crown(page, evt) {
-  if (page.dead || !page.visible || page.touchLocked) return false
+  if (page.dead || !page.visible) return false
   var d = evt && evt.degree
   if (typeof d !== 'number' || !isFinite(d) || !d || Math.abs(d) > 360) return false
   var now = Date.now()
