@@ -44,6 +44,8 @@ for (const [lang, pack] of Object.entries(packs)) {
   const phone = lang === 'en' ? {} : (await import(pathToFileURL(join(root, 'frontend/src/locales', name + '.js')))).default
   for (const [alias, key] of Object.entries({ on: 'On', off: 'Off', pause: 'Pause', resumeRest: 'Resume' })) pack[alias] = phone[key] || key
 }
+const swipe = { en: 'Swipe to choose a plan', 'zh-Hans': '上下滑动选择计划', 'zh-Hant': '上下滑動選擇計劃', de: 'Wischen: Plan wählen', fr: 'Balayez pour choisir', es: 'Desliza para elegir', it: 'Scorri per scegliere', 'pt-PT': 'Deslize para escolher', 'pt-BR': 'Deslize para escolher', ru: 'Листайте планы', uk: 'Гортайте плани', pl: 'Przesuń, wybierz plan' }
+for (const lang of Object.keys(packs)) packs[lang].swipe = swipe[lang] || swipe.en
 // Positional packs: the key names are stored once, not once per language (the page bundle and the
 // app bundle are capped at 48 KB each by the device loader).
 const langs = Object.keys(packs)

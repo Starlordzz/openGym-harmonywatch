@@ -74,3 +74,6 @@ harmonywatch/watch-debug-identity.json
 /file_system/
 # Public progress and implementation docs; application materials stay local.
 !docs/HARMONY_REST_NOTIFICATIONS_ZH.md
+# Cloudflare fallback build (cloudflare/build.sh)
+/dist/
+.wrangler/

@@ -31,7 +31,7 @@ export async function buildNudgeCopy() {
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   const text = await buildNudgeCopy();
   if (process.argv.includes('--check')) {
-    const cur = fs.existsSync(OUT) ? fs.readFileSync(OUT, 'utf8') : '';
+    const cur = fs.existsSync(OUT) ? fs.readFileSync(OUT, 'utf8').replace(/\r\n/g, '\n') : '';
     if (cur !== text) { console.error('api/nudge-copy.js is out of date: run node scripts/build-nudge-copy.mjs'); process.exit(1); }
     console.log('api/nudge-copy.js is up to date.');
   } else {

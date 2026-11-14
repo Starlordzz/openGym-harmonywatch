@@ -32,4 +32,30 @@ README 改为 Android + 华为手表项目说明；圆表、方表等华为手�
 
 ## 上游与发布
 
-已获取 `DuarteSantos8/openGym` 的 `main`：`68dad18f8`，相对当前基线有 310 个上游提交。本轮改动先保存提交，再合并并重新验证；合并与最终 push 结果在此继续更新。
+已获取 `DuarteSantos8/openGym` 的 `main`：`68dad18f8`，相对当前基线 `5fdb229fe` 有 310 个上游提交。合并已完成，冲突 0 处，暂存 1851 个文件。
+
+合并后的修正：
+
+- 生成物与测试比较前统一换行符：`api/coach/prompts/*.md`、`nudge-copy.js`、`wrapped-copy.js` 在 CRLF 检出下不再误报过期；新增 `.gitattributes`（`* text=auto eol=lf`，SDK vendor 目录保留原始字节），使 Linux、WSL 与 Windows 检出的文本字节一致。
+- `frontend/vite.config.js` 显式声明 vitest 的 `include`（`src/**`、`scripts/**`）：`harmony/tests/` 是 `node:test` 套件，不再被 vitest 收集成无测试的失败文件。7862 项 vitest 全部保留，文件数由 674 降为 655，差额正好是 19 个 `node:test` 文件。
+- `frontend/src/lib/harmony-page.test.js` 的 mock 补齐 `keepScreenOn` 并在 `onInit` 后调用 `onShow`；`对应历史提交` 已将粗调步进改为固定 ±1（细调 `editFineBy(0.1)`），用例期望由 22 更正为 21。
+- 华为设置页 CSS 类由 `.hw-*` 改为 `.watch-*`，避免与 Halloween 主题的 `.hw-*` 前缀冲突。
+- `app-icons.mjs --check` 对文本产物按换行归一比较，PNG 仍逐字节比较；慢盘测试使用 30 s 超时与 6 个 vitest worker。
+
+合并后验证：服务端 804 项、手机界面 7862 项（655 个文件）、手表 130 项全部通过；`build-nudge-copy`、`build-wrapped-copy`、`build-coach-assets` 的 `--check` 均一致。
+
+手机 APK 使用 `HARMONY_ANDROID_ASSET_CACHE` 将 244 MB/13,281 个 Web 资源暂存到 WSL 缓存后构建，Gradle 34 分 5 秒、209 个任务，`BUILD SUCCESSFUL`。核对结果：包名 `host.msknet.opengym.phone`、versionCode 31、versionName 1.4.4、minSdk 24、targetSdk 36；23 项权限；v2 签名，调试证书 SHA-256 `f67feedf…eb48e1ae`；14048 个 zip 条目、12 个 dex，包含 HuaweiWatchPlugin 与 Wear Engine 类；包内无 keystore、身份 JSON、`.map` 或私钥标记。证据见 `harmonywatch/artifacts/BUILD_20261114_INTEGRATED.json` 与同名 `.log`。
+
+| 产物 | 大小 | SHA-256 | 状态 |
+|---|---|---|---|
+| `openGym-HuaweiWatch-merged-debug.apk` | 240,344,553 B | `e748bf42b9e4020aa968edba1b9c5948fa3e71c817a70a6b8c6b4460d77e84c5` | 构建并核对完成，未安装到手机 |
+
+本轮未执行 `git push`；推送前须完成敏感数据复核和提交。
+
+### 列表与心率说明补充（2026-11-14）
+
+用户反馈两行计划列表难以识别可滚动。已增加“上下滑动选择计划”提示和计划数量；列表高度保留下一项局部露出，指示可继续滚动。实际显示待安装复测。
+
+底部“心率”是训练期间的应用心率采集开关，开关状态显示为“心率：开 / 关”。开启后在训练中订阅手表心率传感器，关闭停止应用采集；当前心率值在训练页顶部显示。空闲页按钮显示开关状态，空闲期间不持续采集。
+
+界面仅保留功能名称、状态与操作提示；取消装饰箭头和装饰性文案。
