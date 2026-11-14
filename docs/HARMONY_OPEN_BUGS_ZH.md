@@ -226,3 +226,11 @@ Wear Engine DEVICE_MANAGER 与 NOTIFY 于 2026-11-13 获批。2026-11-14 用户�
 合并版手机 APK `openGym-HuaweiWatch-merged-debug.apk`（240,344,553 B，SHA-256 `e748bf42b9e4020aa968edba1b9c5948fa3e71c817a70a6b8c6b4460d77e84c5`）已构建；包名、versionCode 31、versionName 1.4.4、23 项权限、v2 签名、14048 个 zip 条目和包内无密钥/身份文件均已核对。构建与核对证据见 `harmonywatch/artifacts/BUILD_20261114_INTEGRATED.json`。
 
 该 APK 尚未安装到手机；B3–B7 的震动、黑屏、退表盘与卡顿，B8 的双端计时差异，B10 的双向休息控制，B11 的唤起与接收震动，B12 的列表与心率显示，仍以真机复测结果为准。
+
+### 合并版安装与桥接状态（2026-11-14 16:12）
+
+合并版 APK 已通过 ADB 覆盖安装：`versionCode 31`、`versionName 1.4.4`、`lastUpdateTime 16:12:27`。启动后读取应用桥接状态：
+
+`paired=true installed=true receiverRegistered=true managerGranted=true activated=true configured=true lastSendCode=207 lastPingCode=201 receivedPackets=3 watchVersion=1000000 communicationError=""`，设备 `HUAWEI WATCH FIT 5 Pro-A11`，`transport=huawei`。
+
+手表端按合并后源码重建并签名：`openGymFIT-merged-signed.hap`，685,185 B，SHA-256 `972ce55f2aa2d062f6a67e1b1627d5d0a21063f59da781cfa607c482d859b6fb`；app `47,564 / 49,152 B`、页面 `49,035 / 49,152 B`。已推送 `/sdcard/haps/` 并在设备上核对哈希一致。手表端覆盖安装后按上文复测步骤验证。
