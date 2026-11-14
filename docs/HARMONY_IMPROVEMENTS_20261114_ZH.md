@@ -2,14 +2,32 @@
 
 基于 Duarte Santos 的 [openGym](https://github.com/DuarteSantos8/openGym)；本版本为第三方华为手表 / HarmonyOS 适配，代码沿用 AGPL-3.0-or-later。
 
+## 2026-11-14 最新回归：合并版启动黑屏（B13）
+
+用户覆盖安装 `openGymFIT-merged-signed.hap` 后，打开应用立即黑屏，并回报 206。已覆盖恢复到 `openGymFIT-training-recovery-signed.hap`（与此前 training-fix 字节相同），用户确认可以打开；当前手表使用恢复包。
+
+原生 Lite 预览器已复现 `TypeError: wrong type of argument`。已定位：Terser 的默认语句压缩丢弃了顶层 IIFE 的完成值，压缩后 app/page 的求值结果由 ViewModel 对象变成 boolean；旧等价检查仅比较构造参数，漏掉加载器实际消费的返回值。
+
+修正为 `compress.expression=true`，并要求 bundle 求值结果等于刚创建的 ViewModel；新增回归已先失败、修正后通过。发布构建在预览器及配置可用时执行原生启动检查，失败即停止打包。官方选项说明见 [Terser expression](https://terser.org/docs/options/)。
+
+修正版手表 131 项通过；原生启动 2 帧、可见像素 3197、无 JS 异常。app 47,574 B、页面 49,045 B，均低于 49,152 B。手机 APK 继续使用已安装的合并版；修正版 `openGym-HuaweiWatch-boot-return-signed.hap` 已签名推送到 `/sdcard/haps/`，设备文件 SHA-256 与本机一致：`3b644308467bdc78dbcae23a8d00ba13319715d98b9038942423c6e4b19e3a8b`。实机启动与 206 恢复待确认，手机继续使用已安装的合并版 APK。证据：`harmonywatch/artifacts/BUILD_20261114_BOOT_RETURN.json`、`BOOT_RETURN_NATIVE_PREVIEW.log`、`TEST_20261114_BOOT_RETURN_WATCH.log`。
+
+## 合并版交付记录（B13 启动修正见上节）
+
+上游 main `68dad18f8` 已合并并推送。手机合并版已于 16:12 ADB 安装，手表合并版已推送到 `/sdcard/haps/openGymFIT-merged-signed.hap`；16:30 复核设备文件哈希一致，手表覆盖安装和新功能实机验收待进行。
+
+本轮代码已完成：手机开始训练请求唤起手表，新训练落盘后进入训练界面并长震一次；手表 ±15 秒、暂停/继续双向同步；128×128 演示图、可滚动计划列表提示与“心率：开 / 关”。偶发退表盘、震动强度感受和两端计时差异仍需实机结果。
+
+合并后手机 7862、服务端 804、手表 130、MCP 138 项通过。README 仅保留项目说明、功能、兼容状态、构建、目录和许可；项目面向圆表、方表等华为手表。
+
 ## 本轮功能
 
 - 手机端修正 HarmonyOS 5.0+ Lite 对端身份为“包名_Base64(EC 公钥)”，精确迁移旧证书 SHA-256 配置。双向通信和 Full Body 计划保存恢复已由用户确认。
 - 双文件持久化替代超出 128 B 的 KV 状态；保存合并、快照串行、动画整组保存与旧帧保留，减少重复写入。
 - 手表切换/跳过休息通过 navigate 事件通知手机。用户确认两端动作一致。
-- 新增训练接收反馈：手机开始时一次 ping 请求唤起，hello 确认后发送快照；手表新任务落盘后进入训练页并长震一次，重复快照/页面重显保持安静。
+- 新增训练接收反馈：手机开始时一次 ping 请求唤起，hello 确认后发送快照；手表新任务落盘后进入训练页并长震一次，重复快照/页面重显不重复震动。
 - 新增手表休息 −15 秒、+15 秒、暂停/继续，绝对休息状态回传手机；手机优先控制消息保留当前发送队首，session/rev 防止旧快照覆盖新休息。完整快照继续承担恢复。
-- 动画 96×96→128×128，页面刷新间隔 125→250 ms；休息日列表 96→240 px，心率开关显示开/关。
+- 动画 96×96→128×128，页面刷新间隔 125→250 ms；休息日列表 96→220 px，并增加滚动提示、数量及下一项局部露出，心率开关显示开/关。
 - 休息结束前台提示增加为两轮、每轮 4 次 long，触摸/表冠/隐藏可停止。系统通知转发已移除，旧排程升级清理；前台常亮保留。
 - SDK 自带 Terser 优化 ES5 JS；校验编译和打包文件一致、ViewModel 属性、原 12 种语言和休息显示，随后执行 48 KB 门禁。
 
@@ -32,7 +50,7 @@ README 改为 Android + 华为手表项目说明；圆表、方表等华为手�
 
 ## 上游与发布
 
-已获取 `DuarteSantos8/openGym` 的 `main`：`68dad18f8`，相对当前基线 `5fdb229fe` 有 310 个上游提交。合并已完成，冲突 0 处，暂存 1851 个文件。
+已获取 `DuarteSantos8/openGym` 的 `main`：`68dad18f8`，相对当前基线 `5fdb229fe` 有 310 个上游提交。合并已完成并推送，冲突已解决。
 
 合并后的修正：
 

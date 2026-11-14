@@ -25,6 +25,10 @@ calories and Huawei Health writing. Out-of-app punctual vibration and its phone 
 were cancelled by the user on 2026-11-14. Foreground countdown and haptics remain enabled. Keep foreground rest countdown/haptics; prioritize recording, offline sync
 and recovery. Background findings remain in 后台能力调查（本地材料：`HARMONY_BACKGROUND_ZH.md`）.
 
+## 当前启动修正（2026-11-14）
+
+原合并版 HAP 启动黑屏已定位到压缩丢失 ViewModel 返回值。修正版保留返回值，并新增求值身份检查和可用环境下的原生启动检查；131 项手表回归与原生启动通过。当前修正版包为 `openGym-HuaweiWatch-boot-return-signed.hap`，实机结果见[缺陷进度](HARMONY_OPEN_BUGS_ZH.md)。
+
 ## Architecture and source ownership
 
 - `harmonywatch/`: the actual DevEco-generated FA JS Lite Wearable project. Its generated

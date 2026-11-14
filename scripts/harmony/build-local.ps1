@@ -38,6 +38,12 @@ try {
         & (Join-Path $env:NODE_HOME 'node.exe') (Join-Path $PSScriptRoot 'check-bundles.mjs') (Join-Path $ProjectPath 'entry\build\default\intermediates\loader_out_lite\default\js\MainAbility')
         $result = $LASTEXITCODE
         if ($result -eq 0) {
+            $simulator = Join-Path $env:DEVECO_SDK_HOME 'default\hms\previewer\liteWearable\bin\Simulator.exe'
+            $previewConfig = Join-Path $ProjectPath '.idea\previewer\liteWearable\liteWearableSettingConfig_rd.json'
+            if ((Test-Path $simulator) -and (Test-Path $previewConfig)) {
+                & (Join-Path $env:NODE_HOME 'node.exe') (Join-Path $PSScriptRoot 'capture-preview.mjs') '--deveco' $DevEcoRoot '--project' $ProjectPath '--out' (Join-Path $ProjectPath 'artifacts\native-startup-check')
+                if ($LASTEXITCODE -ne 0) { throw 'Native Lite startup failed; packaging stopped' }
+            } else { Write-Output 'Native startup preview unavailable; ViewModel return and size checks completed.' }
             # Hvigor's release target only packages resources. Use its official Lite converter
             # on the freshly minified assets, then wrap that BIN instead of reusing a debug BIN.
             $sdkRoot = Join-Path $env:DEVECO_SDK_HOME 'default\openharmony'

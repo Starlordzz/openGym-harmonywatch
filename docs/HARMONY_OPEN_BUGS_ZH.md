@@ -2,13 +2,29 @@
 
 更新：2026-11-14。基于 Duarte Santos 的 [openGym](https://github.com/DuarteSantos8/openGym) 开发；本版本为第三方华为 FIT / HarmonyOS 适配，沿用 AGPL-3.0-or-later。
 
+## 2026-11-14 最新回归：合并版启动黑屏（B13）
+
+用户覆盖安装 `openGymFIT-merged-signed.hap` 后，打开应用立即黑屏，并回报 206。已覆盖恢复到 `openGymFIT-training-recovery-signed.hap`（与此前 training-fix 字节相同），用户确认可以打开；当前手表使用恢复包。
+
+原生 Lite 预览器已复现 `TypeError: wrong type of argument`。已定位：Terser 的默认语句压缩丢弃了顶层 IIFE 的完成值，压缩后 app/page 的求值结果由 ViewModel 对象变成 boolean；旧等价检查仅比较构造参数，漏掉加载器实际消费的返回值。
+
+修正为 `compress.expression=true`，并要求 bundle 求值结果等于刚创建的 ViewModel；新增回归已先失败、修正后通过。发布构建在预览器及配置可用时执行原生启动检查，失败即停止打包。官方选项说明见 [Terser expression](https://terser.org/docs/options/)。
+
+修正版手表 131 项通过；原生启动 2 帧、可见像素 3197、无 JS 异常。app 47,574 B、页面 49,045 B，均低于 49,152 B。手机 APK 继续使用已安装的合并版；修正版 `openGym-HuaweiWatch-boot-return-signed.hap` 已签名推送到 `/sdcard/haps/`，设备文件 SHA-256 与本机一致：`3b644308467bdc78dbcae23a8d00ba13319715d98b9038942423c6e4b19e3a8b`。实机启动与 206 恢复待确认，手机继续使用已安装的合并版 APK。证据：`harmonywatch/artifacts/BUILD_20261114_BOOT_RETURN.json`、`BOOT_RETURN_NATIVE_PREVIEW.log`、`TEST_20261114_BOOT_RETURN_WATCH.log`。
+
+## 合并版手机与此前交付（历史状态）
+
+合并版手机 APK 已安装（versionCode 31，versionName 1.4.4），桥接配对、应用应答、接收器注册均正常，发送 207。手表包 `/sdcard/haps/openGymFIT-merged-signed.hap` 已推送，设备 SHA-256 为 `972ce55f2aa2d062f6a67e1b1627d5d0a21063f59da781cfa607c482d859b6fb`，与本机一致；待手表覆盖安装后验收新增功能。
+
+代码、上游合并、README 与仓库描述已推送 GitHub。合并后验证：手机 7862、服务端 804、手表 130、MCP 138 项通过。下一步是新任务唤起与一次震动、双向休息控制、列表滚动提示、心率开关状态，以及训练中偶发退表盘和计时差异的实机回归。
+
 ## 当前状态
 
 | 编号 | 现象 | 影响 | 状态 |
 |---|---|---|---|
 | B1 | 按冠后整表卡死，随后黑屏、与手机断连，恢复类似软重启 | 整表与连接中断 | 已修复；用户确认恢复表冠与通信的普通包退出正常 |
 | B2 | 原通信 206、计划存储失败及旧 PPL 优先 | 计划同步 | 已修复；用户确认 Full Body 正确，按冠退出重开后仍在 |
-| R1 | 手表页面 JS 接近 48 KB 上限 | 新增功能受构建体积限制 | 第二版页面余 135 B；app 余 1,875 B |
+| R1 | 手表页面 JS 接近 48 KB 上限 | 新增功能受构建体积限制 | 启动修正版页面余 107 B；app 余 1,578 B |
 | R2 | 手机转发休息结束系统通知 | 用户取消 | 通知入口、后台发送与手表 relay 已移除；保留本地前台震动 |
 | R3 | 训练记录回传、动画、断连补传待真机验证 | 后续端到端验收 | 当前已验证计划下发、显示及退出重开恢复 |
 
@@ -225,7 +241,7 @@ Wear Engine DEVICE_MANAGER 与 NOTIFY 于 2026-11-13 获批。2026-11-14 用户�
 
 合并版手机 APK `openGym-HuaweiWatch-merged-debug.apk`（240,344,553 B，SHA-256 `e748bf42b9e4020aa968edba1b9c5948fa3e71c817a70a6b8c6b4460d77e84c5`）已构建；包名、versionCode 31、versionName 1.4.4、23 项权限、v2 签名、14048 个 zip 条目和包内无密钥/身份文件均已核对。构建与核对证据见 `harmonywatch/artifacts/BUILD_20261114_INTEGRATED.json`。
 
-该 APK 尚未安装到手机；B3–B7 的震动、黑屏、退表盘与卡顿，B8 的双端计时差异，B10 的双向休息控制，B11 的唤起与接收震动，B12 的列表与心率显示，仍以真机复测结果为准。
+该 APK 已于 16:12 安装到手机；B3–B7 的震动、黑屏、退表盘与卡顿，B8 的双端计时差异，B10 的双向休息控制，B11 的唤起与接收震动，B12 的列表与心率显示，仍以真机复测结果为准。
 
 ### 合并版安装与桥接状态（2026-11-14 16:12）
 
