@@ -5,6 +5,7 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { bundleShape } from './check-lite-equivalence.mjs'
+import { checkRadioStartup } from './check-lite-radio.mjs'
 export async function optimizeBundles(project, sdk) {
   const require = createRequire(import.meta.url)
   const { minify } = require(join(resolve(sdk), 'js/build-tools/ace-loader/node_modules/terser/dist/bundle.min.js'))
@@ -14,9 +15,16 @@ export async function optimizeBundles(project, sdk) {
     const source = await readFile(join(loader, name), 'utf8')
     if (source !== await readFile(join(packed, name), 'utf8')) throw Error('Compiled and packaged JS differ: ' + name)
     // The Lite loader consumes eval's ViewModel result; ordinary statement minification discards it.
-    const result = await minify(source, { ecma: 5, compress: { unsafe: false, expression: true }, mangle: false, format: { ecma: 5, comments: false } })
+    // SDK Terser reduce_vars replaces the already-compiled SDK's version callback with
+    // an empty function. Preserve callback bindings across the native async boundary.
+    const result = await minify(source, { ecma: 5, compress: { unsafe: false, expression: true, reduce_vars: false }, mangle: false, format: { ecma: 5, comments: false } })
     if (!result.code) throw Error('Empty optimized bundle: ' + name)
     if (bundleShape(source) !== bundleShape(result.code)) throw Error('Optimized ViewModel changed: ' + name)
+    if (name === 'app.js' && source.includes('@system.wearengine')) {
+      checkRadioStartup(source)
+      checkRadioStartup(result.code)
+      console.log('Compiled native radio startup: SDK 402, RX registered, hello 207')
+    }
     for (const dir of [loader, packed]) await writeFile(join(dir, name), result.code)
     console.log(name + ': ' + Buffer.byteLength(source) + ' -> ' + Buffer.byteLength(result.code) + ' bytes')
   }
