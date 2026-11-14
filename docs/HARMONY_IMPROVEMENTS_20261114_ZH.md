@@ -2,15 +2,29 @@
 
 基于 Duarte Santos 的 [openGym](https://github.com/DuarteSantos8/openGym)；本版本为第三方华为手表 / HarmonyOS 适配，代码沿用 AGPL-3.0-or-later。
 
-## 2026-11-14 最新回归：合并版启动黑屏（B13）
+## 2026-11-14 最新进度：启动恢复，通信回归修正待实机验证（B14）
 
-用户覆盖安装 `openGymFIT-merged-signed.hap` 后，打开应用立即黑屏，并回报 206。已覆盖恢复到 `openGymFIT-training-recovery-signed.hap`（与此前 training-fix 字节相同），用户确认可以打开；当前手表使用恢复包。
+用户确认 `boot-return` 包正常打开、原有 Full Body 计划可显示；调试页为 `sdk:? rx:off tx:-`，后面没有错误文字。B13 启动黑屏已通过本轮实机复测；当前阻塞是 B14 通信初始化回归。
+
+已定位到构建后的实际代码：SDK 原始版本查询传入有效 `complete` 回调，二次 Terser 压缩后变成 `complete:function(){}`。回调无法写入客户端版本，SDK 就绪等待超时，接收器未注册，手机发送返回 206。旧 training-fix 包保留有效回调。逐项关闭优化验证后，`reduce_vars=false` 保留回调；SDK 源文件保持原始字节。
+
+构建流程已关闭 `reduce_vars`，新增实际编译 app.js 的异步通信门禁：延迟返回版本 402，再验证接收器注册与 hello 发送 207。旧故障产物在同一门禁得到 `sdk:? rx:off tx:-` 并超时；修正后压缩前、后均为 `sdk:402 rx:ok tx:207`。手表 133 项通过，原生启动 2 帧、3197 可见像素、无 JS 异常。app 47,743 B、页面 49,097 B；每份上限 49,152 B，页面余量 55 B。
+
+修正包 `/sdcard/haps/openGym-HuaweiWatch-sdk-callback-signed.hap` 已签名校验并通过 ADB 推送，手机端文件哈希一致；大小 685,186 B，SHA-256 `591b5dd463742ce7279711b7735ce65bc4c62635ce333e591470dece99f2a90e`。HAP 内 BIN 与独立签名 BIN 一致，BIN 包含本次编译 JS。等待用户覆盖安装后确认 sdk/rx/tx 和手机 206 是否恢复。
+
+手机继续使用已安装的合并版 APK。本轮已核验实际 APK 签名、已授权权限、保存的 112 字符 Lite 对端身份与手表配置一致；手机接收器已注册，收到 0 条、发送 206。证据：`harmonywatch/artifacts/BUILD_20261114_SDK_CALLBACK.json`、同名 `.log`、`TEST_20261114_SDK_CALLBACK_WATCH.log`、`SIGN_20261114_SDK_CALLBACK.log`、`PHONE_STATUS_20261114_BOOT_RETURN_206.json`。签名、身份配置和设备日志保留本地。
+
+接续顺序：先验证新包通信；恢复后复测手机开始训练时手表自动进入与震动、双向 ±15 秒和暂停/继续，再继续 B3/B5/B6/B7/B8 的训练稳定性与计时测试。
+
+## 2026-11-14 启动黑屏排查记录（B13，后续实机已确认打开）
+
+用户覆盖安装 `openGymFIT-merged-signed.hap` 后，打开应用立即黑屏，并回报 206。已覆盖恢复到 `openGymFIT-training-recovery-signed.hap`（与此前 training-fix 字节相同），用户确认可以打开；此后用户安装 boot-return 包并确认正常打开，详见最新进度。
 
 原生 Lite 预览器已复现 `TypeError: wrong type of argument`。已定位：Terser 的默认语句压缩丢弃了顶层 IIFE 的完成值，压缩后 app/page 的求值结果由 ViewModel 对象变成 boolean；旧等价检查仅比较构造参数，漏掉加载器实际消费的返回值。
 
 修正为 `compress.expression=true`，并要求 bundle 求值结果等于刚创建的 ViewModel；新增回归已先失败、修正后通过。发布构建在预览器及配置可用时执行原生启动检查，失败即停止打包。官方选项说明见 [Terser expression](https://terser.org/docs/options/)。
 
-修正版手表 131 项通过；原生启动 2 帧、可见像素 3197、无 JS 异常。app 47,574 B、页面 49,045 B，均低于 49,152 B。手机 APK 继续使用已安装的合并版；修正版 `openGym-HuaweiWatch-boot-return-signed.hap` 已签名推送到 `/sdcard/haps/`，设备文件 SHA-256 与本机一致：`3b644308467bdc78dbcae23a8d00ba13319715d98b9038942423c6e4b19e3a8b`。实机启动与 206 恢复待确认，手机继续使用已安装的合并版 APK。证据：`harmonywatch/artifacts/BUILD_20261114_BOOT_RETURN.json`、`BOOT_RETURN_NATIVE_PREVIEW.log`、`TEST_20261114_BOOT_RETURN_WATCH.log`。
+修正版手表 131 项通过；原生启动 2 帧、可见像素 3197、无 JS 异常。app 47,574 B、页面 49,045 B，均低于 49,152 B。手机 APK 继续使用已安装的合并版；修正版 `openGym-HuaweiWatch-boot-return-signed.hap` 已签名推送到 `/sdcard/haps/`，设备文件 SHA-256 与本机一致：`3b644308467bdc78dbcae23a8d00ba13319715d98b9038942423c6e4b19e3a8b`。实机随后确认正常打开，通信仍为 206；当前修正见 B14。证据：`harmonywatch/artifacts/BUILD_20261114_BOOT_RETURN.json`、`BOOT_RETURN_NATIVE_PREVIEW.log`、`TEST_20261114_BOOT_RETURN_WATCH.log`。
 
 ## 合并版交付记录（B13 启动修正见上节）
 

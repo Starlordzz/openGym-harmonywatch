@@ -13,7 +13,7 @@
 | 身份 | `watch-peer-identity.mjs` | 公开证书提取包名与 Base64 EC 公钥身份，校验证书摘要 |
 | 签名 | `sign-local.sh` | 从本机 key-info、证书和 Profile 签名并校验 BIN/HAP |
 | 校验 | `check-size.mjs`、`check-bundles.mjs`、`check-lite-config.mjs` | 48 KB、资源与权限检查 |
-| 校验 | `optimize-lite-bundles.mjs`、`check-lite-equivalence.mjs` | 编译和打包 JS 同步优化，保留 eval 的 ViewModel 返回值，比较语言与休息显示 |
+| 校验 | `optimize-lite-bundles.mjs`、`check-lite-equivalence.mjs` | 编译和打包 JS 同步优化，保留 eval 的 ViewModel 返回值，比较语言与休息显示；`check-lite-radio.mjs` 验证编译产物异步 SDK 初始化、接收注册和 hello 发送 |
 | 校验 | `verify-lite-bin.py`、`verify-hap.py` | 固定叶证书、Profile、分块摘要及容器检查 |
 | 诊断 | `capture-preview.mjs`、`prepare-start-preview.mjs` | 原生预览与启动场景 |
 | 诊断 | `prepare-exit-probe.mjs`、`prepare-link-probe.mjs` | 退出和通信对照构建，结果记录在进度文档 |
