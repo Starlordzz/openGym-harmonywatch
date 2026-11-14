@@ -50,7 +50,7 @@ README 改为 Android + 华为手表项目说明；圆表、方表等华为手�
 |---|---|---|---|
 | `openGym-HuaweiWatch-merged-debug.apk` | 240,344,553 B | `e748bf42b9e4020aa968edba1b9c5948fa3e71c817a70a6b8c6b4460d77e84c5` | 构建并核对完成，未安装到手机 |
 
-本轮未执行 `git push`；推送前须完成敏感数据复核和提交。
+合并提交 `e515ee44f` 已推送到 `origin/main`。推送前复核暂存内容：无 keystore、调试身份 JSON、私钥、令牌或 `.map`；包内仅含公开的 `huawei_app_id`。`.gitattributes` 随合并提交纳入版本管理。
 
 ### 列表与心率说明补充（2026-11-14）
 
