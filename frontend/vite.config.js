@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { lazyAssets, stampSw } from './scripts/sw-stamp.mjs'
+import { mobileViewport } from './src/lib/viewport-zoom.js'
 
 const backend = process.env.API_TARGET || 'http://127.0.0.1:3000'
 // The API refuses a state-changing request that a browser sent from anywhere other than its own
@@ -80,11 +81,13 @@ const swStamp = {
 // the mobile build and `cap sync` (two builds in one worktree) shipped the web shell inside an
 // APK: no Android-only settings, a service worker, the passkey login. scripts/check-mobile-bundle.mjs
 // reads this tag in the synced copy after `cap sync` and fails the build without it.
+// The phone flavour also keeps zooming off (src/lib/viewport-zoom.js): the web build lets people
+// pinch, the Capacitor apps stay as they were.
 const flavor = {
   name: 'opengym-flavor',
-  transformIndexHtml() {
+  transformIndexHtml(html) {
     if (process.env.VITE_MOBILE !== '1') return
-    return [{ tag: 'meta', attrs: { name: 'opengym-flavor', content: 'mobile' }, injectTo: 'head' }]
+    return { html: mobileViewport(html), tags: [{ tag: 'meta', attrs: { name: 'opengym-flavor', content: 'mobile' }, injectTo: 'head' }] }
   }
 }
 
@@ -122,5 +125,25 @@ export default defineConfig({
   // lower, scripts/check-bundle-syntax.mjs catches (its test builds the bundle).
   build: { chunkSizeWarningLimit: 1500, target: ['safari15', 'chrome100', 'firefox100', 'edge100'] },
   // Gives happy-dom tests a working localStorage on Node 24+ (#733).
-  test: { setupFiles: ['./src/test-setup.js'] }
+  //
+  // harmony/tests is a node:test suite (`node --test harmony/tests/*.test.js`), files and all: it
+  // imports node:test and never vitest, so vitest's default include would collect it and report
+  // every file as a failure with no tests. State the vitest suites instead of the default glob.
+  //
+  // The timeouts are for the machine, not for the code: on a Windows/network mount (WSL over
+  // /mnt/d) a test that reads a few hundred source files, or re-imports a whole view graph in
+  // beforeEach, outlasts the 5 s default with nothing wrong with it. A real hang still fails,
+  // just later.
+  //
+  // The worker cap is the same trade: every worker keeps its own transform cache, so one per core
+  // (15 of 16 here) transforms the same modules over and over across the mount — three times the
+  // transform work of six workers, for the same wall clock — and the contention pushes a cold
+  // import() past its timeout. VITEST_MAX_WORKERS overrides it on a machine that benefits.
+  test: {
+    setupFiles: ['./src/test-setup.js'],
+    include: ['src/**/*.test.{js,jsx,mjs,ts,tsx}', 'scripts/**/*.test.{js,mjs}'],
+    maxWorkers: Number(process.env.VITEST_MAX_WORKERS) || 6,
+    testTimeout: 30_000,
+    hookTimeout: 30_000
+  }
 })

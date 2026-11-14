@@ -14,6 +14,14 @@ node ../scripts/catalogue/stage-media.mjs dist
 ./node_modules/.bin/cap sync android
 cd android
 task_args=(--no-daemon --max-workers=4 -PpersonalApplicationId=host.msknet.opengym.phone "-PwatchBundleName=$VITE_HUAWEI_WATCH_BUNDLE" "-PwatchPeerFingerprint=$VITE_HUAWEI_WATCH_FINGERPRINT" "-PwatchCertificateSha256=$task_watch_sha256")
+# A fresh local assets copy avoids repeated Windows/WSL metadata round trips.
+if [[ -n "${HARMONY_ANDROID_ASSET_CACHE:-}" ]]; then
+  mkdir -p "$HARMONY_ANDROID_ASSET_CACHE"
+  task_assets_dir=$(mktemp -d "$HARMONY_ANDROID_ASSET_CACHE/assets.XXXXXX")
+  trap 'rm -rf -- "$task_assets_dir"' EXIT
+  tar -C "$task_root/frontend/android/app/src/main/assets" -cf - . | tar -C "$task_assets_dir" -xf -
+  task_args+=("-PharmonyAssetsDirectory=$task_assets_dir")
+fi
 if [[ -n "$task_app_id" ]]; then
   task_args+=("-PhuaweiAppId=$task_app_id")
 fi

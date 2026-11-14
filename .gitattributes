@@ -1,0 +1,5 @@
+# Text sources use the same bytes on Linux, WSL and Windows.
+* text=auto eol=lf
+# Preserve the official SDK archive bytes for integrity verification.
+frontend/harmony/watch/entry/src/main/js/default/vendor/** -text
+harmonywatch/entry/src/main/js/MainAbility/vendor/** -text

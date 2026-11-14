@@ -1,6 +1,6 @@
 # openGym for Huawei Watch
 
-面向华为手表的 openGym 第三方适配，连接 Android 手机与圆表、方表等不同形态的华为手表，让训练计划、组数、重量和休息计时在手机与手腕之间同步。
+openGym 的第三方华为手表适配，面向 Android 手机与圆表、方表等华为手表，提供训练计划、记录和休息计时的双向同步。
 
 **基于 Duarte Santos 的 [openGym](https://github.com/DuarteSantos8/openGym) 项目开发；本版本为第三方华为手表 / HarmonyOS 适配。** 原项目提供训练管理、进阶规则、自托管服务及 Apple Watch 版；本分支新增华为 Wear Engine 通信桥接和鸿蒙手表端。维护者与上游作者、华为均为独立关系。
 
@@ -10,7 +10,7 @@
 
 - **Android ↔ 华为手表双向训练。** 手机下发今日计划、轮换计划和可选训练；手表记录组数、重量、次数、计时动作和 RPE/RIR，并回传手机。
 - **离线记录与恢复。** 训练事件先落盘再发送，确认后才清理；断连时保留记录。手表采用双文件状态存储，避免 Lite KV 单值容量限制，退出重开后恢复计划。
-- **训练接收反馈。** 手机开始训练时请求唤起手表，手表收到新训练并保存后进入训练界面、长震一次；重复快照保持安静。
+- **训练接收反馈。** 手机开始训练时请求唤起手表，手表收到新训练并保存后进入训练界面、长震一次；重复快照不重复震动。
 - **双向休息控制。** 共享休息截止时间，提供 ±15 秒、暂停/继续和跳过；手机通过优先小消息同步休息状态，旧快照顺序保护避免恢复旧计时。
 - **手表训练交互。** 前台常亮、表冠步进、重量小数调整、触摸锁、休息结束长震，以及动作位置同步。
 - **动作演示与心率。** 手机转码并发送动作帧，手表保留上一组完整动画直至替换完成；可独立开启心率采集。手表界面保留 12 种语言。
@@ -20,7 +20,7 @@
 
 项目面向华为手表多型号适配，圆形和方形屏幕均在目标范围。当前实现使用 HarmonyOS Lite Wearable FA JS 与 Wear Engine；已在 **HUAWEI WATCH FIT 5 Pro** 验证计划下发、保存恢复、表冠退出与前台常亮。其他型号的运行时、分辨率、圆屏安全区域和设备能力仍需逐项适配与验证，见[兼容性记录](docs/harmony/COMPATIBILITY_ZH.md)。
 
-2026-11-14 的 `training-v2` 已完成构建与签名，覆盖接收反馈、休息控制和 128×128 动画显示。当前自动回归通过；手机稍后接入 ADB 后安装，**这一版的实际唤起、震动与训练稳定性待真机复测**。此前偶发退表盘仍在排查，关闭动画后暂未观察到退出，两端动作一致已由用户确认。持续状态以[缺陷进度](docs/HARMONY_OPEN_BUGS_ZH.md)为准。
+2026-11-14 已合并上游 `main` 至 `68dad18f8`（310 个上游提交，冲突 0 处）。合并后回归：服务端 804 项、手机界面 7862 项、手表 130 项全部通过。合并版手机 APK（`openGym-HuaweiWatch-merged-debug.apk`，240,344,553 B，SHA-256 `e748bf42b9e4020aa968edba1b9c5948fa3e71c817a70a6b8c6b4460d77e84c5`）已构建，并核对包名、版本号、权限、签名与包内文件；该 APK 尚未安装到手机。训练接收反馈、双向休息控制和 128×128 动画的实机验收待设备接入；此前偶发退表盘仍在排查，关闭动画后暂未观察到退出，两端动作一致已由用户确认。持续状态以[缺陷进度](docs/HARMONY_OPEN_BUGS_ZH.md)为准。
 
 休息结束系统通知已取消，当前保留手表应用内倒计时、前台震动和常亮。系统训练、热量及华为运动健康写入待后续开发。本分支维护 Android 与华为手表；iPhone / Apple Watch 用户可使用[上游版本](https://github.com/DuarteSantos8/openGym)。
 
@@ -39,13 +39,16 @@ npm run dev
 网页开发服务可单独运行；华为手表通信通过 Android 原生桥接。连接自己的服务见[自托管指南](docs/SELF_HOSTING.md)，Android 和手表构建见[开发指南](docs/HARMONY_FIT.md)及[脚本索引](scripts/harmony/README.md)。
 
 ```bash
-# 手表纯逻辑、协议、存储与交互回归
+# 手表纯逻辑、协议、存储与交互回归（130 项）
 node --test frontend/harmony/tests/*.test.js
 # 公钥身份推导检查
 node --test scripts/harmony/watch-peer-identity.test.mjs
-# 手机训练同步回归
+# 手机界面与同步回归（7862 项；npm test 只收 src/ 与 scripts/）
 cd frontend
-npx vitest run src/lib/watch-sync*.test.* src/views/Workout.watch.test.jsx src/store/useUI*.test.js
+npm test
+# 服务端回归（804 项）
+cd ../api
+node --test
 ```
 
 手表构建使用 DevEco Studio 的 Lite Wearable SDK；release 流程复用 SDK 自带 Terser 优化 ES5 JS，逐份检查 **48 KB** 上限，再生成 BIN/HAP。签名和校验脚本见 `scripts/harmony/`。

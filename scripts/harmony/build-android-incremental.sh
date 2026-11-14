@@ -35,6 +35,14 @@ JS
 
 task_app_id="${HUAWEI_APP_ID:-$(node -e 'console.log(JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")).huaweiAppId || "")' "$task_root/harmonywatch/phone-debug-identity.json")}"
 task_args=(--no-daemon --max-workers=4 -PpersonalApplicationId=host.msknet.opengym.phone "-PwatchBundleName=$VITE_HUAWEI_WATCH_BUNDLE" "-PwatchPeerFingerprint=$VITE_HUAWEI_WATCH_FINGERPRINT" "-PwatchCertificateSha256=$task_watch_sha256")
+# A fresh local assets copy avoids repeated Windows/WSL metadata round trips.
+if [[ -n "${HARMONY_ANDROID_ASSET_CACHE:-}" ]]; then
+  mkdir -p "$HARMONY_ANDROID_ASSET_CACHE"
+  task_assets_dir=$(mktemp -d "$HARMONY_ANDROID_ASSET_CACHE/assets.XXXXXX")
+  trap 'rm -rf -- "$task_assets_dir"' EXIT
+  tar -C "$task_root/frontend/android/app/src/main/assets" -cf - . | tar -C "$task_assets_dir" -xf -
+  task_args+=("-PharmonyAssetsDirectory=$task_assets_dir")
+fi
 if [[ -n "$task_app_id" ]]; then task_args+=("-PhuaweiAppId=$task_app_id"); fi
 cd "$task_root/frontend/android"
 "$JAVA_HOME/bin/java" -classpath gradle/wrapper/gradle-wrapper.jar org.gradle.wrapper.GradleWrapperMain "${task_args[@]}" :app:assembleSideloadDebug --console=plain

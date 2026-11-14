@@ -52,14 +52,15 @@
           <image class="round startRound" src="/common/icons/button-play.png" onclick="startToday" />
           <text class="cap buttonCap">{{words.start}}</text>
         </div>
-        <list class="routineList" style="height: {{todayName ? 96 : 240}}px"><list-item class="routineItem" for="{{others}}"><input class="rowbtn" type="button" value="{{$item.name}}" onclick="startOther($idx)" /></list-item></list>
+        <text class="planHint">{{words.swipe + ' (' + others.length + ')'}}</text>
+        <list class="routineList" style="height: {{todayName ? 76 : 220}}px"><list-item class="routineItem" for="{{others}}"><input class="rowbtn" type="button" value="{{$item.name}}" onclick="startOther($idx)" /></list-item></list>
       </div>
       <div class="col idleEmpty" if="{{!routines.length}}">
         <text class="h2">{{idleTitle}}</text>
         <text class="note idleHint">{{idleHint}}</text>
       </div>
       <text class="statusNote" if="{{!!pending}}">{{pending}}</text>
-      <input class="link" type="button" style="width: 300px; font-size: 22px" value="{{words.heart + ' · ' + (sensorOn ? words.on : words.off)}}" onclick="toggleSensor" />
+      <input class="link" type="button" style="width: 300px; font-size: 22px" value="{{words.heart + '：' + (sensorOn ? words.on : words.off)}}" onclick="toggleSensor" />
     </div>
 
     <!-- debug (2 s press on idle; 2 s press on the title flips the screen-on probe, tap closes) -->

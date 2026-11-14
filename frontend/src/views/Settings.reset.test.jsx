@@ -157,6 +157,8 @@ describe('Settings — footer', () => {
   it('links the source code to its home on GitHub, on About & updates', () => {
     act(() => root.render(<Settings page="about" />))
     const link = [...host.querySelectorAll('a')].find(a => a.textContent === 'Source code')
-    expect(link.getAttribute('href')).toBe('https://github.com/DuarteSantos8/openGym')
+    // This is the Huawei Watch / HarmonyOS fork, so "Source code" is the fork's repository; the
+    // upstream app is attributed on the line below it in Settings.jsx ("Duarte Santos · openGym").
+    expect(link.getAttribute('href')).toBe('https://github.com/Starlordzz/openGym-harmonywatch')
   })
 })

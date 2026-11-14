@@ -11,12 +11,15 @@ const { PROMPTS } = await import('../coach/core/prompts.js');
 const { buildPrompt } = await import('../coach/core/prompt.js');
 
 const dir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'coach', 'prompts');
+// A Windows checkout with core.autocrlf=true turns both the .md sources and the generated module
+// into CRLF; the prompt text itself is LF. Compare content, not the checkout's line endings.
+const lf = s => s.replace(/\r\n/g, '\n');
 
 test('core/prompts.js matches api/coach/prompts/*.md byte for byte', () => {
   const files = fs.readdirSync(dir).filter(f => f.endsWith('.md')).sort();
   assert.deepEqual(Object.keys(PROMPTS).sort(), files.map(f => f.replace(/\.md$/, '')));
   for (const f of files) {
-    assert.equal(PROMPTS[f.replace(/\.md$/, '')], fs.readFileSync(path.join(dir, f), 'utf8'), `${f} is stale — run node scripts/build-coach-assets.mjs`);
+    assert.equal(lf(PROMPTS[f.replace(/\.md$/, '')]), lf(fs.readFileSync(path.join(dir, f), 'utf8')), `${f} is stale — run node scripts/build-coach-assets.mjs`);
   }
 });
 

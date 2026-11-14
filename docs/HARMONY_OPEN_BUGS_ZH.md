@@ -203,3 +203,26 @@ Wear Engine DEVICE_MANAGER 与 NOTIFY 于 2026-11-13 获批。2026-11-14 用户�
 4. 在手表空闲页和训练页分别按表冠退出，记录黑屏时长、黑屏前最后画面、恢复后落在应用还是表盘，并注明手机 openGym 当时是否在运行。
 
 前一轮复测使用 `openGymFIT-state-file-signed.hap`，包含双文件状态存储、单次清理修复、表冠旋转监听和 Wear Engine 通信；手机保持已安装的 plan-priority APK。
+
+### 列表与心率说明补充（2026-11-14）
+
+用户反馈两行计划列表难以识别可滚动。已增加“上下滑动选择计划”提示和计划数量；列表高度保留下一项局部露出，指示可继续滚动。实际显示待安装复测。
+
+底部“心率”是训练期间的应用心率采集开关，开关状态显示为“心率：开 / 关”。开启后在训练中订阅手表心率传感器，关闭停止应用采集；当前心率值在训练页顶部显示。空闲页按钮显示开关状态，空闲期间不持续采集。
+
+界面仅保留功能名称、状态与操作提示；取消装饰箭头和装饰性文案。
+
+## 2026-11-14 上游合并与回归
+
+上游 `DuarteSantos8/openGym` 的 `main` `68dad18f8` 已合并进本分支（基线 `5fdb229fe`，310 个上游提交，冲突 0 处）。合并未改动华为手表应用、Android 桥接和训练同步的产品行为；本轮修正集中在生成物换行比较、vitest 收集范围、测试 mock 与一处 CSS 类名前缀冲突。
+
+| 范围 | 命令 | 结果 |
+|---|---|---|
+| 服务端 | `cd api && node --test` | 804 / 804 通过 |
+| 手机界面与同步 | `cd frontend && npm test` | 655 个文件、7862 / 7862 通过 |
+| 手表逻辑、协议、存储与交互 | `node --test frontend/harmony/tests/*.test.js` | 130 / 130 通过 |
+| 生成物一致性 | `build-nudge-copy.mjs`、`build-wrapped-copy.mjs`、`build-coach-assets.mjs` 的 `--check` | 三者一致 |
+
+合并版手机 APK `openGym-HuaweiWatch-merged-debug.apk`（240,344,553 B，SHA-256 `e748bf42b9e4020aa968edba1b9c5948fa3e71c817a70a6b8c6b4460d77e84c5`）已构建；包名、versionCode 31、versionName 1.4.4、23 项权限、v2 签名、14048 个 zip 条目和包内无密钥/身份文件均已核对。构建与核对证据见 `harmonywatch/artifacts/BUILD_20261114_INTEGRATED.json`。
+
+该 APK 尚未安装到手机；B3–B7 的震动、黑屏、退表盘与卡顿，B8 的双端计时差异，B10 的双向休息控制，B11 的唤起与接收震动，B12 的列表与心率显示，仍以真机复测结果为准。

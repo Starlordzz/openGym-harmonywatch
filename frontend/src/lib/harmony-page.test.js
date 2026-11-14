@@ -4,7 +4,10 @@ vi.mock('../../harmony/watch/entry/src/main/js/default/common/runtime.js', () =>
   runtime(changed) {
     port.changed = changed
     return { load() { changed(port.state) }, change(fn) { fn(port.state); changed(port.state); changed(port.state) },
-      samples: () => [], heart: () => null, heartStart: vi.fn(), heartStop: vi.fn(), vibrate: vi.fn(), stop() {} }
+      samples: () => [], heart: () => null, heartStart: vi.fn(), heartStop: vi.fn(), vibrate: vi.fn(),
+      // The page holds the screen on while it is shown (pages/index/index.js onShow/onHide) and the
+      // app releases it on teardown; both go through the runtime's brightness call.
+      keepScreenOn: vi.fn(), stop() {} }
   }
 }))
 import page from '../../harmony/watch/entry/src/main/js/default/pages/index/index.js'
@@ -25,11 +28,18 @@ beforeEach(() => {
   vm = { ...page.data }
   for (const [key, fn] of Object.entries(page)) if (typeof fn === 'function') vm[key] = fn.bind(vm)
   vm.onInit()
+  // onInit only draws the first frame; the page's clock — the one that ends a hold and the
+  // countdown on its own — starts in onShow, which the device calls right after onInit. Without
+  // it no interval exists and a timed hold never reaches its deadline.
+  vm.onShow()
 })
 afterEach(() => { vm.onDestroy(); app.onDestroy(); vi.unstubAllGlobals(); vi.useRealTimers() })
 it('incoming state updates preserve in-progress touch edits', () => {
+  // Coarse edit: the wheel/± key steps weight and reps by 1 (pages/index/index.js edit() sets
+  // editIncrement to 1; the 0.1 fine key is editFineBy), so 20 → 21 and 8 → 9 and the state
+  // callbacks below must not roll either back to the set's own 20/8.
   adjust('weight'); adjust('reps'); port.changed(port.state)
-  expect(vm.weight).toBe('22'); expect(vm.reps).toBe('9')
+  expect(vm.weight).toBe('21'); expect(vm.reps).toBe('9')
 })
 it('snapshot or disk callbacks do not dismiss finish/discard confirmation', () => {
   vm.finishPage(); vm.discard(); port.changed(port.state)
