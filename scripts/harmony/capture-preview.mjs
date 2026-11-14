@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url'
 const args = process.argv.slice(2)
 const option = name => { const i = args.indexOf(name); return i < 0 ? null : args[i + 1] }
 if (args.includes('--help')) {
-  console.log('Windows Node: capture-preview.mjs --deveco <DevEco directory> [--bundle <compiled MainAbility or .demo>] [--out <capture directory>]')
+  console.log('Windows Node: capture-preview.mjs --deveco <DevEco directory> [--project <Lite project>] [--bundle <compiled MainAbility or .demo>] [--out <capture directory>]')
   process.exit(0)
 }
 if (process.platform !== 'win32') throw Error('Run with Windows Node (DevEco tools/node/node.exe), including when called from WSL')
@@ -18,10 +18,11 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const deveco = option('--deveco')
 if (!deveco) throw Error('--deveco is required')
 const sdk = join(resolve(deveco), 'sdk/default/hms/previewer/liteWearable')
-const bundle = resolve(option('--bundle') || join(root, 'harmonywatch/entry/build/default/intermediates/loader_out_lite/default/js/MainAbility'))
-const out = resolve(option('--out') || join(root, 'harmonywatch/artifacts/preview-capture'))
+const project = resolve(option('--project') || join(root, 'harmonywatch'))
+const bundle = resolve(option('--bundle') || join(project, 'entry/build/default/intermediates/loader_out_lite/default/js/MainAbility'))
+const out = resolve(option('--out') || join(project, 'artifacts/preview-capture'))
 const simulator = join(sdk, 'bin/Simulator.exe')
-const config = join(root, 'harmonywatch/.idea/previewer/liteWearable/liteWearableSettingConfig_rd.json')
+const config = join(project, '.idea/previewer/liteWearable/liteWearableSettingConfig_rd.json')
 for (const path of [simulator, config, join(bundle, 'app.js'), join(bundle, 'pages/index/index.js')]) {
   if (!existsSync(path)) throw Error('Missing preview input: ' + path)
 }

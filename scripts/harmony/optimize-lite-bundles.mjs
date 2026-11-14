@@ -13,7 +13,8 @@ export async function optimizeBundles(project, sdk) {
   for (const name of ['app.js', 'pages/index/index.js']) {
     const source = await readFile(join(loader, name), 'utf8')
     if (source !== await readFile(join(packed, name), 'utf8')) throw Error('Compiled and packaged JS differ: ' + name)
-    const result = await minify(source, { ecma: 5, compress: { unsafe: false }, mangle: false, format: { ecma: 5, comments: false } })
+    // The Lite loader consumes eval's ViewModel result; ordinary statement minification discards it.
+    const result = await minify(source, { ecma: 5, compress: { unsafe: false, expression: true }, mangle: false, format: { ecma: 5, comments: false } })
     if (!result.code) throw Error('Empty optimized bundle: ' + name)
     if (bundleShape(source) !== bundleShape(result.code)) throw Error('Optimized ViewModel changed: ' + name)
     for (const dir of [loader, packed]) await writeFile(join(dir, name), result.code)

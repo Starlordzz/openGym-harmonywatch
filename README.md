@@ -20,7 +20,9 @@ openGym 的第三方华为手表适配，面向 Android 手机与圆表、方表
 
 项目面向华为手表多型号适配，圆形和方形屏幕均在目标范围。当前实现使用 HarmonyOS Lite Wearable FA JS 与 Wear Engine；已在 **HUAWEI WATCH FIT 5 Pro** 验证计划下发、保存恢复、表冠退出与前台常亮。其他型号的运行时、分辨率、圆屏安全区域和设备能力仍需逐项适配与验证，见[兼容性记录](docs/harmony/COMPATIBILITY_ZH.md)。
 
-2026-11-14 已合并上游 `main` 至 `68dad18f8`（310 个上游提交，冲突 0 处）。合并后回归：服务端 804 项、手机界面 7862 项、手表 130 项全部通过。合并版手机 APK（`openGym-HuaweiWatch-merged-debug.apk`，240,344,553 B，SHA-256 `e748bf42b9e4020aa968edba1b9c5948fa3e71c817a70a6b8c6b4460d77e84c5`）已构建，并核对包名、版本号、权限、签名与包内文件；该 APK 尚未安装到手机。训练接收反馈、双向休息控制和 128×128 动画的实机验收待设备接入；此前偶发退表盘仍在排查，关闭动画后暂未观察到退出，两端动作一致已由用户确认。持续状态以[缺陷进度](docs/HARMONY_OPEN_BUGS_ZH.md)为准。
+2026-11-14 已合并上游 `main` 至 `68dad18f8`。合并后手机 7862、服务端 804、手表 130 项回归通过，手机 APK 已安装。合并版手表包随后出现启动黑屏；已定位并修正压缩步骤丢失 `ViewModel` 返回值的问题，新增返回值回归和原生启动检查，手表回归增至 131 项。修正版原生启动已通过，实机复测待完成。
+
+训练接收反馈、双向休息控制、128×128 动画、计划列表滚动提示和心率开关状态已实现。实际震动、双端计时和偶发退表盘继续验证，见[缺陷进度](docs/HARMONY_OPEN_BUGS_ZH.md)。
 
 休息结束系统通知已取消，当前保留手表应用内倒计时、前台震动和常亮。系统训练、热量及华为运动健康写入待后续开发。本分支维护 Android 与华为手表；iPhone / Apple Watch 用户可使用[上游版本](https://github.com/DuarteSantos8/openGym)。
 
@@ -39,7 +41,7 @@ npm run dev
 网页开发服务可单独运行；华为手表通信通过 Android 原生桥接。连接自己的服务见[自托管指南](docs/SELF_HOSTING.md)，Android 和手表构建见[开发指南](docs/HARMONY_FIT.md)及[脚本索引](scripts/harmony/README.md)。
 
 ```bash
-# 手表纯逻辑、协议、存储与交互回归（130 项）
+# 手表纯逻辑、协议、存储与交互回归（131 项）
 node --test frontend/harmony/tests/*.test.js
 # 公钥身份推导检查
 node --test scripts/harmony/watch-peer-identity.test.mjs
