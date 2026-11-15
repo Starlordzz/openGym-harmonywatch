@@ -180,7 +180,7 @@
     <!-- rest -->
     <div class="screen restScreen" if="{{screen === 'rest'}}">
       <stack class="ringWrap restWrap">
-        <canvas ref="restArc" class="restArc" if="{{restRing}}"></canvas>
+        <progress class="ring restArc" type="arc" percent="{{ringPercent}}" if="{{restRing}}" />
         <div class="ringText restText">
           <text class="ringCap">{{words.rest}}</text>
           <text class="ringDigits restDigits">{{digits}}</text>
@@ -225,11 +225,12 @@
       </div>
       <text class="note small">{{setsLine}}</text>
       <text class="statusNote" if="{{!!offline}}">{{offline}}</text>
+      <input class="wide accent" type="button" value="{{words.resume}}" onclick="resume" />
       <div class="row finishActions">
-        <input class="wide half accent" type="button" value="{{words.save}}" onclick="save" />
+        <input class="wide half" type="button" value="{{words.save}}" onclick="save" />
         <input class="wide half" type="button" value="{{words.discard}}" onclick="discard" />
       </div>
-      <div class="row finishLinks"><input class="link" type="button" value="{{words.resume}}" onclick="resume" /><input class="link" type="button" value="{{words.addSet}}" onclick="addSet" /></div>
+      <div class="row finishLinks"><input class="link" type="button" value="{{words.addSet}}" onclick="addSet" /></div>
     </div>
 
     <!-- saved -->

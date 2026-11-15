@@ -25,3 +25,5 @@ Android 脚本需要 JDK 21、Android SDK 与 Gradle 缓存；手表脚本使用
 `update-wearengine-materials.py`、`preview-wearengine-materials.ps1` 属于历史申请材料工具，使用前核对文案和输出路径。当前休息结束系统通知已取消，实际功能与验证状态见[进度文档](../../docs/HARMONY_OPEN_BUGS_ZH.md)。
 
 基于 Duarte Santos 的 [openGym](https://github.com/DuarteSantos8/openGym)；本版本为第三方华为手表 / HarmonyOS 适配。许可见 [LICENSE](../../LICENSE)、[NOTICE](../../NOTICE.md) 与各素材/SDK 声明。
+
+2026-11-15：当前休息圈恢复系统 progress 秒级更新。`check-rest-motion.ps1` 保留供 11-14 平滑圈试验回溯；`prepare-ui-preview.mjs --scene finish` 可检查全宽“继续训练”按钮。

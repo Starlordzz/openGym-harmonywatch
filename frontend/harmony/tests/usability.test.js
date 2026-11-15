@@ -27,7 +27,7 @@ test('whole-unit changes retain an existing quarter-unit weight', t => {
   assert.equal(f.vm.editValue, '22.25')
 })
 
-test('whole-unit weigh-in adjustments preserve the selected decimal and crown works before training', t => {
+test('weigh-in buttons adjust whole and fractional values before training', t => {
   const s = savedState(); s.workout = null
   const f = mount(t, s)
   f.vm.startRoutine({ name: 'Today', entries: [] })
@@ -36,7 +36,7 @@ test('whole-unit weigh-in adjustments preserve the selected decimal and crown wo
   f.vm.weighStep(1)
   assert.equal(f.vm.bw, 71.3)
   f.vm.pickPart('tenth')
-  f.vm.crown({ degree: 24 })
+  f.vm.weighStep(1)
   assert.equal(f.vm.bw, 71.4)
 })
 

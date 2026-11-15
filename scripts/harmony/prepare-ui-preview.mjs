@@ -10,7 +10,7 @@ const option = name => { const i = args.indexOf(name); return i < 0 ? null : arg
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const project = resolve(option('--project') || join(root, 'harmonywatch'))
 const scene = option('--scene') || 'rest-offline'
-if (!['rest-offline', 'exercise', 'heart', 'ended'].includes(scene)) throw Error('Unknown UI scene')
+if (!['rest-offline', 'exercise', 'heart', 'finish', 'ended'].includes(scene)) throw Error('Unknown UI scene')
 const built = join(project, 'entry/build/default/intermediates/loader_out_lite/default/js/MainAbility')
 const target = resolve(option('--out') || join(project, 'artifacts/ui-' + scene + '-bundle'))
 cpSync(built, target, { recursive: true })
@@ -22,6 +22,7 @@ state.workout = { id: 'synthetic-preview', name: 'Full Body A', start: Date.now(
   rest: scene === 'rest-offline' ? { endsAt: Date.now() + 90000, total: 90 } : null,
   entries: [{ id: 'preview', name: '哑铃上斜卧推（交替单侧）', mode: 'reps', sets: [{ w: 20, r: 8, done: false }] }] }
 state.outbox = [{ id: 'preview-offline', type: 'navigate', wid: 'synthetic-preview', at: Date.now() }]
+if (scene === 'finish') state.entryIndex = state.workout.entries.length
 if (scene === 'ended') {
   state.summary = { name: 'Full Body A', seconds: 600, sets: 3, volume: 480, endedOnPhone: true }
   state.workout = null
