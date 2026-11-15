@@ -1,6 +1,14 @@
 # 缺陷修复与验证进度
 
-更新：2026-11-14。基于 Duarte Santos 的 [openGym](https://github.com/DuarteSantos8/openGym) 开发；本版本为第三方华为 FIT / HarmonyOS 适配，沿用 AGPL-3.0-or-later。
+更新：2026-11-15。基于 Duarte Santos 的 [openGym](https://github.com/DuarteSantos8/openGym) 开发；本版本为第三方华为 FIT / HarmonyOS 适配，沿用 AGPL-3.0-or-later。
+
+## 2026-11-15 交付：手机新版已安装，手表包已推送
+
+原测试手机已重新连接。`openGym-HuaweiWatch-controls-debug.apk` 通过 ADB 覆盖安装返回 Success；直接读取实际已安装 base.apk 的 SHA-256 为 `83f5ff87ef49ea829524e3c197262f359375cebbdeff8f46de696c1baf88ef68`，与已校验产物一致，版本为 versionCode 31 / versionName 1.4.4。
+
+手表包已推送到原测试手机 `/sdcard/haps/openGym-HuaweiWatch-controls-signed.hap`；设备文件 SHA-256 为 `a112d71b60200a0ce441c90227f162694e9c5fffe33806e91ec0382ea5055a6f`，与本机一致。手表侧仍需通过应用调测助手覆盖安装 HAP，随后验证 B15–B19：离线休息布局、手机结束训练时是否退表盘、圆环推进、加组往返和真实心率读数。B13/B14 通信恢复保留此前实机通过记录。
+
+安装核验记录：`harmonywatch/artifacts/INSTALL_20261115_CONTROLS.json`。本次为已验证产物的设备交付；自动测试沿用本轮手表 141、手机相关 119、原生队列 3 项通过记录。
 
 ## 2026-11-14 追加：休息布局、远端结束、圆环、加组与心率反馈
 
