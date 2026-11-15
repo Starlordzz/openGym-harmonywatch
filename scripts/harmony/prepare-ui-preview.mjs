@@ -10,7 +10,7 @@ const option = name => { const i = args.indexOf(name); return i < 0 ? null : arg
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const project = resolve(option('--project') || join(root, 'harmonywatch'))
 const scene = option('--scene') || 'rest-offline'
-if (!['rest-offline', 'exercise', 'zero-weight', 'decimal-weight', 'bodyweight', 'long-numbers', 'heart', 'heart-error', 'finish', 'ended'].includes(scene)) throw Error('Unknown UI scene')
+if (!['rest-offline', 'exercise', 'zero-weight', 'decimal-weight', 'bodyweight', 'long-numbers', 'heart', 'heart-error', 'heart-auth', 'finish', 'ended'].includes(scene)) throw Error('Unknown UI scene')
 const built = join(project, 'entry/build/default/intermediates/loader_out_lite/default/js/MainAbility')
 const target = resolve(option('--out') || join(project, 'artifacts/ui-' + scene + '-bundle'))
 cpSync(built, target, { recursive: true })
@@ -39,6 +39,8 @@ writeFileSync(join(target, 'app.js'), '(function(nativeModule){var saved=' + JSO
   'get:function(o){o.success(saved)},set:function(o){saved=o.value;o.success()}};' +
   (scene === 'heart' ? 'if(name==="system.sensor")return {subscribeHeartRate:function(o){o.success({heartRate:128})},unsubscribeHeartRate:function(){}};' : '') +
   (scene === 'heart-error' ? 'if(name==="system.sensor")return {subscribeHeartRate:function(o){o.fail("native sensor rejected request",201)},unsubscribeHeartRate:function(){}};' : '') +
-  'return nativeModule(name)};return ' + source + '})(requireNative);\n')
+  'return nativeModule(name)};' +
+  (scene === 'heart-auth' ? 'var app=' + source + ';var create=app.onCreate;app.onCreate=function(){create.call(this);this.sensor(true)};return app;' : 'return ' + source) +
+  '})(requireNative);\n')
 writeFileSync(join(target, 'SCENE.json'), JSON.stringify({ scene, synthetic: true, previewOnly: true }, null, 2) + '\n')
 console.log(target)

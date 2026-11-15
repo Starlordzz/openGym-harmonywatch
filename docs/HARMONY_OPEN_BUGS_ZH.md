@@ -2,13 +2,35 @@
 
 更新：2026-11-15。基于 Duarte Santos 的 [openGym](https://github.com/DuarteSantos8/openGym) 开发；本版本为第三方华为 FIT / HarmonyOS 适配，沿用 AGPL-3.0-or-later。
 
+## 2026-11-15 最新：心率运行时授权验证包
+
+用户补充“不会 不好记录”：安装及开启心率时未出现健康数据／心率授权窗口；B21 结束页实机效果暂未确认。B19 当前真实错误仍为 `E602: permission not declared`。
+
+已接入延迟加载的 FA Context 授权验证：用户开启心率后，在启动采集前调用 `requestPermissionsFromUser(['ohos.permission.READ_HEALTH_DATA'], 1, callback)`；仅成功结果 `authResults[0] === 0` 才订阅传感器。恢复旧的已开启设置时，需在训练页先关闭再开启一次以触发本次授权。应用启动不加载该 FA 模块。授权等待 15 秒超时；关闭采集或离开页面会取消等待，迟到回调失效，也不会调用尚未启动的传感器的停止接口。
+
+| 手表诊断 | 含义与下一步 |
+|---|---|
+| 弹出授权窗口并出现 bpm | 继续完成一组，验证组心率回传与手机历史记录 |
+| `EAUTHAPI` | FA 授权入口缺失或调用异常；长按心率文字查看完整原文 |
+| `EAUTHDENIED` | 未得到成功授权结果；debug 显示 authResults |
+| `EAUTHTIME` | 15 秒内未收到授权回调 |
+| 授权成功后仍 `E602` | 继续核对设备安装权限识别状态及完整传感器错误 |
+
+官方[Lite Wearable 授权指南](https://developer.huawei.com/consumer/cn/doc/lite-wearable-guides/request-permissions/)列出了声明和运行时申请两个步骤。本机 SDK 将 FA Context 请求标注为 `AbilityRuntime.Core`，Lite 设备清单未列出该能力，FIT 5 Pro 的实际支持仍待此包验证。模拟器已验证接口缺失时显示错误且不抛出 JS 异常。当前 Health Service Kit 接入计划保持延后。
+
+新增回归先复现“手动开启仍直接订阅”及“等待授权时关闭会调用原生停止”，修正后手表 152 项、手机页面 8 项通过。实际编译 app.js 在压缩前后均验证：启动不加载授权模块，手动开启后请求，授权成功订阅，拒绝或接口缺失不订阅。原生启动与授权缺失场景通过。app 49,140 B、页面 48,739 B，分别余 12 B、413 B；后续新增应用逻辑须先处理体积余量。
+
+新包 `/sdcard/haps/openGym-HuaweiWatch-heart-auth-signed.hap` 已签名推送原测试手机，设备哈希核对一致；689,281 B，SHA-256 `957f569292338ba572b1a8b2edb5e0700e404a56f61fcbcd42a201a016deb96f`。签名 BIN/HAP 与本次编译 app/page 字节一致；等待手表覆盖安装与授权结果回传。
+
+本机证据：`harmonywatch/artifacts/BUILD_20261115_HEART_AUTH.json`、同名 `.log`、`TEST_20261115_HEART_AUTH_RED.log`、`TEST_20261115_HEART_AUTH_CANCEL_RED.log`、`TEST_20261115_HEART_AUTH_WATCH.log`、`TEST_20261115_HEART_AUTH_PHONE.log`、`SIGN_20261115_HEART_AUTH.log`、`ui-heart-auth-preview/`。真实传感器采样和手机心率记录仍待验收。
+
 ## 2026-11-15 最新：结束页闪回、重量数字缺失与实机 E602
 
 用户安装 number-fit-heartdiag 后回传：心率 E602；“练完了吗”中点“结束训练”后闪回；训练主页面只剩 kg／重量文字，重量数字缺失。
 
 - **B21 结束页闪回**：回归已复现。每秒 `tickClock()` 在打开结束页后仍按 20 分钟空闲条件重新打开提醒；同步刷新又优先绘制提醒。现结束页优先，结束与确认操作期间暂停空闲询问和自动结束；点“继续训练”记录新的活动时间。新增回归先失败、修正后通过，覆盖多次计时/同步刷新、丢弃取消、继续、超过 45 分钟与保存。
 - **B22 重量数字缺失**：改为固定 124 px 数字框与独立单位框，字号继续按宽高缩放；计算时另留 8 px 字形余量。计时数字同样使用固定文本框。原生预览中 0 kg、102.5 kg 与徒手 8 次均可见，数字与标签分离；真实手表的缺失根因和修正效果待复测。
-- **B19 心率 E602**：用户已返回原文 `permission not declared`，真实采集仍失败。当前签名 BIN 的 `module.reqPermissions` 含 `READ_HEALTH_DATA` 及 reason/usedScene。官方 SDK 同名权限与 FA 配置路径一致；[申请授权指南](https://developer.huawei.com/consumer/cn/doc/lite-wearable-guides/request-permissions/)另列运行时授权步骤。当前 Lite 工程没有运行时申请，`@system.app` 也未提供该方法；FA Context 申请方式在本设备上的可用性、安装后权限识别状态待验证。OpenHarmony Lite 安装器更新时会调用 `SaveOrUpdatePermissions`，单纯提高版本号暂无修正依据。下一步核实 FIT Lite 支持的授权入口及设备应用权限状态；保留当前签名、身份与训练数据。
+- **B19 心率 E602**：用户已返回原文 `permission not declared`，真实采集仍失败。当前签名 BIN 的 `module.reqPermissions` 含 `READ_HEALTH_DATA` 及 reason/usedScene。官方 SDK 同名权限与 FA 配置路径一致；[申请授权指南](https://developer.huawei.com/consumer/cn/doc/lite-wearable-guides/request-permissions/)另列运行时授权步骤。该轮 Lite 工程尚未接入运行时申请，`@system.app` 也未提供该方法；FA Context 申请方式在本设备上的可用性、安装后权限识别状态待验证。OpenHarmony Lite 安装器更新时会调用 `SaveOrUpdatePermissions`，单纯提高版本号暂无修正依据。下一步核实 FIT Lite 支持的授权入口及设备应用权限状态；保留当前签名、身份与训练数据。
 
 手表 146 项、手机页面 8 项通过；实际编译产物的 Wear Engine 启动和心率回调门禁通过；原生启动及上述三种数值场景通过。app 48,026 B、页面 48,739 B，各余 1,126 B、413 B。手机沿用 controls APK。
 
@@ -121,11 +143,11 @@
 | B2 | 原通信 206、计划存储失败及旧 PPL 优先 | 计划同步 | 已修复；用户确认 Full Body 正确，按冠退出重开后仍在 |
 | B13 | 合并版打开立即黑屏 | 应用无法进入 | boot-return 已由用户确认正常打开、计划可显示 |
 | B14 | 启动恢复后手机 206，手表 sdk:? rx:off tx:- | 双向通信未启动 | 已修复；SDK 回调修正包获用户“好了”的实机确认 |
-| B19 | 心率始终不可用，实机 E602: permission not declared | 无有效采样与组心率记录 | 包内声明已核对；设备权限识别与运行时授权入口待验证 |
+| B19 | 心率始终不可用，实机 E602: permission not declared | 无有效采样与组心率记录 | 包内声明已核对；动态授权验证包已构建，FIT 实际弹窗与采样待验证 |
 | B20 | 徒手次数数字与标签重叠 | 数值显示 | 宽高约束和独立标签行已实现，原生预览通过，真机待验收 |
 | B21 | 结束页闪回“练完了吗” | 无法操作结束训练 | 定时器重开提醒已复现并修正，回归通过，真机待验收 |
 | B22 | 主页面重量数字消失，只剩单位和标签 | 重量显示 | 固定数字框修正版已推送，真机待验收 |
-| R1 | 手表页面 JS 接近 48 KB 上限 | 新增功能受构建体积限制 | finish-weight 包页面余 413 B；app 余 1,126 B |
+| R1 | 手表页面 JS 接近 48 KB 上限 | 新增功能受构建体积限制 | heart-auth 包页面余 413 B；app 余 12 B |
 | R2 | 手机转发休息结束系统通知 | 用户取消 | 通知入口、后台发送与手表 relay 已移除；保留本地前台震动 |
 | R3 | 训练记录回传、动画、断连补传待真机验证 | 后续端到端验收 | 当前已验证计划下发、显示及退出重开恢复 |
 

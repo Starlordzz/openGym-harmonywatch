@@ -19,6 +19,16 @@
 
 读数位置还可能显示“关”“测量中”“暂无数据”“不可用”。“暂无数据”表示最近 15 秒没有有效的新样本；“不可用”表示订阅失败或已停止运行。用户目前已确认实机失败码 E602。诊断包会进一步显示 `E<原始错误码>`；`EJS` 表示调用出现 JS 异常。完整错误文字保留在应用最后错误中，可长按训练页、休息页的心率文字 2 秒进入 debug 查看；空闲页长按入口保留。
 
+## 动态授权验证包
+
+用户确认安装和开启心率时没有出现过健康授权弹窗。当前验证包接入运行时请求：进入训练页，先关闭心率再开启一次。设备提供 FA Context 授权入口时，会请求 `READ_HEALTH_DATA`；只有成功授权后才订阅心率。
+
+- `EAUTHAPI`：授权入口缺失或异常。
+- `EAUTHDENIED`：未获得成功授权结果。
+- `EAUTHTIME`：15 秒内没有授权回调。
+
+主页面较长代码可能显示省略号；长按心率文字 2 秒可查看 debug 中的完整“心率授权”代码和文字。FIT 5 Pro 是否支持该动态授权入口仍待实机验证；当前真实采样仍为 `E602: permission not declared`。官方流程见[Lite Wearable 申请授权](https://developer.huawei.com/consumer/cn/doc/lite-wearable-guides/request-permissions/)。
+
 ## 手机上在哪里看已保存记录
 
 1. 打开“统计”。
@@ -44,7 +54,7 @@
 
 用户已反馈“一直不可用”。旧回调未保留错误码，本轮诊断包新增原始失败码及错误文字；用户已安装诊断包并回传 **E602: permission not declared**。签名 BIN 已声明 `READ_HEALTH_DATA`，设备权限识别与运行时授权入口继续排查。最新包为 `/sdcard/haps/openGym-HuaweiWatch-finish-weight-signed.hap`，已推送并核对哈希。
 
-用户回忆的上架要求推测对应 [Health Service Kit 个人开发者资质](https://developer.huawei.com/consumer/cn/doc/HarmonyOS-Guides/health-application-qualifications/)。当前采集使用本地 `@system.sensor`；实际签名包已声明 `READ_HEALTH_DATA`。设备返回 E602 和 `permission not declared`，设备授权状态及本机可用的动态申请接口待核对；Health Service Kit 服务接入保持后续计划。
+用户回忆的上架要求推测对应 [Health Service Kit 个人开发者资质](https://developer.huawei.com/consumer/cn/doc/HarmonyOS-Guides/health-application-qualifications/)。当前采集使用本地 `@system.sensor`；实际签名包已声明 `READ_HEALTH_DATA`。设备返回 E602 和 `permission not declared`，动态申请验证包已构建，设备授权结果待回传；Health Service Kit 服务接入保持后续计划。
 
 ## 源码依据
 
