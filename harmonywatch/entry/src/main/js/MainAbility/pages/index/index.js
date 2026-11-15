@@ -52,8 +52,6 @@ export default {
     this.visible = false
     this.stopClocks()
 
-    try { if (this.crownWatching && typeof clearMonitorForCrownEvents === 'function') clearMonitorForCrownEvents() } catch (e) {}
-    this.crownWatching = false
 
     this.ackRest()
 
@@ -75,8 +73,7 @@ export default {
     this.mark('show')
 
 
-    this.visible = true; this.crownDeg = this.crownLast = this.crownStamp = 0
-
+    this.visible = true
     this.app.attach(this.onState)
     this.app.keepScreenOn(true)
     this.stopClocks()
@@ -88,14 +85,10 @@ export default {
       var src = page.screen === 'exercise' && e ? page.app.clipFrame(e.id, Date.now()) : ''
       if (src !== page.clipSrc) page.clipSrc = src
     }, 250)
-    this.motionClock = setInterval(function() { if (page.visible && !page.dead && page.screen === 'rest' && page.session && page.session.workout) page.restView(page.session) }, 100)
     this.clock = setInterval(function() { if (!page.dead && page.visible) page.tickClock() }, 1000)
-    try { if (!this.crownWatching && typeof setMonitorForCrownEvents === 'function') {
-      setMonitorForCrownEvents(function(evt) { return page.crown(evt) }); this.crownWatching = true
-    } } catch (e) {}
     if (this.session) this.tickClock()
   },
-  stopClocks() { clearInterval(this.animationClock); clearInterval(this.motionClock); clearInterval(this.clock) },
+  stopClocks() { clearInterval(this.animationClock); clearInterval(this.clock) },
 
   // ---- state → screen -------------------------------------------------------------------------
   sync() {
@@ -123,7 +116,7 @@ export default {
       this.workoutId = s.workout.id; this.screen = 'exercise'; this.picked = -1; this.live = null
       this.confirm = this.skipConfirm = this.asking = this.manualFinish = false
     }
-    if (this.sensing && !s.sensorEnabled) { this.sensing = false; this.app.heartStop() }
+    if (this.sensing && !s.sensorEnabled) { this.sensing = false; this.app.heartStop(true) }
     if (!this.sensing && s.sensorEnabled) { this.sensing = true; this.app.heartStart() }
     if (this.screen === 'edit') { this.exerciseView(s, now); return }
     if (this.asking) { this.askingView(s); return }
@@ -191,11 +184,10 @@ export default {
     var r = s.workout.rest, left = r.paused ? r.left : (r.endsAt - Date.now()) / 1000, total = r.total || s.restDurationSec || s.workout.restSec
     this.restPaused = !!r.paused
     this.digits = clock(left)
-    this.ringPercent = Math.min(100, Math.max(0, 100 * left / Math.max(1, total)))
+    this.ringPercent = Math.min(100, Math.max(0, Math.round(100 * left / Math.max(1, total))))
     this.restRing = !s.settings.show || s.settings.show.rest !== 'plain'
     var e = s.workout.entries[s.entryIndex], si = setIndex(s, s.entryIndex, this.picked)
     this.nextText = this.showNext && e && si >= 0 ? fill(this.words.next, [e.name, si + 1]) : ''
-    if (this.restRing) this.app.drawRest(this, this.ringPercent)
   },
   heartLabel(s) {
     var words = this.words, h = this.app.heartRate(0)
@@ -222,8 +214,6 @@ export default {
     this.screen = 'exercise'
     this.exerciseView(s, Date.now())
   },
-
-  crown(evt) {  return this.app.crown(this, evt) },
 
   // ---- clocks ---------------------------------------------------------------------------------
   tickClock() {

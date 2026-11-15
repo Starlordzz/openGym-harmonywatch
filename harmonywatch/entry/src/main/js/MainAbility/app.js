@@ -6,7 +6,6 @@ import { start, tick, skip, finish, summary, idle, event } from './common/sessio
 import { localTick, afterTick, closeRest, stats } from './common/heart.js'
 import { clipAt } from './common/clips.js'
 import { adjustNumber } from './common/editor.js'
-import { crown } from './common/crown.js'
 import { changeRest } from './common/rest-control.js'
 
 // watchOS takes the summary's heart rate from the HealthKit workout; here it comes from the
@@ -55,7 +54,6 @@ export default {
   words(lang) { return wordsFor(lang) },
   change(fn) { this.rt.change(fn) },
   vibrate(mode, force) { this.rt.vibrate(mode, force) },
-  crown(page, evt) { return crown(page, evt) },
   keepScreenOn(on) { this.rt.keepScreenOn(on) },
   editNumber(page, delta, number, effort, color, step) { adjustNumber(page, delta, number, effort, color, step) },
   samples() { return this.rt.samples() },
@@ -63,19 +61,6 @@ export default {
   heartStart() { this.rt.heartStart() },
   heartStop(keep) { this.rt.heartStop(keep) },
   heartState() { return this.rt.heartState() },
-  drawRest(page, percent) {
-    var element = page.$refs && page.$refs.restArc
-    if (!element) return
-    var c = element.getContext('2d'), end = Math.PI * (percent / 50 - 0.5)
-    if (c.clearRect) c.clearRect(0, 0, 240, 240)
-    else c.cleanRect(0, 0, 240, 240)
-    c.lineWidth = 12; c.lineCap = 'round'; c.strokeStyle = '#262626'
-    c.beginPath(); c.arc(120, 120, 106, 0, Math.PI * 2); c.stroke()
-    if (percent <= 0) return
-    c.strokeStyle = '#30d158'
-    c.beginPath(); c.arc(120, 120, 106, -Math.PI / 2, end)
-    c.lineTo(120 + 106 * Math.cos(end), 120 + 106 * Math.sin(end)); c.stroke()
-  },
   clipFrame(exId, at) { return this.state ? clipAt(this.state, exId, at) : '' },
   summaryAt(at) { return this.state ? summary(this.state, at) : null },
   idleAt(now) { return this.state ? idle(this.state, now) : '' },

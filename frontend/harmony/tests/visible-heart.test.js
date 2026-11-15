@@ -30,3 +30,12 @@ test('animation cleanup waits for each native delete callback and spaces subsequ
   requests[1].fail(); tasks.shift()()
   assert.equal(requests.length, 2)
 })
+test('turning heart collection off preserves existing samples for the workout summary', t => {
+  const f = mount(t)
+  f.vm.toggleSensor(); f.sampleHeart(128)
+  f.vm.toggleSensor()
+  assert.equal(f.app.samples().length, 1)
+  f.app.finishWorkout(11000, false)
+  assert.equal(f.app.state.summary.hrAvg, 128)
+  assert.equal(f.app.state.summary.hrMax, 128)
+})

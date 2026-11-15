@@ -4,27 +4,24 @@ import { mount, savedState, entry } from './helpers/watch.js'
 import { createRuntime } from '../watch/entry/src/main/js/default/common/controller.js'
 import { waitForSdk } from '../watch/entry/src/main/js/default/common/sdk-ready.js'
 
-test('one crown burst navigates once and stays silent', t => {
-  const f = mount(t, savedState([entry('a'), entry('b'), entry('c'), entry('d')]))
-  f.vm.crown({ degree: 48, timestamp: 1 })
+test('showing and hiding the page never registers a native crown listener', t => {
+  let calls = 0
+  const previous = globalThis.setMonitorForCrownEvents
+  globalThis.setMonitorForCrownEvents = () => calls++
+  t.after(() => { if (previous === undefined) delete globalThis.setMonitorForCrownEvents; else globalThis.setMonitorForCrownEvents = previous })
+  const f = mount(t, savedState([entry('a'), entry('b')]))
+  f.vm.onShow(); f.vm.onHide(); f.vm.onShow()
+  assert.equal(calls, 0)
+  f.vm.onSwipe({ direction: 'up' })
   assert.equal(f.app.state.entryIndex, 1)
-  // A detent reported as a second burst inside the 450 ms lock must not step or buzz again.
-  f.time(10030); f.vm.crown({ degree: 30, timestamp: 2 })
-  f.time(10200); f.vm.crown({ degree: 30, timestamp: 3 })
-  assert.equal(f.app.state.entryIndex, 1)
-  f.time(10480); f.vm.crown({ degree: 24, timestamp: 4 })
-  assert.equal(f.app.state.entryIndex, 2)
-  // The platform's only haptics are notification-style short/long, so the crown does not buzz.
-  assert.equal(f.vibrations.length, 0)
 })
 
-test('hidden pages detach, stop clocks and ignore late crown events until shown', t => {
+test('hidden pages detach and stop clocks until shown', t => {
   const f = mount(t, savedState([entry('a'), entry('b')]))
   f.vm.onShow()
   f.vm.onHide()
   assert.equal(f.app.listener, null)
   assert.ok(f.intervals.every(v => !v.active))
-  f.vm.crown({ degree: 100, timestamp: 4 })
   assert.equal(f.app.state.entryIndex, 0)
   f.app.showEntry(1)
   assert.equal(f.vm.exName, 'a')

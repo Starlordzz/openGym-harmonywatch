@@ -90,17 +90,12 @@ test('the exit start records the JS quiet gap and the clock the app stream stamp
   assert.match(f.traces[f.traces.length - 1], /h[asw]*J4200T34200/)
 })
 
-test('a degree-less crown event is timed from its own arrival to the exit', t => {
+test('disabled crown input leaves no press clock in the exit trace', t => {
   const f = mount(t)
-  f.time(50000)
-  f.vm.onShow()
-  f.vm.crown({ timestamp: 1, degree: 0 })
-  assert.equal(f.vm.crownAt, 50000)
-  f.vm.crown({ timestamp: 2, degree: 30 })
-  assert.equal(f.vm.crownAt, 50000, 'a rotation must not overwrite the press clock')
-  f.time(63100)
-  f.vm.onHide()
-  assert.match(f.traces[f.traces.length - 1], /C13100/)
+  f.time(50000); f.vm.onShow()
+  assert.equal(f.vm.crown, undefined)
+  f.time(63100); f.vm.onHide()
+  assert.doesNotMatch(f.traces[f.traces.length - 1], /C[0-9]+/)
 })
 
 test('a long previous exit wraps so the whole line stays readable', t => {

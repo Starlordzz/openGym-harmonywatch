@@ -40,7 +40,7 @@
 .ringNote { width: 260px; height: 60px; font-size: 22px; text-align: center; color: #aaaaaa; text-overflow: ellipsis; }
 .ringCap { width: 260px; height: 44px; font-size: 22px; text-align: center; color: #aaaaaa; text-overflow: ellipsis; }
 .restWrap { width: 240px; height: 240px; }
-.restArc { width: 240px; height: 240px; }
+.restArc { width: 240px; height: 240px; center-x: 120px; center-y: 120px; radius: 106px; }
 .restText { width: 200px; height: 200px; top: 20px; left: 20px; }
 .ringDigits { width: 280px; height: 100px; font-size: 84px; text-align: center; color: #ffffff; }
 .digits { width: 340px; height: 104px; font-size: 84px; text-align: center; color: #30d158; }
