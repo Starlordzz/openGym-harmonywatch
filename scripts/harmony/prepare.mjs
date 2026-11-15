@@ -79,13 +79,12 @@ if (sdk) {
   // A real offline build. No SDK impersonation or successful radio callbacks are supplied.
   await writeFile(join(destination, 'common/runtime.js'), `import storage from '@system.storage'
 import vibrator from '@system.vibrator'
-import sensor from '@system.sensor'
 import brightness from '@system.brightness'
 import file from '@system.file'
 import { createRuntime } from './controller.js'
 import { stateStorage } from './state-storage.js'
 export function runtime(changed, failure) {
-  return createRuntime({ available: false, storage: stateStorage(storage, file), vibrator: vibrator, sensor: sensor, brightness: brightness,
+  return createRuntime({ available: false, storage: stateStorage(storage, file), vibrator: vibrator, brightness: brightness,
     remove: function(uri) { file.delete({ uri: uri, fail: function() {} }) },
     setTimeout: setTimeout, clearTimeout: clearTimeout, setInterval: setInterval, clearInterval: clearInterval }, changed, failure)
 }

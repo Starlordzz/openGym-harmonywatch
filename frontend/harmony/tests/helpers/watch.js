@@ -24,7 +24,7 @@ export function savedState(entries = [entry()]) {
 }
 
 // Real app + controller + page. Only native I/O, timers and the framework's getApp are replaced.
-export function mount(t, saved = savedState(), { silent = false, corrupt = false, radio = false, lastTrace = '', lastBoot = '', lastBootPrev = '', heartPermission } = {}) {
+export function mount(t, saved = savedState(), { silent = false, corrupt = false, radio = false, lastTrace = '', lastBoot = '', lastBootPrev = '', heartPermission, sensorAvailable = true } = {}) {
   let now = 10000, stored = corrupt ? '{bad json' : JSON.stringify(saved), get, receiver, heartCallbacks
   const timers = [], intervals = [], writes = [], traces = [], boots = [], bootsPrev = [], sent = [], vibrations = [], vibrationModes = [], sensorCalls = [], screenRequests = []
   const extra = new Map([['opengym-fit-trace', lastTrace], ['opengym-fit-boot', lastBoot], ['opengym-fit-boot-prev', lastBootPrev]])
@@ -40,7 +40,7 @@ export function mount(t, saved = savedState(), { silent = false, corrupt = false
       set(o) { if (o.key === 'opengym-fit-v1') { stored = o.value; writes.push(copy(JSON.parse(stored))) } else { extra.set(o.key, o.value); (o.key === 'opengym-fit-boot' ? boots : o.key === 'opengym-fit-boot-prev' ? bootsPrev : traces).push(o.value) } o.success() } },
     vibrator: { vibrate(o) { vibrations.push(now); vibrationModes.push(o.mode) } },
     brightness: { setKeepScreenOn(o) { screenRequests.push(o.keepScreenOn); if (o.success) o.success() } },
-    sensor: { subscribeHeartRate(o) { heartCallbacks = o; sensorCalls.push('start') }, unsubscribeHeartRate() { sensorCalls.push('stop') } },
+    sensor: sensorAvailable ? { subscribeHeartRate(o) { heartCallbacks = o; sensorCalls.push('start') }, unsubscribeHeartRate() { sensorCalls.push('stop') } } : undefined,
     setTimeout: schedule, clearTimeout: cancel, setInterval: () => null, clearInterval() {},
     client: { setPeerPkgName() {}, setPeerFingerPrint() {}, registerReceiver(o) { receiver = o; o.onSuccess() }, unregisterReceiver(o) { o.onSuccess() },
       ping(o) { o.onPingResult({ code: 201 }) }, send(message, o) { sent.push(message.builder.text); o.onSendResult({ code: 207 }) } },
@@ -60,7 +60,7 @@ export function mount(t, saved = savedState(), { silent = false, corrupt = false
     if (oldRuntime === undefined) delete globalThis.__watchTestRuntime; else globalThis.__watchTestRuntime = oldRuntime
   })
   return { app, vm, writes, traces, boots, bootsPrev, sent, vibrations, vibrationModes, sensorCalls, screenRequests, intervals, get stored() { return JSON.parse(stored) },
-    sampleHeart(value) { heartCallbacks.success({ heartRate: value }) }, failHeart(data, code) { heartCallbacks.fail(data, code) },
+    sampleHeart(value) { heartCallbacks.success({ heartRate: value }) }, failHeart(data, code) { heartCallbacks.fail(data, code) }, heartCallbacks() { return heartCallbacks },
     time(at) { now = at },
     fire(ms) { for (const task of timers.slice()) if (task.active && task.ms === ms) { task.active = false; task.fn() } },
     answer(text) { get.success(text) }, failRead() { get.fail() },

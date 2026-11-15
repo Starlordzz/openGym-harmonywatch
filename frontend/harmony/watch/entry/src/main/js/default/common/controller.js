@@ -15,7 +15,7 @@ export function createRuntime(platform, changed, failure) {
   var boot = 'boot-' + Date.now() + '-' + Math.random().toString(16).slice(2)
   var remove = platform.remove || function() {}
   var saves = [], queue = [], sending = false, timer, stopped = false, hr = [], heartOn = false, heartSince = 0, loaded = false, registered = false, registering = false
-  var sendTimer, retryTimer, readWatchdog, cancelReady, screenOn = false, lastSend = '-', heartFailure = '', heartAsk = false, heartSeq = 0, cancelHr
+  var sendTimer, retryTimer, readWatchdog, cancelReady, screenOn = false, lastSend = '-', hrNote = '', hrSeq = 0
   /*f*/
   // U13 forensics, second stream: the app side outlives the page, so its events (SDK readiness,
   // receiver registration, the 15 s tick, stop and unregister) go to their own key with the page
@@ -47,6 +47,11 @@ export function createRuntime(platform, changed, failure) {
   // Installation detection is unnecessary for this protocol and crosses another native boundary.
   var lastHeard = 0, lastOk = 0, traffic = false, lastHello = 0
   function report(e, fatal) { if (!stopped) failure(String(e && e.message || e), fatal) }
+  function failHeart(code, text) {
+    heartOn = false
+    hrNote = (code == null ? '' : code) + ': ' + String(text || '').slice(0, 64)
+    report('心率 ' + hrNote)
+  }
   function online() { return traffic && now() - Math.max(lastHeard, lastOk) < 90000 }
   function mark() {
     if (stopped) return
@@ -231,33 +236,24 @@ export function createRuntime(platform, changed, failure) {
           fail: function(data, code) { /*f*/ tnote('Z' + (on ? '1' : '0') + 'F' + code); /*endf*/ console.warn('keepScreenOn: ' + code) } })
       } catch (e) { /*f*/ tnote('Z' + (on ? '1' : '0') + 'T'); /*endf*/ console.warn('keepScreenOn unavailable') }
     },
-    requestHeart: function() { heartAsk = true },
     heartStart: function() {
       if (stopped || heartOn) return
-      var epoch = ++heartSeq, ask = heartAsk
-      heartAsk = false
-      heartOn = true; heartSince = now(); heartFailure = ''
-      function subscribe(code, text) {
-        if (stopped || !heartOn || epoch !== heartSeq) return
-        cancelHr = null
-        if (code) { heartOn = false; heartFailure = code; report('心率授权 ' + code + ': ' + text); return }
-        try { sensor.subscribeHeartRate({ success: function(v) {
-        if (stopped || !heartOn || epoch !== heartSeq) return
+      if (!sensor) { failHeart('PAUSED', 'HA4 recovery'); return }
+      var seq = ++hrSeq
+      heartOn = true; heartSince = now(); hrNote = 'SENSOR'
+      try { sensor.subscribeHeartRate({ success: function(v) {
+        if (stopped || !heartOn || seq !== hrSeq) return
         if (v.heartRate >= 25 && v.heartRate <= 250) hr.push({ at: now(), value: v.heartRate })
         hr = hr.slice(-600)
-        }, fail: function(data, code) {
-          if (stopped || epoch !== heartSeq) return
-          heartOn = false; heartFailure = code == null ? '' : String(code)
-          report('心率失败 ' + (heartFailure || '?') + ': ' + String(data || '').slice(0, 64))
-        } }) }
-        catch (e) { heartOn = false; heartFailure = e && e.code != null ? String(e.code) : 'JS'; report('心率异常 ' + heartFailure + ': ' + String(e && e.message || e).slice(0, 64)) }
-      }
-      if (ask && platform.heartPermission) cancelHr = platform.heartPermission(subscribe)
-      else subscribe()
+      }, fail: function(data, code) {
+        if (stopped || seq !== hrSeq) return
+        failHeart(code, data)
+      } }) }
+      catch (e) { failHeart(e && e.code || 'JS', e && e.message || e) }
     },
     heartStop: function(keep) { stopHeart(); if (!keep) hr = [] },
     heartState: function() { return !heartOn ? 'unavailable' : now() - (hr.length ? hr[hr.length - 1].at : heartSince) > 15000 ? 'noData' : 'measuring' },
-    heartError: function() { return heartFailure },
+    heartError: function(detail) { return detail ? hrNote : hrNote.split(':')[0] },
     samples: function() { return hr.slice() },
     heart: function(since) {
       var at = now(), values = hr.filter(function(v) { return v.at >= since && v.at <= at })
@@ -313,8 +309,7 @@ export function createRuntime(platform, changed, failure) {
     }
   }
   function stopHeart() {
-    heartSeq++
-    if (cancelHr) { cancelHr(); cancelHr = null; heartOn = false }
+    hrSeq++
     if (!heartOn) return
     heartOn = false
     try { sensor.unsubscribeHeartRate() } catch (e) { report(e) }

@@ -101,12 +101,11 @@ test('a failing sensor cleanup cannot skip P2P cleanup or accept late heart samp
   assert.ok(unregistered > 0); assert.deepEqual(rt.samples(), [])
 })
 
-test('the idle heart link and the debug entry survive a session that has not arrived', t => {
+test('the debug entry and write guard survive a session that has not arrived', t => {
   const saved = savedState()
   const f = mount(t, saved, { silent: true })
   // The idle screen is drawn from the first frame, while native storage is still being read.
   assert.ok(!f.vm.session)
-  assert.doesNotThrow(() => f.vm.toggleSensor())
   f.vm.openDebug()
   assert.equal(f.vm.screen, 'debug')
   assert.equal(f.vm.debugLines[0].text, 'workout: none')
@@ -115,11 +114,11 @@ test('the idle heart link and the debug entry survive a session that has not arr
   // does: a late read must not overwrite what a tap recorded in between.
   f.fire(1500)
   assert.ok(f.vm.session)
-  f.vm.toggleSensor()
-  assert.equal(f.vm.session.sensorEnabled, undefined)
+  f.app.change(s => { s.activity = 123 })
+  assert.equal(f.vm.session.activity, undefined)
   f.answer(JSON.stringify(saved))
-  f.vm.toggleSensor()
-  assert.equal(f.vm.session.sensorEnabled, true)
+  f.app.change(s => { s.activity = 123 })
+  assert.equal(f.vm.session.activity, 123)
 })
 
 test('hide followed by destroy cleans the page once and does not write to the hidden view again', t => {

@@ -46,11 +46,8 @@
 .digits { width: 340px; height: 104px; font-size: 84px; text-align: center; color: #30d158; }
 .bigDigits { width: 280px; height: 160px; font-size: 128px; text-align: center; color: #30d158; }
 .head { width: 368px; height: 60px; flex-direction: row; align-items: center; justify-content: space-between; }
-.name { width: 218px; height: 56px; font-size: 26px; color: #ffffff; text-overflow: ellipsis; }
-.headerStatus { width: 144px; height: 54px; flex-direction: column; justify-content: center; align-items: flex-end; }
-.heartRow { width: 108px; height: 28px; flex-direction: row; align-items: center; }
-.heartIcon { width: 20px; height: 20px; }
-.heartText { width: 144px; height: 48px; font-size: 20px; text-align: right; color: #ff453a; text-overflow: ellipsis; }
+.name { width: 332px; height: 56px; font-size: 26px; color: #ffffff; text-overflow: ellipsis; }
+.headerStatus { width: 28px; height: 54px; flex-direction: column; justify-content: center; align-items: flex-end; }
 .offlineIcon { width: 24px; height: 24px; }
 .tags { width: 368px; height: 28px; flex-direction: row; justify-content: center; align-items: center; }
 .tag { height: 28px; font-size: 20px; text-align: center; border-radius: 10px; padding-left: 6px; padding-right: 6px; margin-left: 2px; margin-right: 2px; }
@@ -63,7 +60,8 @@
 .numLine { width: 168px; height: 72px; margin-bottom: 4px; flex-direction: row; justify-content: center; align-items: center; }
 .largeLine { width: 340px; height: 82px; margin-bottom: 0px; }
 .tnum { width: 160px; height: 72px; font-size: 60px; text-align: center; color: #ffffff; }
-.weightNumber { width: 124px; text-align: right; }
+.weightNumber { width: 168px; text-align: center; }
+.weightUnit { width: 28px; top: 24px; margin-left: 0px; font-size: 20px; }
 .largeNumber { width: 280px; height: 82px; font-size: 84px; }
 .tunit { width: 34px; height: 32px; font-size: 24px; color: #aaaaaa; margin-left: 2px; }
 .tlabel { width: 168px; height: 28px; font-size: 20px; text-align: center; color: #aaaaaa; }
@@ -114,7 +112,6 @@
 
 .restNext { width: 344px; height: 40px; font-size: 20px; color: #aaaaaa; text-align: center; text-overflow: ellipsis; }
 .restOffline { width: 344px; height: 28px; font-size: 20px; color: #aaaaaa; text-align: center; }
-.restHeart { width: 344px; height: 28px; font-size: 20px; color: #ff453a; text-align: center; }
 .restRow { height: 64px; }
 .restSkip { width: 240px; height: 52px; margin-top: 0px; }
 

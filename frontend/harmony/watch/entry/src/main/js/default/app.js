@@ -133,7 +133,7 @@ export default {
   /*endo*/
 
   radioLines() {
-    var lines = [{ text: this.rt.radioStatus() }], error = this.lastError || ''
+    var lines = [{ text: 'HA6 ' + this.rt.radioStatus() }], error = this.lastError || ''
     for (var i = 0; i < Math.min(error.length, 112); i += 28) lines.push({ text: error.slice(i, i + 28) })
     return lines
   },
@@ -145,12 +145,6 @@ export default {
   vibrate(mode, force) { this.rt.vibrate(mode, force) },
   keepScreenOn(on) { this.rt.keepScreenOn(on) },
   editNumber(page, delta, number, effort, color, step) { adjustNumber(page, delta, number, effort, color, step) },
-  samples() { return this.rt.samples() },
-  heartRate(since) { return this.rt.heart(since) },
-  heartStart() { this.rt.heartStart() },
-  heartStop(keep) { this.rt.heartStop(keep) },
-  heartState() { return this.rt.heartState() },
-  heartError() { return this.rt.heartError() },
   clipFrame(exId, at) { return this.state ? clipAt(this.state, exId, at) : '' },
   summaryAt(at) { return this.state ? summary(this.state, at) : null },
   idleAt(now) { return this.state ? idle(this.state, now) : '' },
@@ -201,6 +195,5 @@ export default {
   }) },
   recordEvent(s, type, fields, at) { return event(s, type, fields, at) },
   snooze() { this.rt.change(function(s) { s.snooze = Date.now() }) },
-  sensor(on) { if (on) this.rt.requestHeart(); this.rt.change(function(s) { s.sensorEnabled = on }) },
   clearSummary() { this.rt.change(function(s) { s.summary = null }) }
 }

@@ -94,11 +94,10 @@ test('progress counts non-warm-up sets and both sides count once', () => {
   assert.equal(setsOf('%lld of %lld sets', { done: 0, total: 0 }), '')
 })
 
-test('the summary lists time, sets, volume and heart rate', () => {
+test('the summary keeps time, sets and volume while hiding legacy heart values', () => {
   const words = { time: 'Time', sets: 'Sets', volume: 'Volume', heart: 'Heart rate' }
   const stats = summaryStats({ seconds: 3120, sets: 12, volume: 12345, hrAvg: 128.4, hrMax: 165.6 }, words, 'kg')
-  assert.deepEqual(stats.map(s => s.value), ['52:00', '12', '12,345 kg', '128 / 166'])
-  assert.equal(stats[3].color, '#ff453a')
+  assert.deepEqual(stats.map(s => s.value), ['52:00', '12', '12,345 kg'])
   assert.deepEqual(summaryStats({ seconds: 60, sets: 1, volume: 0 }, words, 'kg').map(s => s.key), ['time', 'sets'])
 })
 

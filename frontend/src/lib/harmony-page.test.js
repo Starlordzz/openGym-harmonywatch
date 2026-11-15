@@ -76,11 +76,11 @@ it('a restored hold whose set is already complete is cleared without repeated al
   expect(port.state.outbox.filter(e => e.type === 'setDone')).toHaveLength(0)
   expect(app.rt.vibrate).not.toHaveBeenCalled()
 })
-it('turning off heart rate during a workout unsubscribes immediately', () => {
+it('old heart settings do not restore collection or controls', () => {
   port.state.sensorEnabled = true; port.changed(port.state)
-  expect(app.rt.heartStart).toHaveBeenCalledTimes(1)
-  port.state.sensorEnabled = false; port.changed(port.state)
-  expect(app.rt.heartStop).toHaveBeenCalledTimes(1)
+  expect(app.rt.heartStart).not.toHaveBeenCalled()
+  expect(vm.toggleSensor).toBeUndefined()
+  expect(app.sensor).toBeUndefined()
 })
 it('an initial countdown does not start a workout while its page is hidden', () => {
   port.state.ready = { today: { name: 'test', routineIds: ['r'], entries: port.state.workout.entries } }

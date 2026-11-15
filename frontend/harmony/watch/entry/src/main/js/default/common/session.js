@@ -10,6 +10,7 @@ export function restoreState(value) {
   if (!Array.isArray(value.outbox)) throw Error('Invalid state')
   var s = Object.assign(initialState(), value)
   delete s.touchLocked
+  delete s.sensorEnabled
   // Old keys omitted the entry index. Recover pending events from their recorded entryIdx;
   // an ambiguous old skip belongs only to its first occurrence, never every duplicate.
   if (s.workout) s.workout.entries.forEach(function(e, ei) {

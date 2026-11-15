@@ -52,7 +52,6 @@
         <text class="note idleHint">{{idleHint}}</text>
       </div>
       <text class="statusNote" if="{{!!pending}}">{{pending}}</text>
-      <input class="link" type="button" style="width: 300px; font-size: 22px" value="{{words.heart + '：' + (sensorOn ? words.on : words.off)}}" onclick="toggleSensor" />
     </div>
 
     <!-- debug (2 s press on idle; 2 s press on the title flips the screen-on probe, tap closes) -->
@@ -96,9 +95,8 @@
     <!-- one exercise, swipe to the neighbours -->
     <div class="screen exerciseScreen" if="{{screen === 'exercise'}}" onswipe="onSwipe">
       <div class="head">
-        <text class="name">{{exName}}</text>
+        <text class="name" onlongpress="openDebug">{{exName}}</text>
         <div class="headerStatus">
-          <text class="heartText" if="{{hrWanted}}" onclick="toggleSensor" onlongpress="openDebug">{{hr}}</text>
           <image class="offlineIcon" src="/common/icons/offline.png" if="{{!!offline}}" />
         </div>
       </div>
@@ -115,7 +113,7 @@
       </div>
       <div class="tiles" if="{{!timed && !cardio && !noSet}}">
         <div class="tile" if="{{!bodyweight}}" onclick="edit('weight')">
-          <div class="numLine"><text class="tnum weightNumber" style="font-size: {{weightFont}}px">{{weight}}</text><text class="tunit">{{unit}}</text></div>
+          <stack class="numLine"><text class="tnum weightNumber" style="font-size: {{weightFont}}px">{{weight}}</text><text class="tunit weightUnit" style="left: {{unitLeft}}px">{{unit}}</text></stack>
           <text class="tlabel">{{words.weight}}</text>
         </div>
         <div class="tile" if="{{bodyweight}}" onclick="edit('reps')">
@@ -187,7 +185,6 @@
         </div>
       </stack>
       <text class="restNext">{{nextText}}</text>
-      <text class="restHeart" if="{{hrWanted}}" onclick="toggleSensor" onlongpress="openDebug">{{hr}}</text>
       <text class="restOffline" if="{{!!offline}}">{{offline}}</text>
       <div class="row restRow">
         <input class="edgeBtn" type="button" value="-15s" onclick="restLess" />

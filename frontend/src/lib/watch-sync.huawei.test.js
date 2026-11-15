@@ -22,6 +22,7 @@ it('Huawei retries failed snapshots and requests a single launch for a new phone
   await vi.advanceTimersByTimeAsync(500)
   expect(b.sendClips).not.toHaveBeenCalled(); expect(b.openOnWatch).toHaveBeenCalledTimes(1)
   expect(JSON.parse(b.sendSnapshot.mock.calls.at(-1)[0].json).settings.health).toBe(false)
+  expect(JSON.parse(b.sendSnapshot.mock.calls.at(-1)[0].json).settings.show.hr).toBe(false)
 })
 it('does not restart an animation transfer when another set updates during transmission', async () => {
   const { EXIDX } = await import('./exercises.js')
