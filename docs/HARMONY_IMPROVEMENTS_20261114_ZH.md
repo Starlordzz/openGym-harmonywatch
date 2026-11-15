@@ -14,7 +14,7 @@
 
 本轮验证：手表 142 项、手机页面 8 项通过；原生启动、结束页与离线休息页均通过，编译 app/page 中已核对无表冠监听注册、无 canvas 自绘路径。app 47,796 B、页面 48,569 B，分别余 1,356 B、583 B。
 
-已签名产物 `harmonywatch/artifacts/openGym-HuaweiWatch-stable-controls-signed.hap` 为 685,186 B，SHA-256 `6c7d2e60f928fc1ff9eee02fb4d612f91ac931d7d4e4d01e53599296ea73ac3e`；Profile、签名 BIN、HAP 容器及编译 JS 包含关系核验通过。当前 ADB 没有设备，新 HAP 等原测试手机连接后推送；手机继续使用已安装的 controls APK。
+已签名产物 `harmonywatch/artifacts/openGym-HuaweiWatch-stable-controls-signed.hap` 为 685,186 B，SHA-256 `6c7d2e60f928fc1ff9eee02fb4d612f91ac931d7d4e4d01e53599296ea73ac3e`；Profile、签名 BIN、HAP 容器及编译 JS 包含关系核验通过。原测试手机已连接，新 HAP 已推送到 `/sdcard/haps/openGym-HuaweiWatch-stable-controls-signed.hap`，设备文件 SHA-256 与上述产物一致；待用户用应用调测助手覆盖安装。手机继续使用已安装的 controls APK。交付核验记录：`harmonywatch/artifacts/DELIVERY_20261115_STABLE_CONTROLS.json`。
 
 证据：`harmonywatch/artifacts/BUILD_20261115_STABLE_CONTROLS.json`、`TEST_20261115_STABLE_CONTROLS_WATCH.log`、`TEST_20261115_STABLE_CONTROLS_PHONE.log`、`SIGN_20261115_STABLE_CONTROLS.log`、`ui-finish-20261115-preview/`、`ui-rest-20261115-preview/`。
 
