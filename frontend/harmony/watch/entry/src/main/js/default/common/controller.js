@@ -15,7 +15,7 @@ export function createRuntime(platform, changed, failure) {
   var boot = 'boot-' + Date.now() + '-' + Math.random().toString(16).slice(2)
   var remove = platform.remove || function() {}
   var saves = [], queue = [], sending = false, timer, stopped = false, hr = [], heartOn = false, heartSince = 0, loaded = false, registered = false, registering = false
-  var sendTimer, retryTimer, readWatchdog, cancelReady, screenOn = false, lastSend = '-', heartFailure = ''
+  var sendTimer, retryTimer, readWatchdog, cancelReady, screenOn = false, lastSend = '-', heartFailure = '', heartAsk = false, heartSeq = 0, cancelHr
   /*f*/
   // U13 forensics, second stream: the app side outlives the page, so its events (SDK readiness,
   // receiver registration, the 15 s tick, stop and unregister) go to their own key with the page
@@ -231,18 +231,29 @@ export function createRuntime(platform, changed, failure) {
           fail: function(data, code) { /*f*/ tnote('Z' + (on ? '1' : '0') + 'F' + code); /*endf*/ console.warn('keepScreenOn: ' + code) } })
       } catch (e) { /*f*/ tnote('Z' + (on ? '1' : '0') + 'T'); /*endf*/ console.warn('keepScreenOn unavailable') }
     },
+    requestHeart: function() { heartAsk = true },
     heartStart: function() {
       if (stopped || heartOn) return
+      var epoch = ++heartSeq, ask = heartAsk
+      heartAsk = false
       heartOn = true; heartSince = now(); heartFailure = ''
-      try { sensor.subscribeHeartRate({ success: function(v) {
-      if (stopped || !heartOn) return
-      if (v.heartRate >= 25 && v.heartRate <= 250) hr.push({ at: now(), value: v.heartRate })
-      hr = hr.slice(-600)
-      }, fail: function(data, code) {
-        heartOn = false; heartFailure = code == null ? '' : String(code)
-        report('心率失败 ' + (heartFailure || '?') + ': ' + String(data || '').slice(0, 64))
-      } }) }
-      catch (e) { heartOn = false; heartFailure = e && e.code != null ? String(e.code) : 'JS'; report('心率异常 ' + heartFailure + ': ' + String(e && e.message || e).slice(0, 64)) }
+      function subscribe(code, text) {
+        if (stopped || !heartOn || epoch !== heartSeq) return
+        cancelHr = null
+        if (code) { heartOn = false; heartFailure = code; report('心率授权 ' + code + ': ' + text); return }
+        try { sensor.subscribeHeartRate({ success: function(v) {
+        if (stopped || !heartOn || epoch !== heartSeq) return
+        if (v.heartRate >= 25 && v.heartRate <= 250) hr.push({ at: now(), value: v.heartRate })
+        hr = hr.slice(-600)
+        }, fail: function(data, code) {
+          if (stopped || epoch !== heartSeq) return
+          heartOn = false; heartFailure = code == null ? '' : String(code)
+          report('心率失败 ' + (heartFailure || '?') + ': ' + String(data || '').slice(0, 64))
+        } }) }
+        catch (e) { heartOn = false; heartFailure = e && e.code != null ? String(e.code) : 'JS'; report('心率异常 ' + heartFailure + ': ' + String(e && e.message || e).slice(0, 64)) }
+      }
+      if (ask && platform.heartPermission) cancelHr = platform.heartPermission(subscribe)
+      else subscribe()
     },
     heartStop: function(keep) { stopHeart(); if (!keep) hr = [] },
     heartState: function() { return !heartOn ? 'unavailable' : now() - (hr.length ? hr[hr.length - 1].at : heartSince) > 15000 ? 'noData' : 'measuring' },
@@ -302,6 +313,8 @@ export function createRuntime(platform, changed, failure) {
     }
   }
   function stopHeart() {
+    heartSeq++
+    if (cancelHr) { cancelHr(); cancelHr = null; heartOn = false }
     if (!heartOn) return
     heartOn = false
     try { sensor.unsubscribeHeartRate() } catch (e) { report(e) }

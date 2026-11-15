@@ -24,7 +24,7 @@ export function savedState(entries = [entry()]) {
 }
 
 // Real app + controller + page. Only native I/O, timers and the framework's getApp are replaced.
-export function mount(t, saved = savedState(), { silent = false, corrupt = false, radio = false, lastTrace = '', lastBoot = '', lastBootPrev = '' } = {}) {
+export function mount(t, saved = savedState(), { silent = false, corrupt = false, radio = false, lastTrace = '', lastBoot = '', lastBootPrev = '', heartPermission } = {}) {
   let now = 10000, stored = corrupt ? '{bad json' : JSON.stringify(saved), get, receiver, heartCallbacks
   const timers = [], intervals = [], writes = [], traces = [], boots = [], bootsPrev = [], sent = [], vibrations = [], vibrationModes = [], sensorCalls = [], screenRequests = []
   const extra = new Map([['opengym-fit-trace', lastTrace], ['opengym-fit-boot', lastBoot], ['opengym-fit-boot-prev', lastBootPrev]])
@@ -35,7 +35,7 @@ export function mount(t, saved = savedState(), { silent = false, corrupt = false
   t.mock.method(globalThis, 'clearTimeout', cancel)
   t.mock.method(globalThis, 'setInterval', (fn, ms) => { const task = { fn, ms, active: true }; intervals.push(task); return task })
   t.mock.method(globalThis, 'clearInterval', cancel)
-  const platform = { available: radio, now: () => now,
+  const platform = { available: radio, now: () => now, heartPermission,
     storage: { get(o) { if (o.key === 'opengym-fit-v1') { get = o; if (!silent) o.success(stored) } else o.success(extra.get(o.key) || o.default || '') },
       set(o) { if (o.key === 'opengym-fit-v1') { stored = o.value; writes.push(copy(JSON.parse(stored))) } else { extra.set(o.key, o.value); (o.key === 'opengym-fit-boot' ? boots : o.key === 'opengym-fit-boot-prev' ? bootsPrev : traces).push(o.value) } o.success() } },
     vibrator: { vibrate(o) { vibrations.push(now); vibrationModes.push(o.mode) } },

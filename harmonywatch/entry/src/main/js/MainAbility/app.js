@@ -112,6 +112,6 @@ export default {
   }) },
   recordEvent(s, type, fields, at) { return event(s, type, fields, at) },
   snooze() { this.rt.change(function(s) { s.snooze = Date.now() }) },
-  sensor(on) { this.rt.change(function(s) { s.sensorEnabled = on }) },
+  sensor(on) { if (on) this.rt.requestHeart(); this.rt.change(function(s) { s.sensorEnabled = on }) },
   clearSummary() { this.rt.change(function(s) { s.summary = null }) }
 }

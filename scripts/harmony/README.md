@@ -29,3 +29,5 @@ Android 脚本需要 JDK 21、Android SDK 与 Gradle 缓存；手表脚本使用
 2026-11-15：当前休息圈恢复系统 progress 秒级更新。`check-rest-motion.ps1` 保留供 11-14 平滑圈试验回溯；`prepare-ui-preview.mjs --scene finish` 可检查全宽“继续训练”按钮。
 
 `prepare-ui-preview.mjs --scene zero-weight` / `decimal-weight` / `bodyweight` 检查零值、小数重量和徒手标签布局；`heart-error` 为模拟错误码场景。
+
+`prepare-ui-preview.mjs --scene heart-auth` 在独立预览副本中触发手动授权，检查 FA 接口缺失分支；`check-lite-heart.mjs` 对实际编译 app 验证延迟加载及授权成功、拒绝、接口缺失三条链路。
