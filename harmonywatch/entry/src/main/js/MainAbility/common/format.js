@@ -8,14 +8,16 @@ export function formatNumber(v) {
 }
 
 // Source Han numeric advances are at most about 0.56em (decimal point 0.28em).
-// Match SwiftUI's minimumScaleFactor(0.5) only when a long number cannot fit beside its unit.
+// Width-only callers retain the legacy 0.5 scale floor. Tiles also reserve a 1.2em line box
+// within their own height, leaving the caption in a separate row.
 function numberUnits(text) {
   var units = 0, s = String(text)
   for (var i = 0; i < s.length; i++) units += s.charAt(i) === '.' ? 0.28 : 0.56
   return Math.max(0.56, units)
 }
-export function numberFont(text, base, width) {
-  return Math.max(base / 2, Math.min(base, Math.floor(width / numberUnits(text))))
+export function numberFont(text, base, width, height) {
+  var fit = Math.min(base, Math.floor(width / numberUnits(text)), height ? Math.floor(height / 1.2) : base)
+  return Math.max(height ? 1 : base / 2, fit)
 }
 export function numberWidth(text, size) { return Math.ceil(numberUnits(text) * size) }
 

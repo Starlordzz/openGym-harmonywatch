@@ -60,7 +60,7 @@ export function mount(t, saved = savedState(), { silent = false, corrupt = false
     if (oldRuntime === undefined) delete globalThis.__watchTestRuntime; else globalThis.__watchTestRuntime = oldRuntime
   })
   return { app, vm, writes, traces, boots, bootsPrev, sent, vibrations, vibrationModes, sensorCalls, screenRequests, intervals, get stored() { return JSON.parse(stored) },
-    sampleHeart(value) { heartCallbacks.success({ heartRate: value }) }, failHeart() { heartCallbacks.fail() },
+    sampleHeart(value) { heartCallbacks.success({ heartRate: value }) }, failHeart(data, code) { heartCallbacks.fail(data, code) },
     time(at) { now = at },
     fire(ms) { for (const task of timers.slice()) if (task.active && task.ms === ms) { task.active = false; task.fn() } },
     answer(text) { get.success(text) }, failRead() { get.fail() },

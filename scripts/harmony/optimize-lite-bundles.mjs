@@ -6,6 +6,7 @@ import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { bundleShape } from './check-lite-equivalence.mjs'
 import { checkRadioStartup } from './check-lite-radio.mjs'
+import { checkHeartSubscription } from './check-lite-heart.mjs'
 export async function optimizeBundles(project, sdk) {
   const require = createRequire(import.meta.url)
   const { minify } = require(join(resolve(sdk), 'js/build-tools/ace-loader/node_modules/terser/dist/bundle.min.js'))
@@ -24,6 +25,10 @@ export async function optimizeBundles(project, sdk) {
       checkRadioStartup(source)
       checkRadioStartup(result.code)
       console.log('Compiled native radio startup: SDK 402, RX registered, hello 207')
+    }
+    if (name === 'app.js' && source.includes('subscribeHeartRate')) {
+      checkHeartSubscription(source); checkHeartSubscription(result.code)
+      console.log('Compiled native heart callbacks: sample and error code preserved')
     }
     for (const dir of [loader, packed]) await writeFile(join(dir, name), result.code)
     console.log(name + ': ' + Buffer.byteLength(source) + ' -> ' + Buffer.byteLength(result.code) + ' bytes')

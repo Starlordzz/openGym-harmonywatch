@@ -1,4 +1,4 @@
-import { fill, formatNumber, numberFont, numberWidth, clock, effortName, effortPosition, effortValue, effortColor, effortStart } from '../../common/format.js'
+import { fill, formatNumber, numberFont, clock, effortName, effortPosition, effortValue, effortColor, effortStart } from '../../common/format.js'
 import { tagsOf, numbers, dots, progress, setsOf, summaryStats } from '../../common/view.js'
 import { setIndex, sideUp } from '../../common/model.js'
 import { addSet } from '../../common/add-set.js'
@@ -11,9 +11,9 @@ export default {
     bwWhole: '70', bwTenth: '0', bwWholeColor: '#30d158', bwTenthColor: '#ffffff', bwWholeBg: '#262626', bwTenthBg: '#000000', unit: 'kg',
     remaining: 3, ringPercent: 100, digits: '3', restRing: true, nextText: '', holdName: '',
     pageNo: 1, pageCount: 1, exName: '', extras: '', hr: '', clipSrc: '', warmup: false, left: false, right: false, superset: false,
-    cardio: false, timed: false, bodyweight: false, weight: '0', added: '', reps: '0', seconds: '30', weightFont: 68, repsFont: 68, secondsFont: 84, weightWidth: 76, secondsWidth: 94, effortName: '', effortText: '–',
+    cardio: false, timed: false, bodyweight: false, weight: '0', added: '', reps: '0', seconds: '30', weightFont: 68, repsFont: 68, secondsFont: 84, effortName: '', effortText: '–',
     effortColor: '#ffffff', last: '', dots: [], noSet: false, noSetText: '', noSetIcon: '', hrWanted: true,
-    editField: '', editTitle: '', editValue: '0', editSuffix: '', alarmOn: false,
+    editField: '', editTitle: '', editValue: '0', editFont: 108, editSuffix: '', alarmOn: false,
     workoutName: '', setsLine: '', summaryName: '', savedTitle: '', stats: [], records: [],
     debugLines: [], confirm: false, skipConfirm: false, asking: false },
   onInit() {
@@ -119,8 +119,8 @@ export default {
     if (this.sensing && !s.sensorEnabled) { this.sensing = false; this.app.heartStop(true) }
     if (!this.sensing && s.sensorEnabled) { this.sensing = true; this.app.heartStart() }
     if (this.screen === 'edit') { this.exerciseView(s, now); return }
+    if (this.manualFinish) { this.asking = false; this.finishView(s); return }
     if (this.asking) { this.askingView(s); return }
-    if (this.manualFinish) { this.finishView(s); this.screen = 'finish'; return }
     var r = s.workout.rest, restEnd = r && (r.paused || r.endsAt > now)
     this.screen = s.hold ? 'hold' : restEnd ? 'rest' : 'exercise'
     if (!this.exerciseView(s, now)) return
@@ -164,11 +164,9 @@ export default {
     var n = numbers(e, row, this.live || {})
     this.cardio = n.cardio; this.timed = n.timed; this.bodyweight = n.bodyweight
     this.weight = n.weight; this.added = n.added; this.reps = n.reps; this.seconds = n.seconds
-    this.weightFont = numberFont(n.weight, 68, 124)
-    this.repsFont = numberFont(n.reps, n.bodyweight ? 84 : 68, 160)
-    this.secondsFont = numberFont(n.seconds, 84, 280)
-    this.weightWidth = numberWidth(n.weight, this.weightFont)
-    this.secondsWidth = numberWidth(n.seconds, this.secondsFont)
+    this.weightFont = numberFont(n.weight, 68, 116, 72)
+    this.repsFont = numberFont(n.reps, n.bodyweight ? 84 : 68, 160, 72)
+    this.secondsFont = numberFont(n.seconds, 84, 272, 82)
     this.effortName = s.settings.effort ? effortName(s.settings.effort) : ''
     this.effortText = this.effort == null ? '–' : formatNumber(this.effort)
     this.effortColor = s.settings.effort ? effortColor(s.settings.effort, this.effort) : '#ffffff'
@@ -190,8 +188,8 @@ export default {
     this.nextText = this.showNext && e && si >= 0 ? fill(this.words.next, [e.name, si + 1]) : ''
   },
   heartLabel(s) {
-    var words = this.words, h = this.app.heartRate(0)
-    return words.heart + ': ' + (!s.sensorEnabled ? words.off : h ? h.current + ' bpm' : words[this.app.heartState()])
+    var words = this.words, h = this.app.heartRate(0), status = this.app.heartState(), code = this.app.heartError()
+    return words.heart + ': ' + (!s.sensorEnabled ? words.off : status === 'unavailable' ? code ? 'E' + code : words.unavailable : h ? h.current + ' bpm' : words[status])
   },
   holdView(hold, now) {
     var s = this.session, e = s.workout.entries[hold.ei]
@@ -233,7 +231,7 @@ export default {
       if (s.hold) { this.complete(true); return }
       this.startRestAlarm(); this.app.closeRestAt(now); return
     }
-    var state = this.app.idleAt(now)
+    var state = this.manualFinish || this.confirm || this.skipConfirm ? '' : this.app.idleAt(now)
     this.asking = state === 'ask'
     if (state === 'end') {
       var at = s.workout.start
@@ -322,10 +320,11 @@ export default {
     } else {
       this.editValue = field === 'weight' ? this.weight : field === 'reps' ? this.reps : this.seconds
     }
-    this.screen = 'edit'
+    this.fitEdit(); this.screen = 'edit'
   },
-  editStepBy(delta) { this.app.editNumber(this, delta, formatNumber, effortValue, effortColor) },
-  editFineBy(delta) { if (this.editField === 'weight') this.app.editNumber(this, delta, formatNumber, effortValue, effortColor, 0.1) },
+  fitEdit() { this.editFont = numberFont(this.editValue, 108, 280, 132) },
+  editStepBy(delta) { this.app.editNumber(this, delta, formatNumber, effortValue, effortColor); this.fitEdit() },
+  editFineBy(delta) { if (this.editField === 'weight') this.app.editNumber(this, delta, formatNumber, effortValue, effortColor, 0.1); this.fitEdit() },
   editDone() { this.screen = 'exercise'; this.sync() },
 
   // ---- a set ----------------------------------------------------------------------------------
@@ -397,12 +396,12 @@ export default {
   restSkip() { this.app.closeRestAt(Date.now()) },
 
   // ---- finish ---------------------------------------------------------------------------------
-  finishPage() { if (!this.session || !this.session.workout) return; this.manualFinish = true; this.finishView(this.session); this.screen = 'finish' },
+  finishPage() { if (!this.session || !this.session.workout) return; this.asking = false; this.manualFinish = true; this.finishView(this.session) },
   save() { if (!this.session || !this.session.workout) return; this.manualFinish = false; this.screen = 'summary'; this.app.finishWorkout(Date.now(), false) },
   discard() { if (!this.session || !this.session.workout) return; this.confirm = true },
   confirmDiscard() { this.confirm = false; this.screen = 'idle'; this.app.finishWorkout(Date.now(), true) },
   cancelDiscard() { this.confirm = false; this.finishView(this.session); this.screen = 'finish' },
-  resume() { this.manualFinish = false; this.confirm = false; this.screen = 'exercise'; this.sync() },
+  resume() { this.manualFinish = this.confirm = this.asking = false; this.screen = 'exercise'; this.app.snooze() },
   closeSummary() { this.app.clearSummary() },
 
   // ---- 20 minutes without a set ---------------------------------------------------------------

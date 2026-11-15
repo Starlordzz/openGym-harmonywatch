@@ -4,7 +4,7 @@ vi.mock('../../harmony/watch/entry/src/main/js/default/common/runtime.js', () =>
   runtime(changed) {
     port.changed = changed
     return { load() { changed(port.state) }, change(fn) { fn(port.state); changed(port.state); changed(port.state) },
-      samples: () => [], heart: () => null, heartState: () => 'measuring', heartStart: vi.fn(), heartStop: vi.fn(), vibrate: vi.fn(),
+      samples: () => [], heart: () => null, heartState: () => 'measuring', heartError: () => '', heartStart: vi.fn(), heartStop: vi.fn(), vibrate: vi.fn(),
       // The page holds the screen on while it is shown (pages/index/index.js onShow/onHide) and the
       // app releases it on teardown; both go through the runtime's brightness call.
       keepScreenOn: vi.fn(), stop() {} }
