@@ -112,3 +112,11 @@ test('watch-size numbers stay large and long decimal weights shrink to fit besid
   assert.equal(numberFont('3600', 84, 280), 84)
   assert.ok(numberFont('123456789', 68, 124) >= 34)
 })
+
+test('numeric tiles fit both their width and height and leave room for the field caption', () => {
+  for (const value of ['0', '8', '123', '123456789', '102.5']) {
+    const size = numberFont(value, 84, 160, 68)
+    assert.ok(size * 1.2 <= 68, value + ': height')
+    assert.ok(numberWidth(value, size) <= 160, value + ': width')
+  }
+})

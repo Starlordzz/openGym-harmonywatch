@@ -2,6 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { mount } from './helpers/watch.js'
 import { fileCleaner } from '../watch/entry/src/main/js/default/common/file-cleaner.js'
+import { numberWidth } from '../watch/entry/src/main/js/default/common/format.js'
 
 test('heart feedback shows off, measuring, real bpm, stale data and unavailable on training/rest screens', t => {
   const f = mount(t)
@@ -38,4 +39,19 @@ test('turning heart collection off preserves existing samples for the workout su
   f.app.finishWorkout(11000, false)
   assert.equal(f.app.state.summary.hrAvg, 128)
   assert.equal(f.app.state.summary.hrMax, 128)
+})
+test('heart subscription errors expose the native error code and message instead of a generic unavailable state', t => {
+  const f = mount(t)
+  f.vm.toggleSensor()
+  f.failHeart('native sensor rejected request', 201)
+  assert.match(f.vm.hr, /E201/)
+  assert.match(f.app.lastError, /201.*native sensor rejected request/)
+})
+test('the numeric edit screen refits long values after each adjustment', t => {
+  const f = mount(t)
+  f.vm.reps = '123456789'; f.vm.edit('reps')
+  assert.ok(numberWidth(f.vm.editValue, f.vm.editFont) <= 280)
+  f.vm.editStepBy(1)
+  assert.equal(f.vm.editValue, '123456790')
+  assert.ok(numberWidth(f.vm.editValue, f.vm.editFont) <= 280)
 })

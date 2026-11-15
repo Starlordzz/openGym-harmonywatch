@@ -61,6 +61,7 @@ export default {
   heartStart() { this.rt.heartStart() },
   heartStop(keep) { this.rt.heartStop(keep) },
   heartState() { return this.rt.heartState() },
+  heartError() { return this.rt.heartError() },
   clipFrame(exId, at) { return this.state ? clipAt(this.state, exId, at) : '' },
   summaryAt(at) { return this.state ? summary(this.state, at) : null },
   idleAt(now) { return this.state ? idle(this.state, now) : '' },

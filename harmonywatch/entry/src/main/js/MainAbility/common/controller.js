@@ -15,7 +15,7 @@ export function createRuntime(platform, changed, failure) {
   var boot = 'boot-' + Date.now() + '-' + Math.random().toString(16).slice(2)
   var remove = platform.remove || function() {}
   var saves = [], queue = [], sending = false, timer, stopped = false, hr = [], heartOn = false, heartSince = 0, loaded = false, registered = false, registering = false
-  var sendTimer, retryTimer, readWatchdog, cancelReady, screenOn = false, lastSend = '-'
+  var sendTimer, retryTimer, readWatchdog, cancelReady, screenOn = false, lastSend = '-', heartFailure = ''
 
   // Reachability comes from traffic: a message or a successful send within the last 90 s.
   // Installation detection is unnecessary for this protocol and crosses another native boundary.
@@ -205,16 +205,20 @@ export function createRuntime(platform, changed, failure) {
     },
     heartStart: function() {
       if (stopped || heartOn) return
-      heartOn = true; heartSince = now()
+      heartOn = true; heartSince = now(); heartFailure = ''
       try { sensor.subscribeHeartRate({ success: function(v) {
       if (stopped || !heartOn) return
       if (v.heartRate >= 25 && v.heartRate <= 250) hr.push({ at: now(), value: v.heartRate })
       hr = hr.slice(-600)
-      }, fail: function() { heartOn = false; report('心率不可用，请检查设备权限') } }) }
-      catch (e) { heartOn = false; report(e) }
+      }, fail: function(data, code) {
+        heartOn = false; heartFailure = code == null ? '' : String(code)
+        report('心率失败 ' + (heartFailure || '?') + ': ' + String(data || '').slice(0, 64))
+      } }) }
+      catch (e) { heartOn = false; heartFailure = e && e.code != null ? String(e.code) : 'JS'; report('心率异常 ' + heartFailure + ': ' + String(e && e.message || e).slice(0, 64)) }
     },
     heartStop: function(keep) { stopHeart(); if (!keep) hr = [] },
     heartState: function() { return !heartOn ? 'unavailable' : now() - (hr.length ? hr[hr.length - 1].at : heartSince) > 15000 ? 'noData' : 'measuring' },
+    heartError: function() { return heartFailure },
     samples: function() { return hr.slice() },
     heart: function(since) {
       var at = now(), values = hr.filter(function(v) { return v.at >= since && v.at <= at })

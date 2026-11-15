@@ -4,6 +4,30 @@ import { mount, entry, savedState, copy } from './helpers/watch.js'
 import { initialState, start, skip, setIndex, tick, applySnapshot, restoreState } from '../watch/entry/src/main/js/default/common/session.js'
 import { mergeHeart, closeRest, localTick } from '../watch/entry/src/main/js/default/common/heart.js'
 
+test('idle finish stays on the finish page across clock ticks and state refreshes', t => {
+  const f = mount(t)
+  f.time(1000 + 21 * 60000); f.vm.tickClock()
+  assert.equal(f.vm.asking, true)
+  f.vm.askFinish()
+  for (let i = 0; i < 3; i++) {
+    f.vm.tickClock(); f.vm.sync()
+    assert.equal(f.vm.asking, false)
+    assert.equal(f.vm.screen, 'finish')
+  }
+  f.vm.discard(); f.vm.tickClock()
+  assert.equal(f.vm.confirm, true)
+  f.vm.cancelDiscard(); f.vm.resume(); f.vm.tickClock()
+  assert.equal(f.vm.asking, false)
+  assert.equal(f.vm.screen, 'exercise')
+  f.time(1000 + 42 * 60000); f.vm.tickClock(); f.vm.askFinish()
+  f.time(1000 + 46 * 60000); f.vm.tickClock()
+  assert.ok(f.app.state.workout)
+  assert.equal(f.vm.screen, 'finish')
+  f.vm.save()
+  assert.equal(f.vm.screen, 'summary')
+  assert.equal(f.app.state.workout, null)
+})
+
 test('saving populates the summary and Done returns to idle', t => {
   const { vm, app } = mount(t)
   vm.finishPage(); vm.save()

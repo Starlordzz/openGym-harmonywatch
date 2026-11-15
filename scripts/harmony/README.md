@@ -13,7 +13,7 @@
 | 身份 | `watch-peer-identity.mjs` | 公开证书提取包名与 Base64 EC 公钥身份，校验证书摘要 |
 | 签名 | `sign-local.sh` | 从本机 key-info、证书和 Profile 签名并校验 BIN/HAP |
 | 校验 | `check-size.mjs`、`check-bundles.mjs`、`check-lite-config.mjs` | 48 KB、资源与权限检查 |
-| 校验 | `optimize-lite-bundles.mjs`、`check-lite-equivalence.mjs` | 编译和打包 JS 同步优化，保留 eval 的 ViewModel 返回值，比较语言与休息显示；`check-lite-radio.mjs` 验证编译产物异步 SDK 初始化、接收注册和 hello 发送 |
+| 校验 | `optimize-lite-bundles.mjs`、`check-lite-equivalence.mjs` | 编译和打包 JS 同步优化，保留 eval 的 ViewModel 返回值，比较语言与休息显示；`check-lite-radio.mjs` 验证编译产物异步 SDK 初始化、接收注册和 hello 发送；`check-lite-heart.mjs` 验证真实编译产物的采样与错误回调 |
 | 校验 | `verify-lite-bin.py`、`verify-hap.py` | 固定叶证书、Profile、分块摘要及容器检查 |
 | 诊断 | `capture-preview.mjs`、`prepare-start-preview.mjs`、`prepare-ui-preview.mjs`、`check-rest-motion.ps1` | 原生预览、合成离线休息/训练/结束场景与圆环弧端检查 |
 | 诊断 | `prepare-exit-probe.mjs`、`prepare-link-probe.mjs` | 退出和通信对照构建，结果记录在进度文档 |
@@ -27,3 +27,5 @@ Android 脚本需要 JDK 21、Android SDK 与 Gradle 缓存；手表脚本使用
 基于 Duarte Santos 的 [openGym](https://github.com/DuarteSantos8/openGym)；本版本为第三方华为手表 / HarmonyOS 适配。许可见 [LICENSE](../../LICENSE)、[NOTICE](../../NOTICE.md) 与各素材/SDK 声明。
 
 2026-11-15：当前休息圈恢复系统 progress 秒级更新。`check-rest-motion.ps1` 保留供 11-14 平滑圈试验回溯；`prepare-ui-preview.mjs --scene finish` 可检查全宽“继续训练”按钮。
+
+`prepare-ui-preview.mjs --scene zero-weight` / `decimal-weight` / `bodyweight` 检查零值、小数重量和徒手标签布局；`heart-error` 为模拟错误码场景。

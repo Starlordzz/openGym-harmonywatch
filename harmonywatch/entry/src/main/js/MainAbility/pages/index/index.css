@@ -60,9 +60,9 @@
 .tiles { width: 368px; height: 104px; flex-direction: row; justify-content: center; align-items: center; margin-top: 4px; }
 .tile { width: 176px; height: 104px; border-radius: 16px; background-color: #262626; flex-direction: column; justify-content: center; align-items: center; margin-left: 4px; margin-right: 4px; }
 .tileWide { width: 368px; height: 110px; border-radius: 16px; background-color: #262626; flex-direction: column; justify-content: center; align-items: center; }
-.numLine { width: 168px; height: 76px; flex-direction: row; justify-content: center; align-items: center; }
-.largeLine { width: 340px; height: 82px; }
-.tnum { width: 160px; height: 76px; font-size: 68px; text-align: center; color: #ffffff; }
+.numLine { width: 168px; height: 72px; margin-bottom: 4px; flex-direction: row; justify-content: center; align-items: center; }
+.largeLine { width: 340px; height: 82px; margin-bottom: 0px; }
+.tnum { width: 160px; height: 72px; font-size: 60px; text-align: center; color: #ffffff; }
 .weightNumber { width: 124px; text-align: right; }
 .largeNumber { width: 280px; height: 82px; font-size: 84px; }
 .tunit { width: 34px; height: 32px; font-size: 24px; color: #aaaaaa; margin-left: 2px; }

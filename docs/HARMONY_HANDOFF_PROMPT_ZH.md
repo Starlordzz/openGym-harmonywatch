@@ -4,6 +4,32 @@
 
 请接手本项目，先阅读本文件、项目 AGENTS.md 和 CLAUDE.md，再根据用户的新要求继续开发。本记录覆盖 2026-10-31 至 2026-11-15，汇总开发进度、网页操作、当前产物、清理结果和接续工作。最新进度见下一节；缺陷明细见 [未解决缺陷清单](HARMONY_OPEN_BUGS_ZH.md)。
 
+## 2026-11-15 接续：结束页、重量数字与 E602
+
+用户已实机回传 E602、结束页闪回“练完了吗”、训练主页面重量数字消失。B21 已用真实页面/控制器回归复现并修正空闲提醒优先级；继续训练会重置提醒时间。B22 已改为固定数字框、独立单位框和宽高自适应字号；0 kg、102.5 kg、徒手 8 次原生截图通过，实机待复测。B19 实机完整原文已取得：`E602: permission not declared`。签名 BIN 已有 `module.reqPermissions.READ_HEALTH_DATA`；下一步核实设备权限识别及 FIT Lite 可用的运行时授权入口。新包支持长按训练/休息页心率文字 2 秒进入 debug。
+
+手表 146、手机页面 8 项通过；新包 `/sdcard/haps/openGym-HuaweiWatch-finish-weight-signed.hap` 已签名推送并核对哈希。app/page 为 48,026 / 48,739 B。安装、完整哈希、证据路径和接续步骤见[缺陷进度](HARMONY_OPEN_BUGS_ZH.md)。用户随后返回“有了”和错误原文；结束页与授权弹窗反馈待补充，真实心率采样尚未成功。
+
+## 2026-11-15 最新：徒手数字自适应与心率原始错误诊断
+
+用户反馈徒手动作次数数字与“次数”标签重叠，并确认心率一直“不可用”；回忆有一项健康服务需上架才能申请。此次处理两条独立问题。
+
+- B20 数字重叠：原徒手字号上限 84 px，而数字文本框仅 76 px 高；原计算只考虑宽度。现为重量、次数、计时数字同时计算宽度与高度上限；数值行 72 px，加 4 px 间距，标签占独立 28 px。计时大数值按 82 px 行高计算。长数字必要时可缩至原字号一半以下，避免宽度溢出。原生“8”及九位长次数场景已检查，数字与标签分离。整页当前仍为 408×480，其他屏幕的整体布局适配继续见兼容性记录。
+- B19 心率失败：用户已确认持续不可用，真实采集仍未成功。旧 fail 回调丢弃 data/code，当前已保留原始错误码和最多 64 字符说明；训练/休息心率行显示 `E<原始代码>`，JS 调用异常显示 `EJS`。采样统计与已有记录保留规则继续使用；本轮诊断阶段。
+- 编译回归增加实际 app.js 的传感器成功与失败回调检查，压缩前后都验证注入样本 128 与原始错误码 201。201 为自动测试输入；用户随后回传真实设备错误码 E602，详见本页最新进度。
+
+### 权限核验
+
+用户回忆的上架条件推测对应 Health Service Kit。华为[个人开发者接入资质说明](https://developer.huawei.com/consumer/cn/doc/HarmonyOS-Guides/health-application-qualifications/)当前要求个人应用上架华为应用市场；该服务用于后续运动健康数据、系统运动与热量等接入。
+
+当前代码实际调用手表本地 `@system.sensor.subscribeHeartRate`，本机 SDK `@system.sensor.d.ts` 要求 `ohos.permission.READ_HEALTH_DATA`。实际 stable-controls 签名 BIN 已声明该权限及 inuse 场景；本机签名 Profile 的 permissions 字段为空。设备已返回 E602，完整回调文字与本地授权状态待核对；Health Service Kit 申请工作继续保持原后续优先级。手机侧 Wear Engine 人体传感器 SENSOR 是第三条链路，见[官方申请说明](https://developer.huawei.com/consumer/cn/doc/connectivity-guides/applying-wearengine-0000001050777982/)。
+
+权限核验本机证据：`harmonywatch/artifacts/PROFILE_HEART_PERMISSION_20261115.json`。心率入口、保存范围和诊断读法见[心率说明](harmony/HEART_RATE_GUIDE_ZH.md)。本轮验证：手表 145 项、手机页面 8 项通过；实际编译产物的 Wear Engine 握手和心率成功/失败回调均通过。普通徒手次数、九位长数字、模拟心率错误码三种原生场景无 JS 异常。数字编辑页也在进入及每次加减后按宽高重新计算字号。
+
+新包 `openGym-HuaweiWatch-number-fit-heartdiag-signed.hap` 为 685,186 B，SHA-256 `9682cf22612cc2c3597ff0433cbc433647c5109529380f1b1bbc804dca196212`；已签名、核验 BIN 和 HAP 内容，推送至原测试手机 `/sdcard/haps/`，设备哈希一致。生产包未含预览注入的训练状态与模拟心率错误。app 48,026 B、页面 48,933 B，分别余 1,126 B、219 B。用户随后安装并回传 E602、结束页闪回和主页面重量数字缺失，后续修正见本页最新进度。
+
+证据：`harmonywatch/artifacts/BUILD_20261115_FIT_HEART.json`、`TEST_20261115_FIT_HEART_WATCH.log`、`TEST_20261115_FIT_HEART_PHONE.log`、`SIGN_20261115_FIT_HEART.log`、`ui-bodyweight-20261115-preview/`、`ui-long-numbers-20261115-preview/`、`ui-heart-error-20261115-preview/`。
+
 ## 2026-11-15 最新调整：恢复秒级圆环、停用表冠旋转、突出继续训练
 
 用户报告点击结束训练后的“继续训练”不够明显，平滑圆环有明显问题并要求暂停；另要求先停用旋转控制动作，并追问心率记录位置。
