@@ -50,16 +50,6 @@
           ],
           "when": "inuse"
         }
-      },
-      {
-        "name": "ohos.permission.READ_HEALTH_DATA",
-        "reason": "用于训练时读取和显示心率",
-        "usedScene": {
-          "ability": [
-            ".MainAbility"
-          ],
-          "when": "inuse"
-        }
       }
     ],
     "metaData": {

@@ -2,6 +2,73 @@
 
 更新：2026-11-15。基于 Duarte Santos 的 [openGym](https://github.com/DuarteSantos8/openGym) 开发；本版本为第三方华为 FIT / HarmonyOS 适配，沿用 AGPL-3.0-or-later。
 
+## 2026-11-15 最新：取消华为心率，核实开发者平台条件
+
+用户要求没有可用权限就取消心率，并明确所问是华为开发者平台。已核实：Health Service Kit 个人开发者应用须上架华为应用市场；Wear Engine SENSOR 原始 ECG／PPG／HR 仅向专业研究机构受限开放。旧实现使用本地 Lite 传感器；其 E602 的具体设备权限原因仍未确定。官方来源、三条链路和版本差异见[心率权限说明](harmony/HEART_RATE_GUIDE_ZH.md)。
+
+当前 HA6 已移除手表心率开关、训练／休息／汇总读数、原生采集及动态授权入口和 READ_HEALTH_DATA 声明；手机华为设置移除“显示心率”，华为快照固定隐藏。恢复旧存档时清除 sensorEnabled；既有历史心率字段与未同步事件保留。重量居中、训练、休息震动、常亮与离线同步继续保留。B19 按用户决定取消；HA5 已获“已恢复正常操作”的实机确认，HA4 继续隔离，后续开发以无心率版本为基线。
+
+手表 146 项、手机相关 27 项通过；Android 构建、原生启动、通信、功能移除门禁及签名检查通过。训练、离线休息与结束页原生预览通过。app 47,701 B、page 47,307 B，各余 1,451 / 1,845 B（48 KiB 上限）。新 APK 已通过 ADB 覆盖安装原测试手机；HAP 已推送 `/sdcard/haps/openGym-HuaweiWatch-no-heart-signed.hap`，需调测助手覆盖安装后实机复测训练操作。
+
+HAP 681,090 B，SHA-256 `b24bd495d392feb32ef027e92bbae75b626300b4a06b780731fad3761983fd38`。构建与测试证据为本地 `harmonywatch/artifacts/*20261115_NO_HEART*`、`SIGN_20261115_NO_HEART.log`、`DELIVERY_20261115_NO_HEART.json`、`ui-*-no-heart-preview/`。离线诊断包生成脚本也已移除原生传感器导入，并补充生成结果回归。原生权限和心率探测已停止，剩余任务为 B20／B21 布局与结束操作、B3–B9 训练稳定性和休息同步实机验收。
+
+以下为历史排查记录；当前状态以本节及“当前状态”表为准。
+
+## 2026-11-15 最新：HA4 已撤回，HA5 恢复包暂停原生心率
+
+用户确认 HA4 在“关闭再开启心率”时直接卡死。B23 定位到新增原生权限／心率调用链，具体阻塞点和 Lite 参数约定尚未查明。HA4 已撤回；本机和手机安装文件更名为 `openGym-HuaweiWatch-HA4-WITHDRAWN.hap.disabled` 保留证据。即时回退可用已确认能进入的 HA3，当前恢复交付为 HA5。
+
+HA5 删除原生 FA 权限适配模块、动态权限调用以及运行时 `@system.sensor` 导入。生产心率后端暂时关闭，旧的“心率已开启”配置和重新切换都会返回 `PAUSED: HA4 recovery`，不会加载这两个原生入口。`EPAUSED` 表示恢复包暂停采集。训练状态、常亮、休息、重量居中与心率统计模型保留；真实采样仍未修复。
+
+151 项回归通过，覆盖旧配置为开、重复切换、后续连接错误不覆盖诊断、迟到样本失效。原生启动、debug 与 Wear Engine 启动检查通过；编译前后及实际签名 BIN 均核对没有 `system.sensor`、`ohos.ability.featureAbility` 和 `requestPermissionsFromUser`，恢复门禁验证反复切换只得到暂停状态。模型回归使用注入的传感器后端，生产恢复包未提供该后端。页面与用户确认重量正常的 HA2 同字节，沿用 8 项手机页面回归；app 48,062 B、页面 49,084 B，各余 1,090 B、68 B。
+
+恢复包 `/sdcard/haps/openGym-HuaweiWatch-HA5-recovery-signed.hap` 已签名推送原测试手机并核对设备哈希；685,186 B，SHA-256 `4064a0b4917a0e5c6eda8f0633009c83426e695f09f435ddb0d36f5f653b1d11`。BIN/HAP 与本次 app/page 字节一致。用户已覆盖安装并确认“已恢复正常操作”；B23 的恢复验证通过，心率继续暂停。手机继续使用 controls APK。
+
+证据：`harmonywatch/artifacts/BUILD_20261115_HA5.json`、同名 `.log`、`TEST_20261115_HA5_WATCH.log`、`SIGN_20261115_HA5.log`、`ui-heart-debug-ha5-preview/`。此前 HA3/HA4 对象适配用例覆盖 JS 模拟回调；Lite 原生调用约定仍待平台资料确认。当前已按用户要求取消心率，后续训练开发使用无心率版本。用户版本原文 `26.0.0 hm7`，本机 Js SDK 26.0.0.105 / API 26。
+
+## 2026-11-15 HA4（已撤回）：直接权限对象适配
+
+HA3 用户返回字段原文 `verifypermissionrequestpermsissionsfromuser`。按候选名称 `verifyPermission`、`requestPermissionsFromUser` 构造直接导出对象后，本地回归得到同样的 `AUTHAPI: K:verifyPermission,requestPermissionsFromUser`。已定位一种集成错误：上一版只通过 `getContext()` 获取权限对象，直接位于返回对象上的方法未被调用。
+
+HA4 同时兼容模块 `getContext()`、默认导出和直接 Context。现在会尝试调用返回对象上的 `requestPermissionsFromUser`，仅成功授权后订阅传感器。用户随后确认关闭再开启心率会卡死，HA4 已撤回，恢复方案见 HA5。
+
+用户回传版本原文为 `26.0.0 hm7`；本机 Js SDK 元数据为 26.0.0.105 / API 26。完整手表构建号及 Lite 接口协议仍需结合实机结果确认。重量居中已实机通过，HA4 的页面 JS 与 HA2 完全一致。
+
+155 项手表回归通过；压缩前后验证模块、默认导出、直接 Context、拒绝、接口缺失五条链路。原生启动与 debug 通过。手机页面沿用同字节 HA2 的 8 项回归结果；app 49,138 B、页面 49,084 B，各余 14 B、68 B。
+
+新包 `/sdcard/haps/openGym-HuaweiWatch-HA4-signed.hap` 已签名推送原测试手机并核对设备 SHA-256；689,281 B，SHA-256 `0348e501e98e8429096dd349d60fa89eb9fbd8276277f952915ff319cb1458b4`。BIN/HAP 与本次 app/page 字节一致。HA4 已撤回，当前使用 HA5 恢复包；原生心率暂停。
+
+证据：`harmonywatch/artifacts/BUILD_20261115_HA4.json`、同名 `.log`、`TEST_20261115_HA4_RED.log`、`TEST_20261115_HA4_WATCH.log`、`SIGN_20261115_HA4.log`、`ui-heart-debug-ha4-preview/`。
+
+## 2026-11-15 最新：HA3 默认导出兼容与字段诊断
+
+HA2 用户已确认重量正常，并返回 `FA permission API unavailable`。该读数定位到获取权限申请函数失败；模块导出形式与固件是否支持仍待进一步区分。
+
+已用回归复现：当模块以 `{ default: api }` 形式返回时，HA2 会误报接口缺失。HA3 先解析默认导出，再获取 Context。缺失时追加 `K:`，列出 Context（存在时）或模块的可枚举字段；空 K 的具体原因仍需结合固件和原生接口确认。调试状态行改为 `HA3`。
+
+154 项手表回归通过；实际编译 app 在压缩前后验证直接导出、默认导出、拒绝、接口缺失四条链路。原生启动和 debug 场景通过。页面 JS 与 HA2 字节完全一致，沿用 HA2 的 8 项手机页面回归、居中截图和用户“重量算正常了”的实机结果。app 49,137 B、页面 49,084 B，各余 15 B、68 B。
+
+新包 `/sdcard/haps/openGym-HuaweiWatch-HA3-signed.hap` 已签名推送原测试手机，设备 SHA-256 一致；689,283 B，SHA-256 `09e8da35e1dde65e97c7cd8be3b3a5d91dd0fd7fc46562a942a3988aa3c212d1`。BIN/HAP 容器与本次 app/page 字节一致。待用户覆盖安装，反馈 HA3 下方的完整诊断及 K 字段；用户回传版本原文为 `26.0.0 hm7`。真实心率采样仍待修复。
+
+证据：`harmonywatch/artifacts/BUILD_20261115_HA3.json`、同名 `.log`、`TEST_20261115_HA3_RED.log`、`TEST_20261115_HA3_WATCH.log`、`SIGN_20261115_HA3.log`、`ui-heart-debug-ha3-preview/`。
+
+## 2026-11-15 最新：HA2 重量居中与稳定诊断页
+
+用户反馈上一版重量数字不居中；没有授权弹窗，debug 中也没有“心率授权”记录。用户随后回传 `FA permission API unavailable`，并确认“重量算正常了”。B22 居中已实机通过；B19 已确认 HA2 未获取到 FA 请求函数；模块导出形式与实际固件支持继续由 HA3 核查。
+
+- **B22 重量居中**：旧数字框右对齐，小数与零值偏移方向不同。现数字占满 168 px 文本框并居中，单位按数字宽度单独定位，数字字号仍受宽高约束。原生截图的数字笔画中心：零重量由 139 px 改为 111 px，小数重量由 97.5 px 改为 111.5 px，目标中心为 112 px，允许 ±4 px。单位没有遮挡数字；用户确认重量正常，居中真机通过。
+- **B19 诊断丢失**：新增回归复现后续连接错误覆盖心率错误。当前心率诊断在运行时内存中独立保留，debug 优先显示；应用重启会重置。保留授权阶段 `WAIT`、授权成功 `OK`、直接订阅 `SENSOR`、原始失败代码与文字。
+- **调试页稳定性**：进入 debug 后，状态刷新保持该页面并更新诊断；长按心率后可能到达的点击事件不再切换心率。左上角动作名称新增长按入口。调试页点击关闭后显示最新训练状态，底层训练与同步继续运行。
+- **包识别**：debug 的 SDK 状态行固定以 `HA2` 开头。测试步骤为：安装 HA2 包，进入训练，关闭再开启心率，长按左上角动作名称 2 秒；反馈 HA2 下方的完整代码和文字。用户已回传 `FA permission API unavailable`；HA2 未获取到该 FA Context 入口；默认导出兼容已在 HA3 补充，实际模块结构与固件支持待回传。E602 原始错误记录保留。
+
+已核对[官方手表应用管理说明](https://consumer.huawei.com/cn/support/content/zh-cn16066729/)，适用产品含 FIT 5 Pro，页面覆盖安装、更新、卸载，健康权限的手动授权步骤仍待确认。[支持机型表](https://developer.huawei.com/consumer/cn/doc/harmonyos-releases/support-device/)将 FIT 5 Pro 归入 Lite Wearable。接续需要当前手表固件版本和安装端实际识别的权限列表；用户回传版本原文为 `26.0.0 hm7`，具体固件构建号和 API 对应关系待核对。Lite 侧载心率授权流程及专用准入要求仍待平台资料确认。
+
+手表 153、手机页面 8 项通过；压缩前后通信、心率与授权三分支门禁通过。原生启动、零重量、小数重量和 debug 场景通过；调试预览可见 `HA2` 与完整 `AUTHAPI: FA permission API unavailable`，该读数来自模拟器。app 49,124 B、页面 49,084 B，分别余 28 B、68 B。
+
+新包 `/sdcard/haps/openGym-HuaweiWatch-HA2-signed.hap` 已签名推送原测试手机，设备哈希一致；689,283 B，SHA-256 `b2ec0eedd45044691fae73067cddfc7d2a3f37024e2bf9aa6ae8c1bfbf83afe8`。签名 BIN/HAP 与本次 app/page 字节一致；用户已覆盖安装，回传 FA 入口不可用、重量正常。手机沿用 controls APK。
+
+证据：`harmonywatch/artifacts/BUILD_20261115_HA2.json`、同名 `.log`、`TEST_20261115_HA2_RED.log`、`TEST_20261115_HA2_WATCH.log`、`TEST_20261115_HA2_PHONE.log`、`SIGN_20261115_HA2.log`、`NUMBER_CENTER_HA2_red.json`、`NUMBER_CENTER_HA2_green.json`、`ui-{zero-weight,decimal-weight,heart-debug}-ha2-preview/`。
+
 ## 2026-11-15 最新：心率运行时授权验证包
 
 用户补充“不会 不好记录”：安装及开启心率时未出现健康数据／心率授权窗口；B21 结束页实机效果暂未确认。B19 当前真实错误仍为 `E602: permission not declared`。
@@ -143,11 +210,12 @@
 | B2 | 原通信 206、计划存储失败及旧 PPL 优先 | 计划同步 | 已修复；用户确认 Full Body 正确，按冠退出重开后仍在 |
 | B13 | 合并版打开立即黑屏 | 应用无法进入 | boot-return 已由用户确认正常打开、计划可显示 |
 | B14 | 启动恢复后手机 206，手表 sdk:? rx:off tx:- | 双向通信未启动 | 已修复；SDK 回调修正包获用户“好了”的实机确认 |
-| B19 | 心率始终不可用，实机 E602: permission not declared | 无有效采样与组心率记录 | 包内声明已核对；动态授权验证包已构建，FIT 实际弹窗与采样待验证 |
+| B19 | 心率始终不可用，实机 E602: permission not declared | 无有效采样与组心率记录 | 用户取消功能；HA6 已移除入口、原生调用和健康权限，既有记录保留 |
 | B20 | 徒手次数数字与标签重叠 | 数值显示 | 宽高约束和独立标签行已实现，原生预览通过，真机待验收 |
 | B21 | 结束页闪回“练完了吗” | 无法操作结束训练 | 定时器重开提醒已复现并修正，回归通过，真机待验收 |
-| B22 | 主页面重量数字消失，只剩单位和标签 | 重量显示 | 固定数字框修正版已推送，真机待验收 |
-| R1 | 手表页面 JS 接近 48 KB 上限 | 新增功能受构建体积限制 | heart-auth 包页面余 413 B；app 余 12 B |
+| B22 | 主页面重量数字消失，只剩单位和标签 | 重量显示 | HA2 居中修正版获用户“重量算正常了”的实机确认 |
+| B23 | HA4 关闭再开启心率直接卡死 | 操作中断 | HA4 已撤回；HA5 停用原生心率及权限入口，用户确认已恢复正常操作 |
+| R1 | 手表页面 JS 接近 48 KB 上限 | 新增功能受构建体积限制 | HA6 包页面余 1,845 B；app 余 1,451 B |
 | R2 | 手机转发休息结束系统通知 | 用户取消 | 通知入口、后台发送与手表 relay 已移除；保留本地前台震动 |
 | R3 | 训练记录回传、动画、断连补传待真机验证 | 后续端到端验收 | 当前已验证计划下发、显示及退出重开恢复 |
 

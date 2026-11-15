@@ -26,12 +26,11 @@ export function numbers(entry, row, live) {
 
 export function dots(entry, current, skipped, ei) { return setDots(entry, current, skipped || [], ei) }
 
-// The summary's stat stack, in Apple's order: Time, Sets, Volume, Heart rate.
+// Training summary: time, sets and volume. Legacy heart fields remain in stored records.
 export function summaryStats(sum, words, unit) {
   var stats = [{ key: 'time', label: words.time, value: clock(sum.seconds), color: '#ffffff' }]
   stats.push({ key: 'sets', label: words.sets, value: String(sum.sets), color: '#ffffff' })
   if (sum.volume > 0) stats.push({ key: 'volume', label: words.volume, value: grouped(sum.volume) + ' ' + unit, color: '#ffffff' })
-  if (sum.hrAvg && sum.hrMax) stats.push({ key: 'hr', label: words.heart, value: Math.round(sum.hrAvg) + ' / ' + Math.round(sum.hrMax), color: '#ff453a' })
   return stats
 }
 

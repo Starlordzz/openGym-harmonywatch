@@ -1,65 +1,43 @@
-# 华为手表心率：开关、显示与记录位置
+# 华为心率功能状态与开发者平台权限
 
-更新：2026-11-15。当前版本使用手表传感器采集前台训练心率。用户已确认真实设备一直显示“不可用”，当前正在定位采集失败原因；已有自动回归和注入样本预览。
+更新：2026-11-15。华为端心率功能已按用户要求移除。当前手机 HUAWEI WATCH 设置没有“显示心率”，手表没有心率开关、实时读数或汇总心率行；生产运行时没有原生心率采集及 FA 动态授权调用。训练、休息提醒、常亮、重量调整和既有历史记录保留。
 
-## 两个开关的区别
+## 华为开发者平台的申请条件
 
-| 入口 | 作用 |
-|---|---|
-| 手机“设置 → HUAWEI WATCH / HUAWEI FIT → 显示心率” | 控制手表训练页、休息页是否显示心率文字；默认开启 |
-| 手表空闲页“心率：开 / 关”，或训练页、休息页的心率文字 | 启停应用的训练心率采集；开启后，进入训练并保持应用前台才订阅传感器 |
+| 能力 | 官方平台要求 | 本项目状态 |
+|---|---|---|
+| Health Service Kit 运动健康数据 | 个人开发者应用须上架华为应用市场；未上架应用暂不开放数据。申请访问的数据还须经过资质和数据权限审核 | 当前个人自用侧载路线，未接入 |
+| Health Service Kit 实时心脏数据 | 经华为运动健康转发，需申请实时心脏数据读权限 `HEALTHKIT_EXTEND_REALTIME_HEART_READ` | 未接入 |
+| Wear Engine 人体传感器 `SENSOR` | 读取 ECG、PPG、HR 的能力受限开放，仅限专业研究机构。个人开发者可申请设备基础信息、消息通知 | 未申请 SENSOR；现有计划和训练通信使用 DEVICE_MANAGER 下的 P2P 消息 |
+| 手表本地 `@system.sensor.subscribeHeartRate` | Lite API 列出 `ohos.permission.READ_HEALTH_DATA`；FIT 5 Pro 当前固件是否另需平台 ACL／专门开通，公开资料尚未核实 | 旧包已声明权限，实机仍返回 `602: permission not declared`；当前已移除 |
 
-空闲页开关本身没有 bpm 数值。空闲期间、应用隐藏后不持续采集。
+官方来源（核查日期 2026-11-15）：
 
-## 手表在哪里看
+- [Health Service Kit 开发者申请资质](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides-V14/health-application-qualifications-V14/)，个人开发者接入资质审核要求。
+- [Android Health Service Kit 申请 FAQ](https://developer.huawei.com/consumer/cn/doc/hmscore-guides/apply-kitservice-0000001050707556/)。
+- [获取实时心脏数据](https://developer.huawei.com/consumer/cn/doc/hmscore-guides/extended-obtaining-real-time-heart-data-0000001050163997/)，实时数据流程与权限。
+- [申请 Wear Engine 服务](https://developer.huawei.com/consumer/cn/doc/connectivity-guides/applying-wearengine-0000001050777982/)，个人开发者范围与 SENSOR 限制。
+- [Lite Wearable 传感器 API](https://developer.huawei.com/consumer/cn/doc/harmonyos-references-V3/lite-wearable-system-sensor-0000001222566847-V3/)，权限列表与心率订阅。
 
-- 训练页右上角：实时读数，例如“心率：128 bpm”。
-- 休息页：下一动作提示下方的心率一行。
-- 训练结束汇总：采到有效样本后显示“心率”，数值为保留样本的平均 / 最高心率。
+用户记得的“只有上架才能申请”条件对应 Health Service Kit。旧实现实际使用手表本地传感器；E602 的设备权限识别原因仍未查明。历史 V2 权限表曾将 READ_HEALTH_DATA 标记为需 ACL，当前通用权限表列为 normal / user_grant；当前 FIT 固件与这些版本文档的对应关系待核实。来源：[历史 V2 表](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides-V2/permission-list-0000001544464017-V2/)、[当前权限表](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/permissions-for-all-user/)。
 
-读数位置还可能显示“关”“测量中”“暂无数据”“不可用”。“暂无数据”表示最近 15 秒没有有效的新样本；“不可用”表示订阅失败或已停止运行。用户目前已确认实机失败码 E602。诊断包会进一步显示 `E<原始错误码>`；`EJS` 表示调用出现 JS 异常。完整错误文字保留在应用最后错误中，可长按训练页、休息页的心率文字 2 秒进入 debug 查看；空闲页长按入口保留。
+## 当前交付
 
-## 动态授权验证包
+- 手机 APK：`harmonywatch/artifacts/openGym-HuaweiWatch-no-heart-debug.apk`，已通过 ADB 覆盖安装，保留原应用数据。
+- 手表 HAP：`/sdcard/haps/openGym-HuaweiWatch-no-heart-signed.hap`，已推送手机；需用应用调测助手覆盖安装手表，实机验收待反馈。
+- 手表调试标记：HA6。实际签名 BIN 不含原生传感器模块、FA 权限模块、权限请求函数或 READ_HEALTH_DATA 声明；仅保留 VIBRATE 权限。
+- 回归：手表 146 项、手机相关 27 项通过；Android 构建、原生启动、通信、签名校验和训练／休息／结束页原生预览通过。
 
-用户确认安装和开启心率时没有出现过健康授权弹窗。当前验证包接入运行时请求：进入训练页，先关闭心率再开启一次。设备提供 FA Context 授权入口时，会请求 `READ_HEALTH_DATA`；只有成功授权后才订阅心率。
+## 故障与恢复记录
 
-- `EAUTHAPI`：授权入口缺失或异常。
-- `EAUTHDENIED`：未获得成功授权结果。
-- `EAUTHTIME`：15 秒内没有授权回调。
+旧本地采集返回 `E602: permission not declared`。HA2 返回 FA 接口不可用；HA3 补充导出结构诊断；HA4 尝试直接 Context 权限函数后，用户确认关闭再开启心率会卡死。HA4 已撤回，安装文件隔离为 `HA4-WITHDRAWN.hap.disabled`。HA5 删除原生入口后，用户确认“已恢复正常操作”。
 
-主页面较长代码可能显示省略号；长按心率文字 2 秒可查看 debug 中的完整“心率授权”代码和文字。FIT 5 Pro 是否支持该动态授权入口仍待实机验证；当前真实采样仍为 `E602: permission not declared`。官方流程见[Lite Wearable 申请授权](https://developer.huawei.com/consumer/cn/doc/lite-wearable-guides/request-permissions/)。
+用户随后要求没有可用权限就取消心率，并明确询问华为开发者平台。当前已完成平台条件核查和功能移除，B19 以功能取消关闭；HA4 的原生调用约定仍未查明。当前开发继续处理训练稳定性、同步和布局。
 
-## 手机上在哪里看已保存记录
+## 已有数据
 
-1. 打开“统计”。
-2. 点右上角“历史”图标。
-3. 点开一条已完成的训练记录。
-4. 查看各动作的完成组；该组有有效心率时，组标签后显示 `♥ 132/151`，分别是平均 / 最高心率，单位 bpm。
+旧训练记录中的 `set.hr`、`set.restHr` 和未确认的同步事件保留；共享历史详情仍兼容已有组心率标签。当前华为版本不新增心率采样，也没有独立心率曲线。恢复旧存档时移除 `sensorEnabled`；华为快照固定 `show.hr=false`，其他平台共享设置保持兼容。
 
-当前保存与展示范围：
+源码：[手机设置](../../frontend/src/views/HuaweiWatchSettings.jsx)、[华为快照](../../frontend/src/lib/watch-sync.js)、[手表页面](../../frontend/harmony/watch/entry/src/main/js/default/pages/index/index.js)、[原生运行时](../../frontend/harmony/watch/entry/src/main/js/default/common/runtime.js)、[构建门禁](../../scripts/harmony/check-lite-heart.mjs)。
 
-| 数据 | 保存与展示 |
-|---|---|
-| 每组训练心率 `set.hr` | 采到有效样本且完成该组后随训练记录同步，手机历史详情显示平均 / 最高 |
-| 休息心率 `set.restHr` | 休息结束后回传保存；手机历史详情当前尚未展示此字段 |
-| 本次训练平均 / 最高心率 | 手表结束汇总显示；当前华为结束事件未向手机发送训练级心率汇总 |
-| 连续原始采样、独立心率列表或曲线 | 当前没有独立存档和查看页面 |
-| 华为运动健康中的训练与心率写入 | 当前尚未启用 |
-
-没有有效样本，或只开启开关而未完成训练组时，手机不会出现该组的心率标签。上述记录来自 openGym 自己的传感器与同步链路；手机健康平台的历史读数回填另有入口和实现。
-
-## 2026-11-15 修正与待验证
-
-关闭采集时保留当前训练已采样本，防止停止采集后训练汇总缺少已有心率；结束训练显示汇总后再释放样本。自动测试覆盖开启、有效 bpm、15 秒失效、错误状态和关闭后汇总保留。
-
-用户已反馈“一直不可用”。旧回调未保留错误码，本轮诊断包新增原始失败码及错误文字；用户已安装诊断包并回传 **E602: permission not declared**。签名 BIN 已声明 `READ_HEALTH_DATA`，设备权限识别与运行时授权入口继续排查。最新包为 `/sdcard/haps/openGym-HuaweiWatch-finish-weight-signed.hap`，已推送并核对哈希。
-
-用户回忆的上架要求推测对应 [Health Service Kit 个人开发者资质](https://developer.huawei.com/consumer/cn/doc/HarmonyOS-Guides/health-application-qualifications/)。当前采集使用本地 `@system.sensor`；实际签名包已声明 `READ_HEALTH_DATA`。设备返回 E602 和 `permission not declared`，动态申请验证包已构建，设备授权结果待回传；Health Service Kit 服务接入保持后续计划。
-
-## 源码依据
-
-- 手表[页面状态与传感器启停](../../frontend/harmony/watch/entry/src/main/js/default/pages/index/index.js)、[传感器回调与有效期](../../frontend/harmony/watch/entry/src/main/js/default/common/controller.js)。
-- [组与休息心率统计](../../frontend/harmony/watch/entry/src/main/js/default/common/heart.js)、[训练汇总显示](../../frontend/harmony/watch/entry/src/main/js/default/common/view.js)。
-- 手机[组心率标签](../../frontend/src/lib/heart-rate.js)、[历史训练详情](../../frontend/src/sheets.jsx)、[同步与补写](../../frontend/src/lib/watch-sync.js)。
-
-基于 Duarte Santos 的 [openGym](https://github.com/DuarteSantos8/openGym)；本版本为第三方华为手表适配。最新状态见[缺陷进度](../HARMONY_OPEN_BUGS_ZH.md)。
+基于 Duarte Santos 的 [openGym](https://github.com/DuarteSantos8/openGym)；本版本为第三方华为手表适配。进度见[缺陷清单](../HARMONY_OPEN_BUGS_ZH.md)。

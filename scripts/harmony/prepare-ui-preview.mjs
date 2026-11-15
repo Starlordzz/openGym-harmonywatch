@@ -10,14 +10,13 @@ const option = name => { const i = args.indexOf(name); return i < 0 ? null : arg
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const project = resolve(option('--project') || join(root, 'harmonywatch'))
 const scene = option('--scene') || 'rest-offline'
-if (!['rest-offline', 'exercise', 'zero-weight', 'decimal-weight', 'bodyweight', 'long-numbers', 'heart', 'heart-error', 'heart-auth', 'finish', 'ended'].includes(scene)) throw Error('Unknown UI scene')
+if (!['rest-offline', 'exercise', 'zero-weight', 'decimal-weight', 'bodyweight', 'long-numbers', 'debug', 'finish', 'ended'].includes(scene)) throw Error('Unknown UI scene')
 const built = join(project, 'entry/build/default/intermediates/loader_out_lite/default/js/MainAbility')
 const target = resolve(option('--out') || join(project, 'artifacts/ui-' + scene + '-bundle'))
 cpSync(built, target, { recursive: true })
 const state = initialState()
 state.settings = { lang: 'zh-Hans', show: { next: true } }
 state.online = false
-state.sensorEnabled = scene === 'heart' || scene === 'heart-error'
 state.workout = { id: 'synthetic-preview', name: 'Full Body A', start: Date.now() - 60000, restSec: 90,
   rest: scene === 'rest-offline' ? { endsAt: Date.now() + 90000, total: 90 } : null,
   entries: [{ id: 'preview', name: '哑铃上斜卧推（交替单侧）', mode: 'reps', sets: [{ w: 20, r: 8, done: false }] }] }
@@ -37,10 +36,11 @@ const source = readFileSync(join(built, 'app.js'), 'utf8').trim().replace(/;$/, 
 writeFileSync(join(target, 'app.js'), '(function(nativeModule){var saved=' + JSON.stringify(JSON.stringify(state)) + ';' +
   'var requireNative=function(name){if(name==="system.storage")return {' +
   'get:function(o){o.success(saved)},set:function(o){saved=o.value;o.success()}};' +
-  (scene === 'heart' ? 'if(name==="system.sensor")return {subscribeHeartRate:function(o){o.success({heartRate:128})},unsubscribeHeartRate:function(){}};' : '') +
-  (scene === 'heart-error' ? 'if(name==="system.sensor")return {subscribeHeartRate:function(o){o.fail("native sensor rejected request",201)},unsubscribeHeartRate:function(){}};' : '') +
-  'return nativeModule(name)};' +
-  (scene === 'heart-auth' ? 'var app=' + source + ';var create=app.onCreate;app.onCreate=function(){create.call(this);this.sensor(true)};return app;' : 'return ' + source) +
-  '})(requireNative);\n')
+  'return nativeModule(name)};return ' + source + '})(requireNative);\n')
+if (scene === 'debug') {
+  const name = join(target, 'pages/index/index.js')
+  const page = readFileSync(name, 'utf8').trim().replace(/;$/, '')
+  writeFileSync(name, '(function(){var page=' + page + ';var init=page.onInit;page.onInit=function(){init.call(this);this.openDebug()};return page})();\n')
+}
 writeFileSync(join(target, 'SCENE.json'), JSON.stringify({ scene, synthetic: true, previewOnly: true }, null, 2) + '\n')
 console.log(target)

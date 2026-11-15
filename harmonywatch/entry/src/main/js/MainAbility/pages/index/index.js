@@ -1,4 +1,4 @@
-import { fill, formatNumber, numberFont, clock, effortName, effortPosition, effortValue, effortColor, effortStart } from '../../common/format.js'
+import { fill, formatNumber, numberFont, numberWidth, clock, effortName, effortPosition, effortValue, effortColor, effortStart } from '../../common/format.js'
 import { tagsOf, numbers, dots, progress, setsOf, summaryStats } from '../../common/view.js'
 import { setIndex, sideUp } from '../../common/model.js'
 import { addSet } from '../../common/add-set.js'
@@ -6,13 +6,13 @@ import { addSet } from '../../common/add-set.js'
 // One page, one state at a time: the same precedence as the Apple Watch app's RootView. The state,
 // the radio and every mutation live in app.js (getApp()); this file only draws and dispatches.
 export default {
-  data: { words: {}, title: 'openGym', line: '正在读取记录', screen: 'loading', error: '', pending: '', offline: '',
-    restPaused: false, sensorOn: false, routines: [], todayName: '', others: [], idleTitle: '', idleHint: '',
+  data: { words: {}, line: '正在读取记录', screen: 'loading', error: '', pending: '', offline: '',
+    restPaused: false, routines: [], todayName: '', others: [], idleTitle: '', idleHint: '',
     bwWhole: '70', bwTenth: '0', bwWholeColor: '#30d158', bwTenthColor: '#ffffff', bwWholeBg: '#262626', bwTenthBg: '#000000', unit: 'kg',
     remaining: 3, ringPercent: 100, digits: '3', restRing: true, nextText: '', holdName: '',
-    pageNo: 1, pageCount: 1, exName: '', extras: '', hr: '', clipSrc: '', warmup: false, left: false, right: false, superset: false,
-    cardio: false, timed: false, bodyweight: false, weight: '0', added: '', reps: '0', seconds: '30', weightFont: 68, repsFont: 68, secondsFont: 84, effortName: '', effortText: '–',
-    effortColor: '#ffffff', last: '', dots: [], noSet: false, noSetText: '', noSetIcon: '', hrWanted: true,
+    pageNo: 1, pageCount: 1, exName: '', extras: '', clipSrc: '', warmup: false, left: false, right: false, superset: false,
+    cardio: false, timed: false, bodyweight: false, weight: '0', added: '', reps: '0', seconds: '30', weightFont: 68, unitLeft: 108, repsFont: 68, secondsFont: 84, effortName: '', effortText: '–',
+    effortColor: '#ffffff', last: '', dots: [], noSet: false, noSetText: '', noSetIcon: '',
     editField: '', editTitle: '', editValue: '0', editFont: 108, editSuffix: '', alarmOn: false,
     workoutName: '', setsLine: '', summaryName: '', savedTitle: '', stats: [], records: [],
     debugLines: [], confirm: false, skipConfirm: false, asking: false },
@@ -59,8 +59,6 @@ export default {
     if (this.app) {
       this.app.detach(this.onState)
 
-      if (this.sensing) this.app.heartStop(true)
-      this.sensing = false
 
       this.app.keepScreenOn(false)
 
@@ -92,21 +90,18 @@ export default {
 
   // ---- state → screen -------------------------------------------------------------------------
   sync() {
-    var s = this.session, now = Date.now()
+    var s = this.session, now = Date.now(), debug = this.screen === 'debug'
     if (!s) return
     this.words = this.app.words(s.settings.lang)
     this.unit = s.unit || 'kg'
-    this.sensorOn = !!s.sensorEnabled
-    this.title = s.workout ? s.workout.name : 'openGym'
     this.pending = s.outbox.length ? this.words.savedLater : ''
     // Apple's rule: what is queued is only "offline" while the phone is not answering.
     this.offline = s.outbox.length && s.online === false ? this.words.savedLater : ''
     if (!s.workout) {
       this.clipSrc = ''; this.workoutId = ''
       this.ackRest()
-      if (this.sensing) this.app.heartStop()
-      this.sensing = false
       this.confirm = this.skipConfirm = this.asking = this.manualFinish = false
+      if (debug) { this.openDebug(); return }
       if (this.screen === 'weigh' || this.screen === 'countdown') return
       if (s.summary) { this.summaryView(s.summary); this.screen = 'summary'; return }
       this.idleView(s)
@@ -116,15 +111,13 @@ export default {
       this.workoutId = s.workout.id; this.screen = 'exercise'; this.picked = -1; this.live = null
       this.confirm = this.skipConfirm = this.asking = this.manualFinish = false
     }
-    if (this.sensing && !s.sensorEnabled) { this.sensing = false; this.app.heartStop(true) }
-    if (!this.sensing && s.sensorEnabled) { this.sensing = true; this.app.heartStart() }
+    if (debug) { this.openDebug(); return }
     if (this.screen === 'edit') { this.exerciseView(s, now); return }
     if (this.manualFinish) { this.asking = false; this.finishView(s); return }
     if (this.asking) { this.askingView(s); return }
     var r = s.workout.rest, restEnd = r && (r.paused || r.endsAt > now)
     this.screen = s.hold ? 'hold' : restEnd ? 'rest' : 'exercise'
     if (!this.exerciseView(s, now)) return
-    this.hr = this.heartLabel(s)
     if (this.screen === 'rest') this.restView(s)
     else if (this.screen === 'hold' && s.hold) this.holdView(s.hold, now)
   },
@@ -164,7 +157,8 @@ export default {
     var n = numbers(e, row, this.live || {})
     this.cardio = n.cardio; this.timed = n.timed; this.bodyweight = n.bodyweight
     this.weight = n.weight; this.added = n.added; this.reps = n.reps; this.seconds = n.seconds
-    this.weightFont = numberFont(n.weight, 68, 116, 72)
+    this.weightFont = numberFont(n.weight, 68, 104, 72)
+    this.unitLeft = 88 + Math.ceil(numberWidth(n.weight, this.weightFont) / 2)
     this.repsFont = numberFont(n.reps, n.bodyweight ? 84 : 68, 160, 72)
     this.secondsFont = numberFont(n.seconds, 84, 272, 82)
     this.effortName = s.settings.effort ? effortName(s.settings.effort) : ''
@@ -173,8 +167,6 @@ export default {
     this.last = !s.settings.show || s.settings.show.last !== false ? (e.last ? fill(this.words.last, [e.last]) : '') : ''
     this.dots = dots(e, si, s.skipped, ei)
     this.extras = s.settings.show && s.settings.show.elapsed ? clock((now - s.workout.start) / 1000) : ''
-    this.hrWanted = !s.settings.show || s.settings.show.hr !== false
-    this.hr = this.heartLabel(s)
     this.showNext = !s.settings.show || s.settings.show.next !== false
     return true
   },
@@ -186,10 +178,6 @@ export default {
     this.restRing = !s.settings.show || s.settings.show.rest !== 'plain'
     var e = s.workout.entries[s.entryIndex], si = setIndex(s, s.entryIndex, this.picked)
     this.nextText = this.showNext && e && si >= 0 ? fill(this.words.next, [e.name, si + 1]) : ''
-  },
-  heartLabel(s) {
-    var words = this.words, h = this.app.heartRate(0), status = this.app.heartState(), code = this.app.heartError()
-    return words.heart + ': ' + (!s.sensorEnabled ? words.off : status === 'unavailable' ? code ? 'E' + code : words.unavailable : h ? h.current + ' bpm' : words[status])
   },
   holdView(hold, now) {
     var s = this.session, e = s.workout.entries[hold.ei]
@@ -225,13 +213,12 @@ export default {
       return
     }
     if (!s.workout) return
-    this.hr = this.heartLabel(s)
     var ends = s.hold ? s.hold.endsAt : s.workout.rest && !s.workout.rest.paused && s.workout.rest.endsAt
     if (ends && ends <= now) {
       if (s.hold) { this.complete(true); return }
       this.startRestAlarm(); this.app.closeRestAt(now); return
     }
-    var state = this.manualFinish || this.confirm || this.skipConfirm ? '' : this.app.idleAt(now)
+    var state = this.screen === 'debug' || this.manualFinish || this.confirm || this.skipConfirm ? '' : this.app.idleAt(now)
     this.asking = state === 'ask'
     if (state === 'end') {
       var at = s.workout.start
@@ -414,7 +401,4 @@ export default {
     var ei = this.ei, app = this.app
     app.change(function(s) { addSet(s, ei, Date.now(), app.recordEvent) })
   },
-  // The idle screen is live before the first state arrives, so a tap can land with no session yet.
-  // app.sensor would be refused there anyway: writes wait for the storage read to settle.
-  toggleSensor() { if (this.session) this.app.sensor(!this.session.sensorEnabled) }
 }

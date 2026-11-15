@@ -7,7 +7,7 @@ import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { configurePermissions, checkPermissions } from '../../../scripts/harmony/lite-config.mjs'
 
-const name = 'ohos.permission.READ_HEALTH_DATA'
+const name = 'ohos.permission.VIBRATE'
 const original = () => ({ module: { deviceType: ['liteWearable'], abilities: [{ name: '.MainAbility', type: 'page' }], reqPermissions: [{ name }] } })
 
 test('a name-only permission which compiles in the SDK is repaired for the Lite installer', () => {
@@ -15,7 +15,7 @@ test('a name-only permission which compiles in the SDK is repaired for the Lite 
   assert.throws(() => checkPermissions(config), /reason.*46/)
   configurePermissions(config.module, '.MainAbility')
   assert.doesNotThrow(() => checkPermissions(config))
-  assert.equal(config.module.reqPermissions.length, 2)
+  assert.equal(config.module.reqPermissions.length, 1)
   for (const permission of config.module.reqPermissions) {
     assert.ok(permission.reason.length > 0)
     assert.equal(permission.usedScene.when, 'inuse')
@@ -28,7 +28,7 @@ test('a name-only permission which compiles in the SDK is repaired for the Lite 
 
 test('missing or invalid usage timing cannot silently pass the permission check', () => {
   const config = original()
-  config.module.reqPermissions[0].reason = 'Read workout heart rate'
+  config.module.reqPermissions[0].reason = 'Rest haptics'
   assert.throws(() => checkPermissions(config), /usedScene.when.*46/)
   config.module.reqPermissions[0].usedScene = { when: 'foreground' }
   assert.throws(() => checkPermissions(config), /usedScene.when.*46/)
@@ -78,4 +78,17 @@ test('staging pins the same phone identity in the Lite manifest and runtime with
   assert.equal(rows.find(r => r.name === 'unrelated').value, 'preserved')
   const peer = await readFile(join(main, 'js/MainAbility/common/peer.js'), 'utf8')
   assert.ok(peer.includes('ch.example.phone') && peer.includes('B'.repeat(64)))
+  const offline = spawnSync(process.execPath, [prepare, '--project', dir, '--offline'], { encoding: 'utf8' })
+  assert.equal(offline.status, 0, offline.stderr)
+  const runtime = await readFile(join(main, 'js/MainAbility/common/runtime.js'), 'utf8')
+  assert.doesNotMatch(runtime, /@system\.sensor|sensor:|requestPermissionsFromUser/)
+  assert.match(runtime, /available: false/)
+})
+
+test('staging removes the retired health permission and preserves vibration metadata', () => {
+  const config = original()
+  config.module.reqPermissions.push({ name: 'ohos.permission.READ_HEALTH_DATA', reason: 'old heart feature', usedScene: { when: 'inuse' } })
+  configurePermissions(config.module, '.MainAbility')
+  assert.deepEqual(config.module.reqPermissions.map(p => p.name), ['ohos.permission.VIBRATE'])
+  assert.doesNotThrow(() => checkPermissions(config))
 })

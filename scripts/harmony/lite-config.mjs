@@ -3,13 +3,13 @@
 // Reference: bundlemanager_bundle_framework_lite, OpenHarmony-v7.0-Release,
 // services/bundlemgr_lite/src/{gt_bundle_parser,bundle_parser}.cpp.
 const requiredPermissions = [
-  ['ohos.permission.VIBRATE', '用于训练休息结束时的振动提醒'],
-  ['ohos.permission.READ_HEALTH_DATA', '用于训练时读取和显示心率']
+  ['ohos.permission.VIBRATE', '用于训练休息结束时的振动提醒']
 ]
 
 export function configurePermissions(module, abilityName) {
-  const permissions = module.reqPermissions ?? []
+  let permissions = module.reqPermissions ?? []
   if (!Array.isArray(permissions)) throw Error('module.reqPermissions must be an array')
+  permissions = permissions.filter(p => p?.name !== 'ohos.permission.READ_HEALTH_DATA')
   for (const [name, reason] of requiredPermissions) {
     let entry = permissions.find(p => p && p.name === name)
     if (!entry) { entry = { name }; permissions.push(entry) }

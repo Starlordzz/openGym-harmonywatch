@@ -733,6 +733,7 @@ async function runLink (p, { useStore, useUI }, { health = true, clips: withClip
       // Apple Health on the watch pauses with the Health module, as the phone's own sync does.
       const hOn = healthOn && isOn(S, 'health')
       snap.settings = { ...settingsForWatch(prefs, hOn), ...watchExtras(S) }
+      if (huawei) snap.settings.show.hr = false
       if (prefs.enabled && isOn(S, 'motivation')) snap.streak = streakFor(S)
       // Discarded here: the watch drops its Apple Health workout instead of saving it (#776).
       const discarded = discardedFor(Date.now(), S)

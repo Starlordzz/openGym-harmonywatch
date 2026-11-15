@@ -23,6 +23,7 @@ it('loads identities and authorizes only after the user connects', async () => {
   expect(bridge.configure).toHaveBeenCalledWith({ bundleName: 'ch.example.fit', fingerprint: peer })
   expect(host.querySelector('input[aria-label="手表签名证书指纹"]').value).toBe(peer)
   expect(host.textContent).toContain('手表应用指纹（包名与公钥）')
+  expect(host.textContent).not.toContain('显示心率')
   expect(bridge.connect).toHaveBeenCalledOnce()
   expect(host.textContent).toContain('已注册通信')
 })

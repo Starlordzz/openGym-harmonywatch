@@ -26,9 +26,9 @@ export async function optimizeBundles(project, sdk) {
       checkRadioStartup(result.code)
       console.log('Compiled native radio startup: SDK 402, RX registered, hello 207')
     }
-    if (name === 'app.js' && source.includes('subscribeHeartRate')) {
+    if (name === 'app.js') {
       checkHeartSubscription(source); checkHeartSubscription(result.code)
-      console.log('Compiled native heart callbacks: sample and error code preserved')
+      console.log('Compiled heart retirement gate: native APIs and controls removed')
     }
     for (const dir of [loader, packed]) await writeFile(join(dir, name), result.code)
     console.log(name + ': ' + Buffer.byteLength(source) + ' -> ' + Buffer.byteLength(result.code) + ' bytes')

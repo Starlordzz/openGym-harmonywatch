@@ -7,7 +7,7 @@ const bridge = registerPlugin('HuaweiWatch')
 // Identity setup belongs here because the two signed applications must trust each other.
 
 const SHOWS = [
-  ['clip', '显示动作动画'], ['hr', '显示心率'], ['last', '显示上次记录'],
+  ['clip', '显示动作动画'], ['last', '显示上次记录'],
   ['elapsed', '显示训练时长'], ['next', '休息时显示下一组'],
 ]
 
