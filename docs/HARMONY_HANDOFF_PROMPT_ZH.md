@@ -129,7 +129,7 @@ app 49,140 B，仅余 12 B；页面余 413 B。FIT 5 Pro 的 FA Context 实际�
 
 构建流程已关闭 `reduce_vars`，新增实际编译 app.js 的异步通信门禁：延迟返回版本 402，再验证接收器注册与 hello 发送 207。旧故障产物在同一门禁得到 `sdk:? rx:off tx:-` 并超时；修正后压缩前、后均为 `sdk:402 rx:ok tx:207`。手表 133 项通过，原生启动 2 帧、3197 可见像素、无 JS 异常。app 47,743 B、页面 49,097 B；每份上限 49,152 B，页面余量 55 B。
 
-修正包 `/sdcard/haps/openGym-HuaweiWatch-sdk-callback-signed.hap` 已签名校验并通过 ADB 推送，手机端文件哈希一致；大小 685,186 B，SHA-256 `591b5dd463742ce7279711b7735ce65bc4c62635ce333e591470dece99f2a90e`。HAP 内 BIN 与独立签名 BIN 一致，BIN 包含本次编译 JS。用户随后回复“好了”，本轮通信恢复已确认。对应代码提交为 `c97c781e9`。
+修正包 `/sdcard/haps/openGym-HuaweiWatch-sdk-callback-signed.hap` 已签名校验并通过 ADB 推送，手机端文件哈希一致；大小 685,186 B，SHA-256 `591b5dd463742ce7279711b7735ce65bc4c62635ce333e591470dece99f2a90e`。HAP 内 BIN 与独立签名 BIN 一致，BIN 包含本次编译 JS。用户随后回复“好了”，本轮通信恢复已确认。对应代码提交为 `对应历史提交`。
 
 手机继续使用已安装的合并版 APK。本轮已核验实际 APK 签名、已授权权限、保存的 112 字符 Lite 对端身份与手表配置一致；修正前手机接收器已注册，收到 0 条、发送 206；修正后用户确认恢复。证据：`harmonywatch/artifacts/BUILD_20261114_SDK_CALLBACK.json`、同名 `.log`、`TEST_20261114_SDK_CALLBACK_WATCH.log`、`SIGN_20261114_SDK_CALLBACK.log`、`PHONE_STATUS_20261114_BOOT_RETURN_206.json`。签名、身份配置和设备日志保留本地。
 
@@ -149,7 +149,7 @@ app 49,140 B，仅余 12 B；页面余 413 B。FIT 5 Pro 的 FA Context 实际�
 
 | 事项 | 当前状态 | 依据 |
 |---|---|---|
-| 本轮代码与上游同步 | 已合并上游 main `68dad18f8` 并推送 GitHub | 合并提交 `e515ee44f`，随后安装记录提交 `9b71c53dc` |
+| 本轮代码与上游同步 | 已合并上游 main `68dad18f8` 并推送 GitHub | 合并提交 `对应历史提交`，随后安装记录提交 `对应历史提交` |
 | 手机 APK | 合并版已 ADB 覆盖安装 | `openGym-HuaweiWatch-merged-debug.apk`；versionCode 31、versionName 1.4.4，安装时间 16:12:27 |
 | 手表 HAP | SDK 回调修正版通信恢复已获用户确认 | `/sdcard/haps/openGym-HuaweiWatch-sdk-callback-signed.hap` |
 | 基础通信 | SDK 回调修正后用户确认通信恢复 | 用户反馈“好了”；具体新读数尚未回传 |
@@ -378,7 +378,7 @@ WSL：`/mnt/d/LEARNING/vibeproject/openGym-harmonywatch/openGym-harmonywatch`。
 6. 手机 HUAWEI FIT 设置增加独立的“休息结束系统通知”开关、测试通知和精确闹钟设置入口。连接请求 DEVICE_MANAGER；开启通知请求 DEVICE_MANAGER 和 NOTIFY。
 7. 建立带 PPL、无计划两种测试构建和空存储启动预览，手机继续使用现有 NAS 服务。
 
-Android 通知实现已进入提交 1851faded（2026-10-31）。既有记录为 4 项 Android Gradle 通知规则测试、6 项手机设置/同步测试通过；证据见 REST_NOTIFICATIONS_VERIFICATION.json、ANDROID_VERIFICATION.json。
+Android 通知实现已进入提交 对应历史提交（2026-10-31）。既有记录为 4 项 Android Gradle 通知规则测试、6 项手机设置/同步测试通过；证据见 REST_NOTIFICATIONS_VERIFICATION.json、ANDROID_VERIFICATION.json。
 
 ## 2026-11-01：开发与操作
 
@@ -483,7 +483,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\harmony\build-test
 
 Android 构建入口为 scripts/harmony/build-android.sh，使用 JDK 21、个人包名和登记 APP ID。私钥、密码保留在本机既有位置。该工程若曾在 Windows 侧构建，Gradle 增量状态会记下 D:\ 路径，回到 WSL 重编会以 mergeSideloadDebugResources 空指针失败；先执行 :app:clean 或删除 frontend/android/app/build 再构建。
 
-当前 HEAD 为 1851faded；表冠、独立小数按钮、长振和退出清理等后续修改仍在工作树。实际差异通过 git status、git diff 查看。最近两天涉及手表模板、DevEco 工程、Android 桥接、手机设置/同步、测试和构建工具；NAS 服务及后端 API 沿用现有实现。
+当前 HEAD 为 对应历史提交；表冠、独立小数按钮、长振和退出清理等后续修改仍在工作树。实际差异通过 git status、git diff 查看。最近两天涉及手表模板、DevEco 工程、Android 桥接、手机设置/同步、测试和构建工具；NAS 服务及后端 API 沿用现有实现。
 
 ## 接续工作
 

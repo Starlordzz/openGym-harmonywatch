@@ -115,7 +115,7 @@ app 49,140 B，仅余 12 B；页面余 413 B。FIT 5 Pro 的 FA Context 实际�
 
 最终验证：手表 141 项、手机同步/训练相关 119 项、原生队列 3 项通过。原生启动与结束汇总通过；离线休息页连续 12 秒抓到 119 帧，弧端 53 个不同位置，无 JS 异常。心率预览注入 128 bpm 样本验证布局，真实传感器读数待真机确认。app 49,096 B、页面 49,092 B，距离 49,152 B 上限分别余 56 B、60 B。
 
-手表包 `openGym-HuaweiWatch-controls-signed.hap` 已完成签名、Profile、BIN 分块与容器校验；689,283 B，SHA-256 `a112d71b60200a0ce441c90227f162694e9c5fffe33806e91ec0382ea5055a6f`。HAP 内 BIN 与签名单独文件一致，包含本次 app/page 字节。手机 APK 签名仍为已登记的 F67F…E1AE。用户指定继续使用原测试手机，最新回复为稍后重新连接；本轮 APK 覆盖安装与 HAP 推送待该手机连接后执行。
+手表包 `openGym-HuaweiWatch-controls-signed.hap` 已完成签名、Profile、BIN 分块与容器校验；689,283 B，SHA-256 `a112d71b60200a0ce441c90227f162694e9c5fffe33806e91ec0382ea5055a6f`。HAP 内 BIN 与签名单独文件一致，包含本次 app/page 字节。手机 APK 签名仍为已登记的 [本机证书摘要已省略]。用户指定继续使用原测试手机，最新回复为稍后重新连接；本轮 APK 覆盖安装与 HAP 推送待该手机连接后执行。
 
 本机证据：`harmonywatch/artifacts/BUILD_20261114_LAYOUT_END.json`、`BUILD_20261114_LAYOUT_END_ANDROID.json`、`TEST_20261114_LAYOUT_END_WATCH.log`、`TEST_20261114_LAYOUT_END_PHONE.log`、`TEST_20261114_LAYOUT_END_QUEUE.log`、`SIGN_20261114_LAYOUT_END.log`、`RING_MOTION_20261114_FINAL.json`。下一步安装两端新包，确认结束训练是否仍退表盘、手机/手表加组往返、休息圈与暂停、心率实际读数。原生工具新增 `prepare-ui-preview.mjs`（独立副本、合成训练/离线休息/结束场景）和 `check-rest-motion.ps1`（按 JPEG 弧端位置检查亚秒变化）；生产包保留真实存储和通信。
 
@@ -127,7 +127,7 @@ app 49,140 B，仅余 12 B；页面余 413 B。FIT 5 Pro 的 FA Context 实际�
 
 构建流程已关闭 `reduce_vars`，新增实际编译 app.js 的异步通信门禁：延迟返回版本 402，再验证接收器注册与 hello 发送 207。旧故障产物在同一门禁得到 `sdk:? rx:off tx:-` 并超时；修正后压缩前、后均为 `sdk:402 rx:ok tx:207`。手表 133 项通过，原生启动 2 帧、3197 可见像素、无 JS 异常。app 47,743 B、页面 49,097 B；每份上限 49,152 B，页面余量 55 B。
 
-修正包 `/sdcard/haps/openGym-HuaweiWatch-sdk-callback-signed.hap` 已签名校验并通过 ADB 推送，手机端文件哈希一致；大小 685,186 B，SHA-256 `591b5dd463742ce7279711b7735ce65bc4c62635ce333e591470dece99f2a90e`。HAP 内 BIN 与独立签名 BIN 一致，BIN 包含本次编译 JS。用户随后回复“好了”，本轮通信恢复已确认。对应代码提交为 `c97c781e9`。
+修正包 `/sdcard/haps/openGym-HuaweiWatch-sdk-callback-signed.hap` 已签名校验并通过 ADB 推送，手机端文件哈希一致；大小 685,186 B，SHA-256 `591b5dd463742ce7279711b7735ce65bc4c62635ce333e591470dece99f2a90e`。HAP 内 BIN 与独立签名 BIN 一致，BIN 包含本次编译 JS。用户随后回复“好了”，本轮通信恢复已确认。对应代码提交为 `对应历史提交`。
 
 手机继续使用已安装的合并版 APK。本轮已核验实际 APK 签名、已授权权限、保存的 112 字符 Lite 对端身份与手表配置一致；修正前手机接收器已注册，收到 0 条、发送 206；修正后用户确认恢复。证据：`harmonywatch/artifacts/BUILD_20261114_SDK_CALLBACK.json`、同名 `.log`、`TEST_20261114_SDK_CALLBACK_WATCH.log`、`SIGN_20261114_SDK_CALLBACK.log`、`PHONE_STATUS_20261114_BOOT_RETURN_206.json`。签名、身份配置和设备日志保留本地。
 
@@ -187,7 +187,7 @@ README 改为 Android + 华为手表项目说明；圆表、方表等华为手�
 
 - 生成物与测试比较前统一换行符：`api/coach/prompts/*.md`、`nudge-copy.js`、`wrapped-copy.js` 在 CRLF 检出下不再误报过期；新增 `.gitattributes`（`* text=auto eol=lf`，SDK vendor 目录保留原始字节），使 Linux、WSL 与 Windows 检出的文本字节一致。
 - `frontend/vite.config.js` 显式声明 vitest 的 `include`（`src/**`、`scripts/**`）：`harmony/tests/` 是 `node:test` 套件，不再被 vitest 收集成无测试的失败文件。7862 项 vitest 全部保留，文件数由 674 降为 655，差额正好是 19 个 `node:test` 文件。
-- `frontend/src/lib/harmony-page.test.js` 的 mock 补齐 `keepScreenOn` 并在 `onInit` 后调用 `onShow`；`44e01244e` 已将粗调步进改为固定 ±1（细调 `editFineBy(0.1)`），用例期望由 22 更正为 21。
+- `frontend/src/lib/harmony-page.test.js` 的 mock 补齐 `keepScreenOn` 并在 `onInit` 后调用 `onShow`；`对应历史提交` 已将粗调步进改为固定 ±1（细调 `editFineBy(0.1)`），用例期望由 22 更正为 21。
 - 华为设置页 CSS 类由 `.hw-*` 改为 `.watch-*`，避免与 Halloween 主题的 `.hw-*` 前缀冲突。
 - `app-icons.mjs --check` 对文本产物按换行归一比较，PNG 仍逐字节比较；慢盘测试使用 30 s 超时与 6 个 vitest worker。
 
@@ -200,7 +200,7 @@ README 改为 Android + 华为手表项目说明；圆表、方表等华为手�
 | `openGym-HuaweiWatch-merged-debug.apk` | 240,344,553 B | `e748bf42b9e4020aa968edba1b9c5948fa3e71c817a70a6b8c6b4460d77e84c5` | 已 ADB 覆盖安装（versionCode 31）；桥接 paired/installed/receiverRegistered 均为 true |
 | `openGymFIT-merged-signed.hap` | 685,185 B | `972ce55f2aa2d062f6a67e1b1627d5d0a21063f59da781cfa607c482d859b6fb` | 已签名验签并推送 `/sdcard/haps/`，待手表覆盖安装 |
 
-合并提交 `e515ee44f` 已推送到 `origin/main`。推送前复核暂存内容：无 keystore、调试身份 JSON、私钥、令牌或 `.map`；包内仅含公开的 `huawei_app_id`。`.gitattributes` 随合并提交纳入版本管理。
+合并提交 `对应历史提交` 已推送到 `origin/main`。推送前复核暂存内容：无 keystore、调试身份 JSON、私钥、令牌或 `.map`；包内仅含公开的 `huawei_app_id`。`.gitattributes` 随合并提交纳入版本管理。
 
 ### 列表与心率说明补充（2026-11-14）
 

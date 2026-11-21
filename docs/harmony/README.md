@@ -15,6 +15,8 @@
 | [本轮变更](../HARMONY_IMPROVEMENTS_20261114_ZH.md) | 本轮功能、构建、整理和上游同步证据 |
 | [构建脚本索引](../../scripts/harmony/README.md) | 构建、签名、校验与诊断命令 |
 | [自签名打包](SELF_SIGNING_ZH.md) | 用自己的注册身份生成、签名和核验 APK 与 Lite HAP |
+| [Agent 自签打包](AGENT_PACKAGING_ZH.md) | 可复制的提示词、非交互配置和本机验收 |
+| [与上游的差异](FORK_DIFFERENCES_ZH.md) | 对照 1.4.5 的平台、同步、服务和发布差异 |
 
 需求与进度文档保留原固定路径；安装包和设备日志统一放在 Git 忽略的 `harmonywatch/artifacts/`。华为申请材料、离线平台文档和本机签名资料单独保存在本地。
 
