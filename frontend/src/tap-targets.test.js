@@ -43,7 +43,8 @@ describe('tap targets of small controls', () => {
     const jsx = readFileSync(fileURLToPath(new URL('./views/Settings.jsx', import.meta.url)), 'utf8')
     const block = jsx.slice(jsx.indexOf('sp-version'), jsx.indexOf('sp-version') + 1200)
     const links = block.match(/<a [^>]*>(.*?)<\/a>/g) || []
-    expect(links.length).toBe(3)
+    expect(links).toHaveLength(4)
+    expect(links.some(a => a.includes('href="https://github.com/DuarteSantos8/openGym"'))).toBe(true)
     for (const a of links) expect(a).toMatch(/><span>.*<\/span><\/a>$/)
   })
   it.each([

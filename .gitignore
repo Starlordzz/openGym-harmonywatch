@@ -64,6 +64,8 @@ docs/*HUAWEI*
 docs/*AGC*
 docs/*APP_GALLERY*
 scripts/harmony/download-huawei-docs.py
+scripts/harmony/update-wearengine-materials.py
+scripts/harmony/preview-wearengine-materials.ps1
 harmonywatch/artifacts/
 harmonywatch/signing/
 harmonywatch/phone-debug-identity.json

@@ -3,8 +3,8 @@
     "bundleName": "host.msknet.opengym.fit",
     "vendor": "openGym",
     "version": {
-      "code": 1000000,
-      "name": "1.0.0"
+      "code": 1004005,
+      "name": "1.4.5"
     }
   },
   "deviceConfig": {},
@@ -56,7 +56,7 @@
       "customizeData": [
         {
           "name": "supportLists",
-          "value": "host.msknet.opengym.phone:0000000000000000000000000000000000000000000000000000000000000000",
+          "value": "example.opengym.phone:0000000000000000000000000000000000000000000000000000000000000000",
           "extra": ""
         }
       ]

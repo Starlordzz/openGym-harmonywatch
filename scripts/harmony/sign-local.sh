@@ -45,30 +45,40 @@ for f in "$HAP_SIGN_TOOL" "$PACK_TOOL" "$CERT" "$PROFILE" "$LEAF"; do
   [ -f "$f" ] || { echo "Missing signing input: $f" >&2; exit 1; }
 done
 
-# The key directory is the only place the passwords live; they are read here, never printed.
-eval "$(node -e '
-const k = require(process.argv[1]);
-const esc = s => "'"'"'" + String(s).replace(/'"'"'/g, "'"'"'\\'"'"''"'"'") + "'"'"'";
-for (const [name, value] of [["KEYSTORE", k.keystore], ["ALIAS", k.keyAlias], ["KEYSTORE_PWD", k.keystorePwd], ["KEY_PWD", k.keyPwd]]) {
-  if (value === undefined) throw new Error("key-info.json is missing " + name);
-  console.log(name + "=" + esc(value));
-}
-' "$KEY_INFO")"
-
 WORK="$(mktemp -d -t opengym-sign-XXXXXX)"
 trap 'rm -rf "$WORK"' EXIT
 mkdir -p "$(dirname "$BIN_OUT")" "$(dirname "$HAP_OUT")"
+
+sign_app() {
+  local args_file="$WORK/sign.args"
+  # A private Java argument file keeps keystore passwords out of the process command line.
+  node --input-type=module - "$args_file" "$KEY_INFO" "$HAP_SIGN_TOOL" "$CERT" "$PROFILE" "$@" <<'JS'
+import { readFileSync, writeFileSync } from 'node:fs'
+const [argsFile, keyInfo, tool, certificate, profile, ...extra] = process.argv.slice(2)
+const key = JSON.parse(readFileSync(keyInfo, 'utf8'))
+for (const field of ['keystore', 'keyAlias', 'keystorePwd', 'keyPwd']) {
+  if (typeof key[field] !== 'string' || !key[field].length || /[\u0000-\u001f\u007f]/.test(key[field])) {
+    throw Error(`Invalid signing configuration field: ${field}`)
+  }
+}
+const args = [
+  '-jar', tool, 'sign-app', '-mode', 'localSign',
+  '-keyAlias', key.keyAlias, '-keyPwd', key.keyPwd,
+  '-appCertFile', certificate, '-profileFile', profile, '-profileSigned', '1',
+  '-keystoreFile', key.keystore, '-keystorePwd', key.keystorePwd,
+  '-signAlg', 'SHA256withECDSA', ...extra,
+]
+writeFileSync(argsFile, args.map(arg => JSON.stringify(arg)).join('\n') + '\n', { mode: 0o600 })
+JS
+  "$JAVA" "@$args_file"
+  rm -f "$args_file"
+}
 
 echo "== verify-profile"
 "$JAVA" -jar "$HAP_SIGN_TOOL" verify-profile -inFile "$PROFILE" -outFile "$WORK/profile-verification.json"
 
 echo "== sign BIN (-inForm bin)"
-"$JAVA" -jar "$HAP_SIGN_TOOL" sign-app \
-  -mode localSign -keyAlias "$ALIAS" -keyPwd "$KEY_PWD" \
-  -appCertFile "$CERT" -profileFile "$PROFILE" -profileSigned 1 \
-  -inFile "$BIN_IN" -inForm bin -signAlg SHA256withECDSA \
-  -keystoreFile "$KEYSTORE" -keystorePwd "$KEYSTORE_PWD" \
-  -outFile "$BIN_OUT"
+sign_app -inFile "$BIN_IN" -inForm bin -outFile "$BIN_OUT"
 
 echo "== pack HAP around the signed BIN"
 # The HAP member name follows the packed file's basename, and the device expects the canonical
@@ -78,13 +88,8 @@ cp "$BIN_OUT" "$WORK/entry-default-signed.bin"
 "$JAVA" -jar "$PACK_TOOL" --mode hap --bin-path "$WORK/entry-default-signed.bin" --out-path "$HAP_TMP" --force true
 
 echo "== sign HAP (-inForm zip, compatibleVersion $COMPATIBLE_VERSION)"
-"$JAVA" -jar "$HAP_SIGN_TOOL" sign-app \
-  -mode localSign -keyAlias "$ALIAS" -keyPwd "$KEY_PWD" \
-  -appCertFile "$CERT" -profileFile "$PROFILE" -profileSigned 1 \
-  -inFile "$HAP_TMP" -inForm zip -signCode 1 -compatibleVersion "$COMPATIBLE_VERSION" \
-  -signAlg SHA256withECDSA \
-  -keystoreFile "$KEYSTORE" -keystorePwd "$KEYSTORE_PWD" \
-  -outFile "$HAP_OUT"
+sign_app -inFile "$HAP_TMP" -inForm zip -signCode 1 \
+  -compatibleVersion "$COMPATIBLE_VERSION" -outFile "$HAP_OUT"
 
 echo "== verify-app"
 "$JAVA" -jar "$HAP_SIGN_TOOL" verify-app -inFile "$HAP_OUT" -inForm zip \

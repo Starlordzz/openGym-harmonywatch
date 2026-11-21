@@ -45,7 +45,7 @@
 | E05 | 手机使用方式 | 已安装 openGym Android APK，登录 NAS 自部署服务。 |
 | E06 | 手表工程位置 | 仓库子目录 `harmonywatch/`；早期消息中拼写为 hamonywatch，实际工程为 harmonywatch。 |
 | E07 | 手表应用 | 开发者中心名称 opengym，最终包名 `host.msknet.opengym.fit`。 |
-| E08 | 手机配套应用 | openGym Phone，包名 `host.msknet.opengym.phone`，APP ID `YOUR_REGISTERED_APP_ID`。 |
+| E08 | 手机配套应用 | openGym Phone，使用本机登记的包名与 APP ID。 |
 | E09 | 测试应用 | opengym1 是用户测试用应用，日常操作忽略它；删除须对应具体清理安排。 |
 | E10 | 设备授权 | 使用用户已提供的 FIT UDID 办理调试设备与 Profile；凭据沿用本机已有配置。 |
 

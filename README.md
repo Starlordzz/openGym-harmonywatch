@@ -42,6 +42,8 @@ npm run dev
 
 网页开发服务可单独运行；华为手表通信通过 Android 原生桥接。连接自己的服务见[自托管指南](docs/SELF_HOSTING.md)，Android 和手表构建见[开发指南](docs/HARMONY_FIT.md)及[脚本索引](scripts/harmony/README.md)。
 
+1.4.5 源码版的 Android APK 和 Lite Wearable HAP 可按[自签名打包指南](docs/harmony/SELF_SIGNING_ZH.md)在本机生成。
+
 ```bash
 # 手表纯逻辑、协议、存储与交互回归（当前 146 项）
 node --test frontend/harmony/tests/*.test.js

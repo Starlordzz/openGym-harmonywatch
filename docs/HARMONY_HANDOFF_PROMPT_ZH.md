@@ -117,7 +117,7 @@ app 49,140 B，仅余 12 B；页面余 413 B。FIT 5 Pro 的 FA Context 实际�
 
 最终验证：手表 141 项、手机同步/训练相关 119 项、原生队列 3 项通过。原生启动与结束汇总通过；离线休息页连续 12 秒抓到 119 帧，弧端 53 个不同位置，无 JS 异常。心率预览注入 128 bpm 样本验证布局，真实传感器读数待真机确认。app 49,096 B、页面 49,092 B，距离 49,152 B 上限分别余 56 B、60 B。
 
-手表包 `openGym-HuaweiWatch-controls-signed.hap` 已完成签名、Profile、BIN 分块与容器校验；689,283 B，SHA-256 `a112d71b60200a0ce441c90227f162694e9c5fffe33806e91ec0382ea5055a6f`。HAP 内 BIN 与签名单独文件一致，包含本次 app/page 字节。手机 APK 签名仍为已登记的 [本机证书摘要已省略]。用户指定继续使用原测试手机，最新回复为稍后重新连接；本轮 APK 覆盖安装与 HAP 推送待该手机连接后执行。
+手表包 `openGym-HuaweiWatch-controls-signed.hap` 已完成签名、Profile、BIN 分块与容器校验；689,283 B，SHA-256 `a112d71b60200a0ce441c90227f162694e9c5fffe33806e91ec0382ea5055a6f`。HAP 内 BIN 与签名单独文件一致，包含本次 app/page 字节。手机 APK 签名仍为已登记的 已登记证书摘要。用户指定继续使用原测试手机，最新回复为稍后重新连接；本轮 APK 覆盖安装与 HAP 推送待该手机连接后执行。
 
 本机证据：`harmonywatch/artifacts/BUILD_20261114_LAYOUT_END.json`、`BUILD_20261114_LAYOUT_END_ANDROID.json`、`TEST_20261114_LAYOUT_END_WATCH.log`、`TEST_20261114_LAYOUT_END_PHONE.log`、`TEST_20261114_LAYOUT_END_QUEUE.log`、`SIGN_20261114_LAYOUT_END.log`、`RING_MOTION_20261114_FINAL.json`。下一步安装两端新包，确认结束训练是否仍退表盘、手机/手表加组往返、休息圈与暂停、心率实际读数。原生工具新增 `prepare-ui-preview.mjs`（独立副本、合成训练/离线休息/结束场景）和 `check-rest-motion.ps1`（按 JPEG 弧端位置检查亚秒变化）；生产包保留真实存储和通信。
 
@@ -231,18 +231,18 @@ B3–B9 的马达反馈、实际卡顿/黑屏、图像稳定性、动作位置�
 5. 手机 Wear Engine SDK 由 5.0.2.306 升到 5.0.3.304（`frontend/android/app/build.gradle`）。
 6. 手机端增加 `checkPermission(DEVICE_MANAGER)` 核验与手表应用探测（`HuaweiWatchPlugin.java` 的 `managerGranted`、`probeWatch()`），设置页显示连接权限、设备、通信能力、探测码和版本。
 
-已核对一致的身份：手机 APK 实际签名 [本机证书摘要已省略]；手机保存的手表身份 `host.msknet.opengym.fit` / [本机证书摘要已省略] 与签名 HAP 证书一致；手机 APP ID `YOUR_REGISTERED_APP_ID`。运行环境：华为运动健康 17.0.10.300（允许后台），HMS Core 6.16.4.362。
+已核对 APK、HAP 和双端配对身份与本机开发者配置一致。
 
 ### B2 手机指纹根因（2026-11-13 发现，11-14 修复验证）
 
 原始短文本自检包结果：用户在进度文档中记录仍为 206；官方示例短文本同样发送失败，后续优先修正身份配置。
 
-手机侧 `setPeerFingerPrint` 填入的手表指纹格式有误。华为[如何获取应用指纹](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/wearengine_faq-9)规定：HarmonyOS 5.0 及之后的 Lite Wearable 应用，指纹为 `应用包名_base64Encode(公钥)`，公钥取签名叶证书的 EC 未压缩点（65 字节，`04` 开头）；[手机侧 P2P 指南](https://developer.huawei.com/consumer/cn/doc/connectivity-guides/phone-send-message-0000001051059209)注明该指纹最长 127 位。此前填的是叶证书 SHA-256（64 位十六进制 [本机证书摘要已省略]），Android 对端采用该证书 SHA-256 格式。手表为 HarmonyOS 7.0.0.017，适用新格式。
+手机侧 `setPeerFingerPrint` 填入的手表指纹格式有误。华为[如何获取应用指纹](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/wearengine_faq-9)规定：HarmonyOS 5.0 及之后的 Lite Wearable 应用，指纹为 `应用包名_base64Encode(公钥)`，公钥取签名叶证书的 EC 未压缩点（65 字节，`04` 开头）；[手机侧 P2P 指南](https://developer.huawei.com/consumer/cn/doc/connectivity-guides/phone-send-message-0000001051059209)注明该指纹最长 127 位。此前填的是叶证书 SHA-256（64 位十六进制 已登记证书摘要），Android 对端采用该证书 SHA-256 格式。手表为 HarmonyOS 7.0.0.017，适用新格式。
 
 | 方向 | 值 | 状态 |
 |---|---|---|
-| 手表 → 手机身份（手表侧配置） | 包名 `host.msknet.opengym.phone` + APK 证书 SHA-256 [本机证书摘要已省略] | 格式正确，保持 |
-| 手机 → 手表身份（手机侧配置） | `host.msknet.opengym.fit_BGsX0fLhLEJH+Lzm5WOkQPJ3A32BLeszoPShOUXYmMKWT+NC4v4af5uO5+tKfA+eFivOM1drMV7Oy7ZAaDe/UfU=` | 由 `harmonywatch/signing/opengym-fit-leaf.cer` 算出，共 112 字符；2026-11-14 已从手机 SharedPreferences 核验迁移成功 |
+| 手表 → 手机身份（手表侧配置） | 包名 `host.msknet.opengym.phone` + APK 证书 SHA-256 已登记证书摘要 | 格式正确，保持 |
+| 手机 → 手表身份（手机侧配置） | `手表包名与公钥指纹` | 由 `harmonywatch/signing/opengym-fit-leaf.cer` 算出，共 112 字符；2026-11-14 已从手机 SharedPreferences 核验迁移成功 |
 
 推导命令：`openssl x509 -in opengym-fit-leaf.cer -noout -pubkey | openssl pkey -pubin -outform DER`，取末尾 65 字节做 base64，前面拼 `包名_`。包名探测（202）与版本读取只用包名，所以此前能通过；指纹只在消息收发时校验，与全部读数相符。
 
@@ -276,7 +276,7 @@ B3–B9 的马达反馈、实际卡顿/黑屏、图像稳定性、动作位置�
 
 ### 2026-11-14：旧 PPL 优先于当前 Full Body
 
-复现场景为训练库同时保留历史计划和当前计划，手表在休息日显示了历史计划。
+复现场景为训练库同时保留旧 PPL 与当前 Full Body 计划，手表在休息日显示历史计划。用合成计划覆盖这一排序场景。
 
 已复现的缺口：`buildReady()` 原先按计划库顺序截取 `others`，旧 PPL 在前；`fitSnapshot()` 超预算时会先压到 3 个 others，当前 Full Body 可能排到后面或被裁掉。本轮改为优先下发周计划、轮换队列和未来日期安排中仍在使用的计划，其余保留计划随后排列，手机计划库保持原样。
 
@@ -293,7 +293,7 @@ B3–B9 的马达反馈、实际卡顿/黑屏、图像稳定性、动作位置�
 
 安装后的原生读数：`paired=true`、`installed=true`、`receiverRegistered=true`、`receivedPackets=4`、`lastSendCode=207`、`managerGranted=true`、`communicationError=""`。完整证据为 `PHONE_STATUS_20261114_PLAN_FINAL.json`；探测码为最近一次单独探测结果，消息与用户操作另行记录。
 
-测试与构建：手表 119 项、手机设置/同步/语言 37 项、公钥推导 2 项、原生指纹/迁移 2 项通过；新 APK 的 136 个 Web 构建文件与包内逐字节一致，签名仍为登记的 [本机证书摘要已省略]。手表已完成官方验签、固定叶证书/Profile/分块摘要校验，签名 BIN 中两份 JS 与编译输出一致。
+测试与构建：手表 119 项、手机设置/同步/语言 37 项、公钥推导 2 项、原生指纹/迁移 2 项通过；新 APK 的 136 个 Web 构建文件与包内逐字节一致，签名仍为登记的 已登记证书摘要。手表已完成官方验签、固定叶证书/Profile/分块摘要校验，签名 BIN 中两份 JS 与编译输出一致。
 
 ### 接续验证
 
@@ -304,7 +304,7 @@ B3–B9 的马达反馈、实际卡顿/黑屏、图像稳定性、动作位置�
 
 ### 2026-11-14 安装后读数
 
-ADB 覆盖安装成功；签名证书 SHA-256 仍为 [本机证书摘要已省略]。已核验 APK 的 DEX 和 Web 资源均含新公钥身份，迁移类与素材 NOTICE 均在包内。手机实际保存值从 [本机证书摘要已省略] 自动更新为上述 112 字符身份，`authorized=true` 保留。
+ADB 覆盖安装成功；签名证书 SHA-256 仍为 已登记证书摘要。已核验 APK 的 DEX 和 Web 资源均含新公钥身份，迁移类与素材 NOTICE 均在包内。手机实际保存值从 已登记证书摘要 自动更新为上述 112 字符身份，`authorized=true` 保留。
 
 首次原生状态：接收 1 条、应用探测 201、发送 206。随后读数为接收 13 条、探测 202、发送 207、通信错误为空，hello 当时尚未解析；证据 `PHONE_STATUS_20261114_PEER_LATEST.json`。
 
@@ -346,10 +346,10 @@ WSL：`/mnt/d/LEARNING/vibeproject/openGym-harmonywatch/openGym-harmonywatch`。
 |---|---|
 | 电脑 | Windows 11 + WSL Ubuntu 26 |
 | IDE | DevEco Studio 26.0.0.851，`E:\Program Files\Huawei\DevEco Studio` |
-| 手机 | Android 手机，Android 16，已安装 openGym Android APK，登录 NAS 自部署服务 |
+| 手机 | Android 16，安装 openGym Android APK，连接测试服务 |
 | 手表 | HUAWEI WATCH FIT 5 Pro，NKI-B29，HarmonyOS 7.0.0.017，API 26 |
 | 手表应用 | 开发者中心名称 opengym，包名 `host.msknet.opengym.fit` |
-| 手机应用 | openGym Phone，包名 `host.msknet.opengym.phone`，APP ID `YOUR_REGISTERED_APP_ID` |
+| 手机应用 | openGym Phone，使用本机登记的包名与 APP ID |
 | 工程 | `harmonywatch/`，Lite Wearable FA JS，HML + CSS + JS |
 | SDK | target API 26，Compatible SDK 6.1.1(24) |
 | 使用方式 | 个人签名、调测助手侧载、自用测试 |

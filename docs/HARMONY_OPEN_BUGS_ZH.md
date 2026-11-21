@@ -168,7 +168,7 @@ HA2 用户已确认重量正常，并返回 `FA permission API unavailable`。�
 
 最终验证：手表 141 项、手机同步/训练相关 119 项、原生队列 3 项通过。原生启动与结束汇总通过；离线休息页连续 12 秒抓到 119 帧，弧端 53 个不同位置，无 JS 异常。心率预览注入 128 bpm 样本验证布局，真实传感器读数待真机确认。app 49,096 B、页面 49,092 B，距离 49,152 B 上限分别余 56 B、60 B。
 
-手表包 `openGym-HuaweiWatch-controls-signed.hap` 已完成签名、Profile、BIN 分块与容器校验；689,283 B，SHA-256 `a112d71b60200a0ce441c90227f162694e9c5fffe33806e91ec0382ea5055a6f`。HAP 内 BIN 与签名单独文件一致，包含本次 app/page 字节。手机 APK 签名仍为已登记的 [本机证书摘要已省略]。用户指定继续使用原测试手机，最新回复为稍后重新连接；本轮 APK 覆盖安装与 HAP 推送待该手机连接后执行。
+手表包 `openGym-HuaweiWatch-controls-signed.hap` 已完成签名、Profile、BIN 分块与容器校验；689,283 B，SHA-256 `a112d71b60200a0ce441c90227f162694e9c5fffe33806e91ec0382ea5055a6f`。HAP 内 BIN 与签名单独文件一致，包含本次 app/page 字节。手机 APK 签名仍为已登记的 已登记证书摘要。用户指定继续使用原测试手机，最新回复为稍后重新连接；本轮 APK 覆盖安装与 HAP 推送待该手机连接后执行。
 
 本机证据：`harmonywatch/artifacts/BUILD_20261114_LAYOUT_END.json`、`BUILD_20261114_LAYOUT_END_ANDROID.json`、`TEST_20261114_LAYOUT_END_WATCH.log`、`TEST_20261114_LAYOUT_END_PHONE.log`、`TEST_20261114_LAYOUT_END_QUEUE.log`、`SIGN_20261114_LAYOUT_END.log`、`RING_MOTION_20261114_FINAL.json`。下一步安装两端新包，确认结束训练是否仍退表盘、手机/手表加组往返、休息圈与暂停、心率实际读数。原生工具新增 `prepare-ui-preview.mjs`（独立副本、合成训练/离线休息/结束场景）和 `check-rest-motion.ps1`（按 JPEG 弧端位置检查亚秒变化）；生产包保留真实存储和通信。
 
@@ -310,7 +310,7 @@ HA2 用户已确认重量正常，并返回 `FA permission API unavailable`。�
 
 官方 SDK 集成测试已覆盖：首次 hello 发送失败 → 手机请求应答 → 手表重发 hello → 训练计划快照落盘 → 回传 `snapshotAck`。手机设置页、现有训练同步与 Huawei 重试测试通过。首轮普通包真机复测：用户确认退出正常；点击手机“授权并连接”后返回 `Wear Engine send failed: 206`，手机仍显示手表已连接、应用未应答、身份已配置。
 
-已通过 ADB 核验：实际手机安装包签名为登记的 [本机证书摘要已省略]，手机保存的手表身份为 `host.msknet.opengym.fit`、[本机证书摘要已省略]，与签名 HAP 一致。
+已通过 ADB 核验：实际手机安装包签名为登记的 已登记证书摘要，手机保存的手表身份为 `host.msknet.opengym.fit`、已登记证书摘要，与签名 HAP 一致。
 
 后续补齐：
 
@@ -344,7 +344,7 @@ HA2 用户已确认重量正常，并返回 `FA permission API unavailable`。�
 已从本地公开叶证书复算公钥，与用户文档提供的值一致，共 112 字符：
 
 ```text
-host.msknet.opengym.fit_BGsX0fLhLEJH+Lzm5WOkQPJ3A32BLeszoPShOUXYmMKWT+NC4v4af5uO5+tKfA+eFivOM1drMV7Oy7ZAaDe/UfU=
+手表包名与公钥指纹
 ```
 
 本轮修正：两条 Android 构建脚本统一从证书生成新默认值；原生校验接受大小写敏感的公钥身份；原生启动时精确迁移本应用的旧 SHA-256 设置；手机输入框同步改为新格式。手表侧的手机身份仍使用 Android APK 证书 SHA-256。
