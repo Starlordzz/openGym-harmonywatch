@@ -22,11 +22,26 @@
 | `designWidth` | 408 | 466 |
 | `autoDesignWidth` | false | false |
 | `distroFilter.screenShape` | `rect` | `circle` |
-| 内容宽度 | 368 px | 340 px（圆内安全列） |
-| 已验证设备 | HUAWEI WATCH FIT 5 Pro | 待实机验证 |
+| 主体安全区 | 368 px 垂直列 | 310 px 赤道核心列（顶底收窄至 260 px） |
+| 最大内接正方形 | 408×480（全屏可用） | 329×329 px（中心 233, 233，半径 233 px） |
+| 覆盖机型 | HUAWEI WATCH FIT 3 / FIT 5 Pro | HUAWEI WATCH GT 5 / GT 4 / GT 3 / WATCH 4 / WATCH 3 / Ultimate |
+| 兼容机型 | — | GT 2 46mm（454×454，依 466 缩放 97.4%） |
 | 运行时 | HarmonyOS Lite Wearable，API 12 | 同左 |
 
 `screenWindow` 不写入 `distroFilter`：只按形态匹配，让同形态的不同分辨率共用同一 HAP；尺寸差异由 `designWidth` 等比缩放承担。若某型号出现溢出，再补 `screenWindow` 精确匹配，并单独验证。
+
+## 圆表几何安全区与 UI 协调规范
+
+1. **圆表几何约束**：
+   - 466×466 屏幕中心为 (233, 233)，半径 $R = 233$ px。
+   - 任意高度 $y$ 处的物理可见弦长为 $W(y) = 2 \times \sqrt{233^2 - (y - 233)^2}$。
+   - $y \le 30$ 或 $y \ge 436$ 时可用宽度降至 228 px 以下，矩形直角元素在顶部或底部会发生严重截断。
+2. **布局避让与内缩规则**：
+   - **顶部避让**：页面顶部内边距设为 30~32 px，标题与标签限宽 260 px 并居中对齐，杜绝表圈削角。
+   - **底部避让**：页面底部内边距设为 26~36 px，底部跳过按钮限宽 220 px，双操作按钮（Save/Discard）限宽 270 px，进度点限宽 180 px。
+   - **列表数值防切**：结算列表项数值向内留出 12 px 边距，防止数字末尾触碰圆弧边框。
+3. **视觉圆角与同心协调**：
+   - 所有按钮、快调胶囊与触控卡片采用大圆角胶囊造型（`border-radius: 20px ~ 26px`），消除方表情境下的硬直角，与物理圆盘同心呼应。
 
 ## API 等级
 
