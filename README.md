@@ -18,6 +18,8 @@ openGym 的第三方华为手表适配，面向 Android 手机与圆表、方表
 
 ## 当前适配状态
 
+当前源码已同步上游 [openGym 1.4.5](https://github.com/DuarteSantos8/openGym/releases/tag/v1.4.5)，保留 Android 和华为手表适配。
+
 项目面向华为手表多型号适配，圆形和方形屏幕均在目标范围。当前实现使用 HarmonyOS Lite Wearable FA JS 与 Wear Engine；已在 **HUAWEI WATCH FIT 5 Pro** 验证计划下发、保存恢复、表冠退出与前台常亮。其他型号的运行时、分辨率、圆屏安全区域和设备能力仍需逐项适配与验证，见[兼容性记录](docs/harmony/COMPATIBILITY_ZH.md)。
 
 2026-11-14 已合并上游 `main` 至 `68dad18f8`。合并后手机 7862、服务端 804、手表 130 项回归通过，手机 APK 已安装。合并版手表包随后出现启动黑屏；已定位并修正压缩步骤丢失 `ViewModel` 返回值的问题，新增返回值回归和原生启动检查，手表回归增至 131 项。启动与 SDK 回调修正版已通过实机复测，用户确认恢复。
@@ -45,10 +47,10 @@ npm run dev
 node --test frontend/harmony/tests/*.test.js
 # 公钥身份推导检查
 node --test scripts/harmony/watch-peer-identity.test.mjs
-# 手机界面与同步回归（7862 项；npm test 只收 src/ 与 scripts/）
+# 手机界面与同步回归
 cd frontend
 npm test
-# 服务端回归（804 项）
+# 服务端回归
 cd ../api
 node --test
 ```
