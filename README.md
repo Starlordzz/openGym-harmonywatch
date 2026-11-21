@@ -53,7 +53,7 @@ sequenceDiagram
 
 ## 当前适配状态
 
-当前源码已同步上游 [openGym 1.4.5](https://github.com/DuarteSantos8/openGym/releases/tag/v1.4.5)，保留 Android 和华为手表适配。
+当前代码基于上游 [openGym 1.4.5](https://github.com/DuarteSantos8/openGym/releases/tag/v1.4.5)，并已合入上游 `main` 至 `e4a68a94c` 的文档更新。
 
 项目面向华为手表多型号适配，圆形和方形屏幕均在目标范围。当前实现使用 HarmonyOS Lite Wearable FA JS 与 Wear Engine；已在 **HUAWEI WATCH FIT 5 Pro** 验证计划下发、保存恢复、表冠退出与前台常亮。其他型号的运行时、分辨率、圆屏安全区域和设备能力仍需逐项适配与验证，见[兼容性记录](docs/harmony/COMPATIBILITY_ZH.md)。
 
