@@ -40,12 +40,12 @@
 |---|---|---|
 | E01 | 电脑 | Windows 11 + WSL Ubuntu 26。 |
 | E02 | DevEco Studio | 26.0.0.851；Windows 安装目录 `E:\Program Files\Huawei\DevEco Studio`。 |
-| E03 | 手机 | 一加 Ace 3，Android 16。 |
+| E03 | 手机 | Android 手机，Android 16。 |
 | E04 | 手表 | HUAWEI WATCH FIT 5 Pro，NKI-B29，HarmonyOS 7.0.0.017，API 26。 |
 | E05 | 手机使用方式 | 已安装 openGym Android APK，登录 NAS 自部署服务。 |
 | E06 | 手表工程位置 | 仓库子目录 `harmonywatch/`；早期消息中拼写为 hamonywatch，实际工程为 harmonywatch。 |
 | E07 | 手表应用 | 开发者中心名称 opengym，最终包名 `host.msknet.opengym.fit`。 |
-| E08 | 手机配套应用 | openGym Phone，包名 `host.msknet.opengym.phone`，APP ID `119569911`。 |
+| E08 | 手机配套应用 | openGym Phone，使用本机登记的包名与 APP ID。 |
 | E09 | 测试应用 | opengym1 是用户测试用应用，日常操作忽略它；删除须对应具体清理安排。 |
 | E10 | 设备授权 | 使用用户已提供的 FIT UDID 办理调试设备与 Profile；凭据沿用本机已有配置。 |
 

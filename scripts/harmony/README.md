@@ -22,7 +22,7 @@ Android 脚本需要 JDK 21、Android SDK 与 Gradle 缓存；手表脚本使用
 
 在 WSL 中检出到 Windows 挂载盘时，`HARMONY_ANDROID_ASSET_CACHE=<目录>` 会把约 244 MB、13,281 个 Web 资源复制到该目录，并以 `-PharmonyAssetsDirectory` 交给 Gradle，避免逐文件扫描挂载盘；资源缓存目录由脚本在每次构建后删除子目录。
 
-`update-wearengine-materials.py`、`preview-wearengine-materials.ps1` 属于历史申请材料工具，使用前核对文案和输出路径。当前休息结束系统通知已取消，实际功能与验证状态见[进度文档](../../docs/HARMONY_OPEN_BUGS_ZH.md)。
+华为服务申请材料及其生成工具随本机资料保管。面向源码版的 Android APK 和手表 HAP 构建、签名与校验步骤见[自签名打包指南](../../docs/harmony/SELF_SIGNING_ZH.md)。
 
 基于 Duarte Santos 的 [openGym](https://github.com/DuarteSantos8/openGym)；本版本为第三方华为手表 / HarmonyOS 适配。许可见 [LICENSE](../../LICENSE)、[NOTICE](../../NOTICE.md) 与各素材/SDK 声明。
 

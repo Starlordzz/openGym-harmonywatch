@@ -205,14 +205,14 @@ lock), no live calories (Health Service Kit is deferred), and the summary's time
 a localised "52 min" because Lite has no duration formatter.
 
 
-The registered Android product is openGym Phone (APP ID `119569911`); account service is enabled.
+The registered Android product is openGym Phone (APP ID `YOUR_REGISTERED_APP_ID`); account service is enabled.
 Wear Engine DEVICE_MANAGER and NOTIFY were approved on 2026-11-13; DEVICE_MANAGER authorization
 was verified on the phone. Notification delivery remains unverified.
 Both official Excel templates were filled and uploaded. The current APK has been rebuilt with this
 APP ID and verified against the registered signing certificate. Rebuild with JDK 21 using:
 
 ```sh
-JAVA_HOME=/path/to/jdk21 HUAWEI_APP_ID=119569911 bash scripts/harmony/build-android.sh
+JAVA_HOME=/path/to/jdk21 HUAWEI_APP_ID=YOUR_REGISTERED_APP_ID bash scripts/harmony/build-android.sh
 ```
 
 The personal build helpers read the public Android APP ID and watch bundle from

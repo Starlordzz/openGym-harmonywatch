@@ -30,12 +30,13 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Lite bundle optimization failed' }
     }
     # The device refuses a JS file over 48 KB; the previewer only warns, so gate release builds on it.
+    $bundles = Join-Path $ProjectPath 'entry\build\default\intermediates\loader_out_lite\default\js\MainAbility'
     if ($result -eq 0 -and $buildMode -eq 'release') {
-        & node (Join-Path $PSScriptRoot 'check-size.mjs')
+        & (Join-Path $env:NODE_HOME 'node.exe') (Join-Path $PSScriptRoot 'check-size.mjs') --files (Join-Path $bundles 'app.js') (Join-Path $bundles 'pages\index\index.js')
         if ($LASTEXITCODE -ne 0) { $result = $LASTEXITCODE }
     }
     if ($result -eq 0 -and !$DebugBuild) {
-        & (Join-Path $env:NODE_HOME 'node.exe') (Join-Path $PSScriptRoot 'check-bundles.mjs') (Join-Path $ProjectPath 'entry\build\default\intermediates\loader_out_lite\default\js\MainAbility')
+        & (Join-Path $env:NODE_HOME 'node.exe') (Join-Path $PSScriptRoot 'check-bundles.mjs') $bundles
         $result = $LASTEXITCODE
         if ($result -eq 0) {
             $simulator = Join-Path $env:DEVECO_SDK_HOME 'default\hms\previewer\liteWearable\bin\Simulator.exe'
