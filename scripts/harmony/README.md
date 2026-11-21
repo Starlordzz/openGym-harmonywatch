@@ -6,9 +6,9 @@
 |---|---|---|
 | Android | `build-android.sh` | 完整构建并暂存授权范围内的素材 |
 | Android | `build-android-incremental.sh` | 已暂存素材后的 UI/原生桥接迭代 |
-| 手表 | `prepare.mjs --project harmonywatch` | 模板暂存、身份和权限配置；本机 peer.js 保持忽略 |
-| 手表 | `build-test.ps1 -DevEcoRoot <目录>` | 无预填计划的普通 release 构建；`-Forensics` 为退出取证变体 |
-| 手表 | `build-local.ps1 -DevEcoRoot <目录>` | 编译、SDK Terser ES5 优化、48 KB 检查、可用环境下的原生启动检查及 BIN/HAP 生成 |
+| 手表 | `prepare.mjs --project harmonywatch --round-project harmonywatch/round` | 模板暂存、身份和权限配置；`entry` 为方表、`round` 为 466×466 圆表（`--round-project` 可选），本机 peer.js 保持忽略 |
+| 手表 | `build-test.ps1 -DevEcoRoot <目录>` | 无预填计划的普通 release 构建（仅 `entry`）；`-Forensics` 为退出取证变体 |
+| 手表 | `build-local.ps1 -DevEcoRoot <目录> [-Module entry\|round\|all]` | 编译、SDK Terser ES5 优化、48 KB 检查、可用环境下的原生启动检查及 BIN/HAP 生成；默认同时产出方表与圆表 HAP |
 | 语言 | `build-locales.mjs` | 生成共享压缩译文；12 种语言原文由哈希回归保护 |
 | 身份 | `watch-peer-identity.mjs` | 公开证书提取包名与 Base64 EC 公钥身份，校验证书摘要 |
 | 签名 | `sign-local.sh` | 从本机 key-info、证书和 Profile 签名并校验 BIN/HAP |

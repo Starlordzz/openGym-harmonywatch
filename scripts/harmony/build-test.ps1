@@ -16,7 +16,7 @@ if ($Forensics) {
     & $node (Join-Path $PSScriptRoot 'build-locales.mjs') '--langs' 'en,zh-Hans' '--out' (Join-Path $ProjectPath 'entry\src\main\js\MainAbility\common\locales.js')
     if ($LASTEXITCODE -ne 0) { throw 'Cannot build the forensics locale set' }
 }
-& (Join-Path $PSScriptRoot 'build-local.ps1') -DevEcoRoot $DevEcoRoot -ProjectPath $ProjectPath
+& (Join-Path $PSScriptRoot 'build-local.ps1') -DevEcoRoot $DevEcoRoot -ProjectPath $ProjectPath -Module entry
 if ($LASTEXITCODE -ne 0) { throw 'Watch test build failed' }
 Write-Output 'Test scenario: no preset plan; the phone snapshot supplies it, existing device storage is retained.'
 if ($Forensics) { Write-Output 'Forensics scenario: exit-trace instrumentation kept, languages limited to en and zh-Hans.' }

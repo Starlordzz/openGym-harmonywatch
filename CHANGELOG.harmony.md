@@ -1,5 +1,9 @@
 # 华为手表适配版发布记录
 
+## 未发布
+
+- 新增圆表 HAP：`round` 模块为 466×466 圆屏，`entry` 保留 408×480 方屏；两者共用 HML/JS，圆屏差异仅来自 `pages/index/round.css` 与空闲列表高度。两个模块分别声明 `module.distroFilter.screenShape`（`rect` / `circle`），由 AppGallery 按屏幕形态分发。`prepare.mjs --round-project` 与 `build-local.ps1 -Module` 同步支持。
+
 ## v1.4.5 (2026-11-21)
 
 openGym for Huawei Watch 1.4.5 首个源码发布。基于 Duarte Santos 的 [openGym](https://github.com/DuarteSantos8/openGym) 开发，是面向 Android 和华为 Lite Wearable 手表的第三方适配。[上游 1.4.5 发布说明](https://github.com/DuarteSantos8/openGym/releases/tag/v1.4.5)

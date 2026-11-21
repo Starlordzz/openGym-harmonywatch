@@ -28,6 +28,7 @@ signing-config.json
 
 # Generated per-installation public peer identity.
 /entry/src/main/js/*/common/peer.js
+/round/src/main/js/*/common/peer.js
 
 # Local certificates, profiles and device registration details.
 /signing/

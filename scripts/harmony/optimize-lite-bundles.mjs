@@ -7,11 +7,11 @@ import { fileURLToPath } from 'node:url'
 import { bundleShape } from './check-lite-equivalence.mjs'
 import { checkRadioStartup } from './check-lite-radio.mjs'
 import { checkHeartSubscription } from './check-lite-heart.mjs'
-export async function optimizeBundles(project, sdk) {
+export async function optimizeBundles(project, sdk, module = 'entry') {
   const require = createRequire(import.meta.url)
   const { minify } = require(join(resolve(sdk), 'js/build-tools/ace-loader/node_modules/terser/dist/bundle.min.js'))
-  const loader = join(project, 'entry/build/default/intermediates/loader_out_lite/default/js/MainAbility')
-  const packed = join(project, 'entry/build/default/intermediates/lite_source/default/assets/js/MainAbility')
+  const loader = join(project, module, 'build/default/intermediates/loader_out_lite/default/js/MainAbility')
+  const packed = join(project, module, 'build/default/intermediates/lite_source/default/assets/js/MainAbility')
   for (const name of ['app.js', 'pages/index/index.js']) {
     const source = await readFile(join(loader, name), 'utf8')
     if (source !== await readFile(join(packed, name), 'utf8')) throw Error('Compiled and packaged JS differ: ' + name)
@@ -35,6 +35,6 @@ export async function optimizeBundles(project, sdk) {
   }
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  if (!process.argv[2] || !process.argv[3]) throw Error('Usage: optimize-lite-bundles.mjs <project> <SDK openharmony>')
-  await optimizeBundles(resolve(process.argv[2]), resolve(process.argv[3]))
+  if (!process.argv[2] || !process.argv[3]) throw Error('Usage: optimize-lite-bundles.mjs <project> <SDK openharmony> [module]')
+  await optimizeBundles(resolve(process.argv[2]), resolve(process.argv[3]), process.argv[4] || 'entry')
 }

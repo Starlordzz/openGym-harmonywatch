@@ -1,0 +1,59 @@
+/* Round 466x466 Lite canvas. The square design surface is centred in the circle, so every box
+   keeps its centre alignment and only its width narrows to the 340 px column that stays inside
+   the 233 px radius. The exercise stack trades media size for the primary action and the page
+   dots so all of them stay on-screen. Colours and typography are inherited from index.css. */
+
+.page { width: 466px; height: 466px; }
+.body { width: 466px; height: 466px; }
+.screen { width: 466px; height: 466px; padding: 16px; }
+.exerciseScreen { padding: 4px; }
+.restScreen { padding: 8px; }
+
+.col { width: 340px; height: 300px; }
+.logo { width: 340px; }
+.h2 { width: 320px; }
+.note { width: 320px; }
+.idleHint { width: 300px; height: 128px; }
+.statusNote { width: 280px; }
+
+.wide { width: 300px; }
+.half { width: 160px; }
+.restSkip { width: 240px; }
+.routineList { width: 340px; }
+.routineItem { width: 340px; }
+.rowbtn { width: 340px; }
+.debugList { width: 340px; height: 300px; }
+.debugRow { width: 340px; }
+.summaryList { width: 340px; height: 240px; }
+.summaryItem { width: 340px; }
+.summaryStatus { width: 340px; }
+.stat { width: 340px; }
+.edgeBtn { width: 80px; height: 56px; }
+
+/* One exercise: 52 + 26 + 100 + 30 + 200 + 22 px fits the circle with the screen centred. */
+.head { width: 300px; height: 52px; }
+.name { width: 260px; }
+.tags { width: 300px; height: 26px; }
+.tag { height: 24px; }
+.primary { width: 340px; height: 200px; }
+.mediaRail { width: 112px; height: 200px; }
+.sideRail { width: 96px; height: 200px; }
+.doneWrap { width: 112px; }
+.clip { width: 112px; height: 112px; }
+.tiles { width: 340px; height: 96px; }
+.tile { height: 92px; }
+.tileWide { width: 340px; height: 100px; }
+.numLine { height: 64px; }
+.largeLine { height: 72px; }
+.tnum { height: 64px; }
+.largeNumber { height: 72px; }
+.dots { width: 240px; height: 22px; }
+.dotbox { width: 22px; height: 22px; }
+
+/* Rest: 210 + 40 + 56 + 56 px keeps the three buttons and the skip row above the lower cut. */
+.restWrap { width: 210px; height: 210px; }
+.restArc { width: 210px; height: 210px; center-x: 105px; center-y: 105px; radius: 91px; }
+.restText { width: 200px; height: 200px; top: 5px; left: 5px; }
+.restRow { height: 56px; }
+.restNext { width: 280px; }
+.restOffline { width: 280px; }

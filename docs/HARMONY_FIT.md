@@ -72,15 +72,24 @@ Create the Lite project in DevEco once. `harmonywatch/build-profile.json5` is lo
 so manual-signing passwords cannot accidentally be committed; the sanitized example is tracked.
 The Windows build helper creates the local profile from the example if necessary.
 
-Build the radio-enabled HAP using the included official WearEngine-LiteWearable 5.0.2.306 SDK:
+Build the radio-enabled HAPs using the included official WearEngine-LiteWearable 5.0.2.306 SDK:
 
 ```sh
-node scripts/harmony/prepare.mjs --project harmonywatch --bundle host.msknet.opengym.fit
+node scripts/harmony/prepare.mjs --project harmonywatch --round-project harmonywatch/round --bundle host.msknet.opengym.fit
 ```
 
 ```powershell
 .\scripts\harmony\build-local.ps1 -DevEcoRoot 'E:\Program Files\Huawei\DevEco Studio'
 ```
+
+`entry` is the 408×480 rectangular HAP and `round` is the 466×466 circular HAP. Both stage the same
+page sources; the circle appends `pages/index/round.css` and shortens the idle list through HML
+staging, so no runtime JS is added. Each `config.json` declares
+`module.distroFilter.screenShape` (`rect` or `circle`) without `screenWindow`, letting AppGallery
+distribute every resolution of each shape. The helper builds both modules by default and writes
+`entry/build/default/outputs/default/entry-default-unsigned.hap` and
+`round/build/default/outputs/default/round-default-unsigned.hap`; use `-Module entry` or
+`-Module round` to build one shape.
 
 The default peer identity comes from `harmonywatch/phone-debug-identity.json`. Override it with
 `--phone-package` and `--phone-fingerprint` if using another Android signing certificate. An
