@@ -2,6 +2,8 @@
 
 项目结构、构建和代码规范见 [CLAUDE.md](CLAUDE.md)。所有在本仓库工作的 Agent 均须遵守以下署名和许可要求。
 
+**自签打包。** 构建或校验 Android APK、华为 Lite HAP 时，使用 [Agent 自签打包](docs/harmony/AGENT_PACKAGING_ZH.md) 的本机配置和验收步骤。
+
 ## 原作者署名与鸿蒙适配说明
 
 - 原项目为 **openGym**，原作者为 **Duarte Santos（GitHub：DuarteSantos8）**，上游仓库：<https://github.com/DuarteSantos8/openGym>。作者信息依据本仓库 [NOTICE.md](NOTICE.md)。

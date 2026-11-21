@@ -6,6 +6,8 @@ openGym 的第三方华为手表适配，面向 Android 手机与圆表、方表
 
 [开发文档](docs/harmony/README.md) · [兼容性](docs/harmony/COMPATIBILITY_ZH.md) · [修复进度](docs/HARMONY_OPEN_BUGS_ZH.md) · [接手记录](docs/HARMONY_HANDOFF_PROMPT_ZH.md) · [上游](https://github.com/DuarteSantos8/openGym)
 
+**可交给 Agent 自签打包。** 在本机准备工具链和自己的签名资料后，复制[打包提示词](docs/harmony/AGENT_PACKAGING_ZH.md)，Agent 可完成源码检出、APK/HAP 构建、签名、验签和 SHA-256 校验。[与上游 1.4.5 的差异](docs/harmony/FORK_DIFFERENCES_ZH.md)
+
 ## 项目特点
 
 - **Android ↔ 华为手表双向训练。** 手机下发今日计划、轮换计划和可选训练；手表记录组数、重量、次数、计时动作和 RPE/RIR，并回传手机。
@@ -15,6 +17,39 @@ openGym 的第三方华为手表适配，面向 Android 手机与圆表、方表
 - **手表训练交互。** 前台常亮、触屏数值调整、重量小数调整、加一组、休息结束长震，以及动作位置同步。表冠旋转控制与触控锁已取消。
 - **动作演示与多语言。** 手机转码并发送动作帧，手表保留上一组完整动画直至替换完成。手表界面保留 12 种语言。
 - **沿用 openGym 的训练基础。** 训练计划、历史记录、进阶规则、身体数据、本地使用和可选自托管服务继续使用原项目实现。
+
+## 手机与手表界面示意
+
+| Android 手机训练页 | 华为 Lite Wearable 训练页 |
+| --- | --- |
+| <img src="assets/readme/harmony-phone-workout.png" alt="移动端训练页，显示合成训练动作、重量、次数及完成状态" width="270"> | <img src="assets/readme/harmony-watch-workout.png" alt="华为手表训练页，显示合成动作、重量、次数及组数" width="248"> |
+
+左侧为手机共用训练界面预览，右侧为 DevEco Lite Wearable 预览。两张图均使用合成训练数据。
+
+## 手机与手表如何联动
+
+```mermaid
+sequenceDiagram
+  participant P as Android 手机
+  participant W as 华为手表
+  participant S as 自托管 openGym（可选）
+  P->>W: Wear Engine 下发训练计划和会话状态
+  W->>W: 保存计划，记录组数、重量和次数
+  alt 手机连接可用
+    W->>P: 回传训练事件
+    P->>P: 保存记录
+    P-->>W: 确认事件已保存
+  else 手机暂时离线
+    W->>W: 保留待同步事件
+    W->>P: 重连后补发
+    P-->>W: 保存后确认
+  end
+  opt 手机已连接自托管服务
+    P->>S: 同步训练记录
+  end
+```
+
+休息计时和结束训练可在两端联动。自托管服务由手机访问，手表与手机通过 Wear Engine 通信。
 
 ## 当前适配状态
 
@@ -43,6 +78,14 @@ npm run dev
 网页开发服务可单独运行；华为手表通信通过 Android 原生桥接。连接自己的服务见[自托管指南](docs/SELF_HOSTING.md)，Android 和手表构建见[开发指南](docs/HARMONY_FIT.md)及[脚本索引](scripts/harmony/README.md)。
 
 1.4.5 源码版的 Android APK 和 Lite Wearable HAP 可按[自签名打包指南](docs/harmony/SELF_SIGNING_ZH.md)在本机生成。
+
+### 给 Agent 的打包提示词
+
+```text
+请读 docs/harmony/AGENT_PACKAGING_ZH.md，使用 OPENGYM_PACKAGING_CONFIG 指向的本机配置，完成 fork v1.4.5 的 Android APK 和华为 Lite Wearable HAP 自签打包。按指南完成非交互构建与验签，将已验证的包、SHA256SUMS 和对应源码提交记录交付到配置的本机输出目录。
+```
+
+完整提示词、配置样例和验收条件见 [Agent 自签打包](docs/harmony/AGENT_PACKAGING_ZH.md)。首次账号授权与设备登记由用户在本机完成，私钥、密码、调试 Profile 和设备资料通过本机文件提供。
 
 ```bash
 # 手表纯逻辑、协议、存储与交互回归（当前 146 项）
