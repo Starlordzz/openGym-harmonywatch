@@ -8,18 +8,19 @@ import { keepForensics, stripForensics } from './strip-forensics.mjs'
 const args = process.argv.slice(2)
 const get = name => { const i = args.indexOf(name); return i < 0 ? null : args[i + 1] }
 if (!get('--project')) {
-  console.error('Usage: node scripts/harmony/prepare.mjs --project <Lite project> [--bundle <watch bundle>] [--offline] [--forensics] [--sdk <official SDK directory> --phone-package <Android applicationId> --phone-fingerprint <SHA256>]')
+  console.error('Usage: node scripts/harmony/prepare.mjs --project <Lite project> [--bundle <watch bundle>] [--offline] [--forensics] [--placeholder] [--sdk <official SDK directory> --phone-package <Android applicationId> --phone-fingerprint <SHA256>]')
   process.exit(1)
 }
 const project = resolve(get('--project'))
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const template = join(root, 'frontend/harmony/watch/entry/src/main')
 const sdk = args.includes('--offline') ? null : get('--sdk') ? resolve(get('--sdk')) : join(template, 'js/default/vendor')
+const placeholder = args.includes('--placeholder')
 let identity = {}
-try {
-  identity = JSON.parse(await readFile(join(root, 'harmonywatch/phone-debug-identity.json'), 'utf8'))
-} catch {
+if (placeholder) {
   try { identity = JSON.parse(await readFile(join(root, 'harmonywatch/phone-debug-identity.example.json'), 'utf8')) } catch {}
+} else {
+  try { identity = JSON.parse(await readFile(join(root, 'harmonywatch/phone-debug-identity.json'), 'utf8')) } catch {}
 }
 if (project.startsWith(join(root, 'frontend/harmony/watch'))) throw Error('Use a separate DevEco-generated project')
 const configFile = join(project, 'entry/src/main/config.json')
@@ -28,9 +29,13 @@ if (!config.module?.deviceType?.includes('liteWearable')) throw Error('Target pr
 const bundle = get('--bundle') || config.app.bundleName
 const validPackage = v => /^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z0-9_]+)+$/.test(v || '')
 if (!validPackage(bundle)) throw Error('Invalid watch bundle')
-const phonePackage = get('--phone-package') || identity.phoneApplicationId, phoneFingerprint = (get('--phone-fingerprint') || identity.phoneCertificateSha256 || '').replaceAll(':', '').toUpperCase()
+const phonePackage = get('--phone-package') || identity.phoneApplicationId
+const rawFingerprint = (get('--phone-fingerprint') || identity.phoneCertificateSha256 || '').replaceAll(':', '').toUpperCase()
+const phoneFingerprint = placeholder && !rawFingerprint ? '0'.repeat(64) : rawFingerprint
+const isPlaceholderIdentity = phonePackage === 'example.opengym.phone' || /^0+$/.test(phoneFingerprint)
 if (sdk) {
   if (!validPackage(phonePackage) || !/^[A-F0-9]{64}$/.test(phoneFingerprint)) throw Error('Provide actual phone package and certificate fingerprint with the SDK')
+  if (!placeholder && isPlaceholderIdentity) throw Error('Refusing placeholder phone identity without --placeholder')
   await stat(join(sdk, 'wearengine.js'))
 }
 try { await stat(join(project, 'node_modules')); throw Error('Remove node_modules from the Lite project root') } catch (e) { if (e.code !== 'ENOENT') throw e }
@@ -57,11 +62,16 @@ if (sdk) {
   if (!peer) { peer = { name: 'supportLists' }; rows.push(peer) }
   Object.assign(peer, { value, extra: '' })
 }
+await rm(join(destination, 'common'), { recursive: true, force: true })
 await cp(join(template, 'js/default'), destination, { recursive: true })
 await rm(join(destination, 'common/rest-relay.js'), { force: true })
 // One template, two builds (scripts/harmony/strip-forensics.mjs): --forensics keeps the U13
 // exit-trace instrumentation, the normal build strips it back to the shipping bytes.
 const forensics = args.includes('--forensics')
+if (!forensics) {
+  const hmlPath = join(destination, 'pages/index/index.hml')
+  await writeFile(hmlPath, (await readFile(hmlPath, 'utf8')).replace(/ onlongpress="toggleProbe"/g, ''))
+}
 const staged = ['app.js', 'pages/index/index.js', ...(await readdir(join(destination, 'common'))).filter(f => f.endsWith('.js')).map(f => 'common/' + f)]
 for (const file of staged) {
   const path = join(destination, file)

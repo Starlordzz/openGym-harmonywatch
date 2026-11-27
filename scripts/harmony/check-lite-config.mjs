@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { readFileSync } from 'node:fs'
-import { checkPermissions, readBinConfig } from './lite-config.mjs'
+import { checkBinIdentity, checkPermissions, readBinConfig } from './lite-config.mjs'
 
 const args = process.argv.slice(2)
 if (!args.length) {
@@ -14,6 +14,7 @@ try {
   const bytes = readFileSync(file)
   const config = binary ? readBinConfig(bytes) : JSON.parse(bytes.toString('utf8'))
   checkPermissions(config)
+  if (binary) checkBinIdentity(config)
   console.log('Lite permission metadata OK: ' + (config.module.reqPermissions || []).length + ' entries')
 } catch (error) {
   console.error('Lite config check failed: ' + error.message)

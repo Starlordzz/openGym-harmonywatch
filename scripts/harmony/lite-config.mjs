@@ -39,6 +39,25 @@ export function checkPermissions(config) {
   }
 }
 
+export function checkBinIdentity(config) {
+  const pkgPattern = /^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z0-9_]+)+$/
+  const bundle = config?.app?.bundleName
+  if (!pkgPattern.test(bundle || '') || bundle === 'example.opengym.fit' || bundle === 'example.opengym.watch') {
+    throw Error('Lite BIN uses missing or placeholder bundleName: ' + (bundle || '-'))
+  }
+  const rows = config?.module?.metaData?.customizeData
+  const peer = Array.isArray(rows) ? rows.find(row => row && row.name === 'supportLists') : null
+  if (!peer || typeof peer.value !== 'string') throw Error('Lite BIN missing supportLists peer trust metadata')
+  const parts = peer.value.split(':')
+  const phonePkg = parts[0], phoneFp = parts[1]
+  if (parts.length !== 2 || !pkgPattern.test(phonePkg || '') || phonePkg === 'example.opengym.phone') {
+    throw Error('Lite BIN uses missing or placeholder phone package in supportLists')
+  }
+  if (!/^[A-F0-9]{64}$/.test(phoneFp || '') || /^0+$/.test(phoneFp)) {
+    throw Error('Lite BIN uses missing or placeholder phone fingerprint in supportLists')
+  }
+}
+
 export function readBinConfig(buffer) {
   // Installed haptobin_tool format: 0xBE, uint32 BE bundle-name length, bundle name,
   // then config.json's uint32 filename length/name, 8 header bytes and uint32 data length.

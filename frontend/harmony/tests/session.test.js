@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { initialState, start, tick, finish, applySnapshot, acknowledge, setIndex, skip, summary, idle } from '../watch/entry/src/main/js/default/common/session.js'
+import { initialState, start, tick, finish, applySnapshot, acknowledge, setIndex, skip, summary, idle, event } from '../watch/entry/src/main/js/default/common/session.js'
 import { packets, assembler } from '../watch/entry/src/main/js/default/common/wire.js'
 import { afterTick } from '../watch/entry/src/main/js/default/common/heart.js'
 const entry = (id, extra = {}) => ({ id, name: id, mode: 'reps', sets: [{ w: 20, r: 10, done: false }, { w: 20, r: 10, done: false }], ...extra })
@@ -89,4 +89,55 @@ test('a running hold or rest prevents the idle policy ending an active timer', (
   const s = session(), now = 1000 + 50 * 60000
   s.hold = { endsAt: now + 5000 }; assert.equal(idle(s, now), '')
   s.hold = null; s.workout.rest = { endsAt: now + 5000 }; assert.equal(idle(s, now), '')
+})
+test('protocol 2 events carry seq, clock offset, and coalesce while preserving restSkip', () => {
+  const s = session()
+  s.clockOff = 2500
+  const e1 = event(s, 'navigate', { wid: s.workout.id, entryIdx: 0, restSkip: true }, 5000)
+  const e2 = event(s, 'navigate', { wid: s.workout.id, entryIdx: 1 }, 5100)
+  assert.ok(e2.seq > e1.seq)
+  assert.equal(e2.off, 2500)
+  assert.equal(e2.restSkip, true)
+  assert.equal(s.outbox.filter(e => e.type === 'navigate').length, 1)
+  event(s, 'restChange', { wid: s.workout.id, rest: { endsAt: 10000 } }, 5200)
+  event(s, 'restChange', { wid: s.workout.id, rest: { endsAt: 20000 } }, 5300)
+  assert.equal(s.outbox.filter(e => e.type === 'restChange').length, 1)
+  assert.equal(s.outbox.find(e => e.type === 'restChange').rest.endsAt, 20000)
+})
+test('applySnapshot shifts phone clocks, consumes acked ids, respects restAt, and lets stamped phone unticks win', () => {
+  let s = initialState()
+  const wPhone = {
+    id: 'wp2', name: 'Push', unit: 'kg', restSec: 90, start: 1000, pausedAt: 2000, activeAt: 3000, restAt: 2500,
+    rest: { endsAt: 15000, total: 90 },
+    entries: [{ id: '0025', unit: 'lb', mode: 'reps', sets: [{ sid: 's1', w: 100, r: 10, done: false }, { sid: 's2', w: 100, r: 10, done: false }] }]
+  }
+  s = applySnapshot(s, { v: 1, now: 10000, active: wPhone }, 15000)
+  assert.equal(s.clockOff, 5000)
+  assert.equal(s.workout.start, 6000)
+  assert.equal(s.workout.pausedAt, 7000)
+  assert.equal(s.workout.rest.endsAt, 20000)
+  assert.equal(s.activity, 8000)
+  tick(s, 0, 0, { w: 100, r: 10 }, 20000)
+  const doneEv = s.outbox.find(e => e.type === 'setDone')
+  assert.equal(doneEv.sid, 's1')
+  assert.equal(doneEv.off, 5000)
+  // Older restAt on phone cannot wipe out watch's newer local rest (restAt 20000)
+  s = applySnapshot(s, { v: 1, now: 15500, active: { ...wPhone, restAt: 3000, rest: null } }, 20500)
+  assert.equal(s.workout.rest.endsAt, 110000)
+  // Stamped phone untick (row.at 16000 + 5000 > 20000) + ack retires pending tick and unticks cleanly
+  const unticked = JSON.parse(JSON.stringify(wPhone))
+  unticked.entries[0].sets[0] = { sid: 's1', w: 100, r: 10, done: false, at: 16000 }
+  s = applySnapshot(s, { v: 1, now: 16000, acked: [doneEv.id], active: unticked }, 21000)
+  assert.deepEqual(s.pending, {})
+  assert.equal(s.workout.entries[0].sets[0].done, false)
+})
+test('summary converts per-exercise unit to profile unit and finish records idle flag', () => {
+  const s = session([entry('0025', { unit: 'lb', sets: [{ w: 100, r: 10, done: false }] })])
+  tick(s, 0, 0, { w: 100, r: 10 }, 2000)
+  assert.ok(Math.abs(summary(s, 3000).volume - 453.59237) < 0.01)
+  finish(s, 4000, false, true)
+  const fin = s.outbox.find(e => e.type === 'finish')
+  assert.equal(fin.idle, true)
+  assert.equal(s.activity, undefined)
+  assert.equal(s.startId, null)
 })

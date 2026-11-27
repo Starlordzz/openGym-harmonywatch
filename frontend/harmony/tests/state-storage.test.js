@@ -93,3 +93,16 @@ test('real controller acknowledges a large snapshot only after file and small in
   assert.deepEqual(state.ready, ready)
   rt.stop()
 })
+test('split ready storage skips rewriting og-ready when ready is unchanged across state saves', () => {
+  const d = disk(), adapter = stateStorage(d.storage, d.file)
+  const ready = { today: { name: 'Push', entries: [] }, others: [] }
+  const first = JSON.stringify({ workout: null, ready, outbox: [] })
+  assert.equal(write(adapter, first).ok, true)
+  assert.match(d.kv['opengym-fit-v1'], /^@[01]:\d+:[01]:\d+$/)
+  const writesBefore = d.writes.length
+  const second = JSON.stringify({ workout: { id: 'w1', entries: [] }, ready, outbox: [{ id: 'e1' }] })
+  assert.equal(write(adapter, second).ok, true)
+  assert.equal(d.writes.length, writesBefore + 1)
+  assert.match(d.writes.at(-1), /og-state/)
+  assert.equal(d.read().value, second)
+})

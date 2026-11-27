@@ -70,14 +70,23 @@ export function effortColor(kind, value) {
 
 // The set dots: 6 px for a warm-up, 9 px otherwise, inside a 16 px tap box (9 + 7 = 16).
 export function setDots(entry, current, skipped, ei) {
-  var out = []
-  entry.sets.forEach(function(row, i) {
+  var out = [], total = entry.sets.length, max = 18
+  var start = 0, end = total
+  if (total > max) {
+    var anchor = current >= 0 ? current : total - 1
+    start = Math.max(0, Math.min(total - max, anchor - Math.floor(max / 2)))
+    end = start + max
+  }
+  var box = Math.max(14, Math.min(20, Math.floor(340 / Math.max(1, end - start))))
+  for (var i = start; i < end; i++) {
+    var row = entry.sets[i]
     var half = !row.done && !!row.sides && (row.sides.L.done || row.sides.R.done)
     var colour = row.warmup ? '#ff9f0a' : '#ffffff'
     var size = row.warmup ? 6 : 9
     var isCurrent = i === current
     var isSkipped = !row.done && skipped.indexOf(key(entry.id, i, '', ei)) >= 0
     out.push({
+      index: i, box: box,
       size: size, pad: (16 - size) / 2,
       fill: row.done ? colour : half ? colour : '#2c2c2e',
       opacity: half ? 0.5 : 1,
@@ -85,7 +94,7 @@ export function setDots(entry, current, skipped, ei) {
       borderColor: isCurrent ? colour : '#9a9a9a',
       skipped: isSkipped
     })
-  })
+  }
   return out
 }
 
