@@ -81,7 +81,7 @@ mkdir -p "$out"
 
 ## 3. 构建并签署 Lite Wearable HAP
 
-用上面的 `watch_bundle`、`phone_package` 和 `phone_sha` 暂存模板。可对仓库的 DevEco 工程副本执行，以便保持检出的模板干净。
+用上面的 `watch_bundle`、`phone_package` 和 `phone_sha` 暂存模板。可对仓库的 DevEco 工程副本执行，以便保持检出的模板干净。`prepare.mjs` 默认拒绝示例占位身份（`example.opengym.phone` / 全零指纹），仅公开仓库重新暂存匿名占位配置时传入 `--placeholder`（且 `check-lite-config.mjs --bin` 在发布 BIN 打包时会拦截占位配置）。
 
 ```bash
 node scripts/harmony/prepare.mjs --project harmonywatch \

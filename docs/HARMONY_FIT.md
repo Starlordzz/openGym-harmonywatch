@@ -95,11 +95,14 @@ The API 26 `WearEngineLite` declarations are not substituted for the legacy P2pC
 ### State persistence (2026-11-14)
 
 Lite `@system.storage.set` values must be below 128 bytes; the empty session JSON alone is 171 bytes.
-`common/state-storage.js` now writes URI-encoded ASCII state to alternating app files in chunks
-of at most 4096 bytes. A short KV index is committed after the file is complete. The previous
-file remains readable after an interrupted new write; snapshot acknowledgements still follow persistence.
-Legacy JSON is read and migrated on the next successful save. Older HAPs that directly parse the KV
-value cannot read the new index; subsequent builds must retain the file adapter.
+`common/state-storage.js` splits non-null `ready` plans into alternating `og-ready0` / `og-ready1`
+files and writes the remaining session state to alternating `og-state0` / `og-state1` files in chunks
+of at most 4096 bytes. A short 4-part KV index (`@sSlot:sLen:rSlot:rLen`, or 2-part `@sSlot:sLen` when
+`ready` is null) is committed only after both files complete; subsequent saves skip rewriting
+`og-ready` when `ready` is unchanged. The previous files remain readable after an interrupted new write;
+snapshot acknowledgements still follow persistence. Legacy JSON is read and migrated on the next
+successful save. Older HAPs that directly parse the KV value cannot read the new index; subsequent
+builds must retain the file adapter.
 See [Huawei storage](https://developer.huawei.com/consumer/cn/doc/harmonyos-references/js-apis-system-storage/)
 and [file APIs](https://developer.huawei.com/consumer/cn/doc/harmonyos-references/js-apis-system-file/).
 
@@ -126,8 +129,8 @@ The watch is therefore split in two bundles, each inside the limit in a **releas
 
 | File | release | limit |
 |---|---|---|
-| `app.js` (state, radio, storage, mutations, translations) | 49,112 B | 49,152 B |
-| `pages/index/index.js` (layout, view model) | 49,031 B | 49,152 B |
+| `app.js` (state, radio, storage, mutations, translations) | 49,127 B | 49,152 B |
+| `pages/index/index.js` (layout, view model) | 48,384 B | 49,152 B |
 
 `getApp()` only answers when the app's options have a `data` object
 (`app_data_module.cpp` reads `vm.data`), so `app.js` keeps `data: { ready: false }`; everything else
@@ -140,7 +143,7 @@ watch build keeps 12 of the 19 Apple Watch languages to fit: `node scripts/harmo
 `--langs`) and the app bundle goes back over 48 KB.
 
 `scripts/harmony/check-size.mjs` gates the release build on both bundles (and `build-local.ps1` runs
-it), so a page too big for the device fails the build instead of shipping. Both bundles now sit close to the limit (40 bytes left in `app.js`, 121 in the page), so a new string usually means dropping one language from `WATCH_LANGS`.
+it), so a page too big for the device fails the build instead of shipping. Both bundles now sit close to the limit (25 bytes left in `app.js`, 768 in the page), so a new string usually means dropping one language from `WATCH_LANGS`.
 
 To see the previewer's pixels yourself: run the simulator, connect a WebSocket to
 `ws://127.0.0.1:<lws port>/<the -sid value>` (any other path fails validation), and read the binary
@@ -193,11 +196,11 @@ older builds still work. If a real FIT turns the other way, flip the sign in `cr
 
 Ported down to the small states as well: the page keeps an exercise with no open set and offers the
 dots ("All sets done" / "Tap a dot to do a skipped set."), the pending-sync mark sits in the exercise
-header and in the rest ring, the HR badge shows "measuring" until the sensor's first sample, and a
-rest that ends pulses three times with one repeat after 5 s that any touch silences.
+header and in the rest ring, on-watch heart rate sensing is disabled on this fork, and a rest that ends
+emits two rounds of four long pulses that any touch silences.
 
 A workout the phone ends while the watch has it running becomes a summary here, marked "Ended on
-your iPhone", the way watchOS does it: `applySnapshot` sees the workout leave the snapshot, checks the
+your phone", the way watchOS does it: `applySnapshot` sees the workout leave the snapshot, checks the
 phone's `discarded` list (already sent by `lib/watch-sync.js`) and either keeps the local summary or
 drops it. Only the calorie row still needs the phone or Health Service Kit, since watchOS takes kcal
 from the Apple Health workout and neither side of ours has that number. Deliberate deviations: no water lock (the existing in-app touch
