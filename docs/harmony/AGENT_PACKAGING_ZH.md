@@ -5,7 +5,7 @@
 ## 可复制提示词
 
 ```text
-请在本机为 openGym-harmonywatch 构建、签名并校验 Android APK 和华为 Lite Wearable HAP。目标默认是 fork 的 v1.4.5；如果我给出提交或标签，以我指定的版本为准。交付到本机输出目录。
+请在本机为 openGym-harmonywatch 构建、签名并校验 Android APK 和华为 Lite Wearable HAP。目标默认是 fork 的 v1.4.6；如果我给出提交或标签，以我指定的版本为准。交付到本机输出目录。
 
 1. 在独立检出目录获取 https://github.com/Starlordzz/openGym-harmonywatch 的目标版本，记录提交 SHA。阅读 AGENTS.md、docs/harmony/SELF_SIGNING_ZH.md 和 docs/harmony/AGENT_PACKAGING_ZH.md。使用所检出版本的构建脚本，保留原作者署名和许可。
 2. 从本机环境变量 OPENGYM_PACKAGING_CONFIG 指向的配置文件取得工具链、已登记的双端应用身份、签名材料路径和输出目录。先按文档检查所有输入。本机文件负责提供密码和密钥，对话及构建日志仅记录阶段状态和结果。检查签名材料是否可读，发现缺项时集中列出缺项和对应平台操作，继续完成可独立验证的步骤。

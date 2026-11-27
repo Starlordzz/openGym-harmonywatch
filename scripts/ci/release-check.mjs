@@ -23,7 +23,7 @@ const found = {
   'Garmin manifest version': /<iq:application [^>]*version="([^"]+)"/.exec(read('frontend/garmin/manifest.xml'))?.[1],
   'iOS build number': [...new Set([...read('frontend/ios/App/App.xcodeproj/project.pbxproj').matchAll(/CURRENT_PROJECT_VERSION = ([^;]+);/g)].map((m) => m[1]))].join(', '),
 }
-const changelog = read('CHANGELOG.md')
+const changelog = [read('CHANGELOG.md'), read('CHANGELOG.harmony.md')].filter(Boolean).join('\n')
 const section = want ? new RegExp(`^## v${want.replace(/\./g, '\\.')}([^0-9.]|$)`, 'm').test(changelog) : null
 
 const errors = [], warnings = []

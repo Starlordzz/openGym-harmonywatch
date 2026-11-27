@@ -1,12 +1,12 @@
 # Android 与华为手表自签名打包
 
-openGym for Huawei Watch 1.4.5 提供源码和本地构建流程。Android APK 使用自己的签名，华为 Lite Wearable HAP 使用与手表型号、包名和设备登记匹配的华为 Profile。当前验证机型见[兼容性记录](COMPATIBILITY_ZH.md)。
+openGym for Huawei Watch 1.4.6 提供源码和本地构建流程。Android APK 使用自己的签名，华为 Lite Wearable HAP 使用与手表型号、包名和设备登记匹配的华为 Profile。当前验证机型见[兼容性记录](COMPATIBILITY_ZH.md)。
 
 基于 Duarte Santos 的 [openGym](https://github.com/DuarteSantos8/openGym) 开发，为第三方华为手表 / HarmonyOS 适配。源码遵循 [AGPL-3.0-or-later](../../LICENSE)。训练素材和华为 SDK 的许可声明随对应目录保存。[项目声明](../../NOTICE.md) · [训练素材许可](../../catalogue/media/NOTICE.md) · [华为 Lite SDK 声明](../../frontend/harmony/watch/entry/src/main/js/default/vendor/README.md)
 
 ## 准备工作
 
-- 获取 fork 的 `v1.4.5` 源码。如果下载了发布页附带的源码包，在下载目录执行 `sha256sum -c SHA256SUMS`。Android 构建使用 Node.js 22、JDK 21、Android SDK Platform 36、Build Tools 35.0.0 和 Gradle Wrapper。手表构建使用带 Lite Wearable SDK 的 Windows DevEco Studio。WSL 签名校验还使用 Python 3 和 OpenSSL。
+- 获取 fork 的 `v1.4.6` 源码。如果下载了发布页附带的源码包，在下载目录执行 `sha256sum -c SHA256SUMS`。Android 构建使用 Node.js 22、JDK 21、Android SDK Platform 36、Build Tools 35.0.0 和 Gradle Wrapper。手表构建使用带 Lite Wearable SDK 的 Windows DevEco Studio。WSL 签名校验还使用 Python 3 和 OpenSSL。
 - 在仓库外保管 Android 签名库、华为手表私钥和密码。在 AppGallery Connect 登记自己的手机应用包名、Android 证书指纹及手表应用包名，按账号和型号申请 Wear Engine。记录自己应用的 APP ID。[华为 Wear Engine 配置](https://developer.huawei.com/consumer/en/doc/development/connectivity-Guides/addingappid-packagename-0000001050818013)
 - 在华为开发者后台申请匹配手表包名的 P-256 调试证书和 Profile，并登记用于调试的手表。把自己的公开叶证书、完整证书链和调试 Profile 分别保存为 `harmonywatch/signing/opengym-fit-leaf.cer`、`opengym-fit-chain.cer` 和 `opengym-fit-debug.p7b`。该目录由 Git 忽略。[华为 Lite Wearable 调测文档](https://developer.huawei.com/consumer/en/doc/harmonyos-guides-V2/run_fitnesswatch-0000001054134240-V2/)
 
