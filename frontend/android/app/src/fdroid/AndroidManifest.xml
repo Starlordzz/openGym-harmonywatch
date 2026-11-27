@@ -4,7 +4,11 @@
      are left out; the check-in scanner uses the WebView's camera instead (lib/scan.js). -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
+    <queries>
+        <package android:name="com.huawei.health" tools:node="remove" />
+    </queries>
     <application>
+        <meta-data android:name="com.huawei.hms.client.appid" tools:node="remove" />
         <service android:name=".WatchListenerService" tools:node="remove" />
         <meta-data android:name="com.google.mlkit.vision.DEPENDENCIES" tools:node="remove" />
     </application>

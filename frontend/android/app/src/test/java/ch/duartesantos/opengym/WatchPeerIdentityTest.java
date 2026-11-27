@@ -1,6 +1,8 @@
 package ch.duartesantos.opengym;
 
 import org.junit.Test;
+import java.util.Arrays;
+import java.util.Collections;
 import static org.junit.Assert.*;
 
 public class WatchPeerIdentityTest {
@@ -23,5 +25,26 @@ public class WatchPeerIdentityTest {
         assertEquals(custom, WatchPeerIdentity.migrate(PKG, custom, PKG, OLD, PEER));
         assertEquals(OLD, WatchPeerIdentity.migrate("another.watch", OLD, PKG, OLD, PEER));
         assertEquals(OLD, WatchPeerIdentity.migrate(PKG, OLD, PKG, OLD, ""));
+    }
+
+    @Test public void selectsCompatibleWatchPreferringLastDeviceUuid() {
+        assertEquals(-1, WatchPeerIdentity.selectConnectedIndex(Collections.emptyList(), Collections.emptyList(), ""));
+        assertEquals(-1, WatchPeerIdentity.selectConnectedIndex(Arrays.asList("u1"), Arrays.asList(WatchPeerIdentity.P2P_NOT_SUPPORTED), ""));
+        assertEquals(1, WatchPeerIdentity.selectConnectedIndex(
+                Arrays.asList("band", "watch"),
+                Arrays.asList(WatchPeerIdentity.P2P_NOT_SUPPORTED, WatchPeerIdentity.P2P_SUPPORTED),
+                ""));
+        assertEquals(1, WatchPeerIdentity.selectConnectedIndex(
+                Arrays.asList("watch-a", "watch-b"),
+                Arrays.asList(WatchPeerIdentity.P2P_SUPPORTED, WatchPeerIdentity.P2P_SUPPORTED),
+                "watch-b"));
+        assertEquals(0, WatchPeerIdentity.selectConnectedIndex(
+                Arrays.asList("watch-a", "watch-b"),
+                Arrays.asList(WatchPeerIdentity.P2P_SUPPORTED, WatchPeerIdentity.P2P_SUPPORTED),
+                "missing-uuid"));
+        assertEquals(0, WatchPeerIdentity.selectConnectedIndex(
+                Arrays.asList("unknown-watch", "band"),
+                Arrays.asList(2, WatchPeerIdentity.P2P_NOT_SUPPORTED),
+                ""));
     }
 }
