@@ -92,4 +92,7 @@ it('keeps runtime detection, protocol response and checked authorization visible
   expect(host.textContent).toContain('应用探测 202（运行中）')
   expect(host.textContent).toContain('手表应用未应答')
   expect(host.textContent).toContain('通信能力支持')
+  expect(host.textContent).toContain('Duarte Santos')
+  expect(host.textContent).toContain('HUAWEI WATCH / FIT')
+  expect(host.querySelector('a[href="https://github.com/DuarteSantos8/openGym"]')).not.toBeNull()
 })

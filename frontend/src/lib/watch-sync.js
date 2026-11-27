@@ -183,6 +183,9 @@ export function phoneClock (ev) {
   if (!off || Math.abs(off) > MAX_OFF_MS) return ev
   const out = { ...ev }
   for (const k of ['at', 'restEnd', 'endsAt']) if (num(out[k]) && out[k] > 0) out[k] = out[k] - off
+  if (out.rest && !out.rest.paused && num(out.rest.endsAt) && out.rest.endsAt > 0) {
+    out.rest = { ...out.rest, endsAt: out.rest.endsAt - off }
+  }
   return out
 }
 
@@ -237,12 +240,16 @@ export const setStamp = s => Math.max(num(s?.at) || 0, num(s?.eat) || 0)
 export function editedDoneRows (prev, next) {
   const out = []
   if (!prev || !next || prev.id !== next.id || !Array.isArray(next.entries) || !Array.isArray(prev.entries)) return out
-  const nums = s => JSON.stringify([s.w, s.r, s.sec, s.sides?.L?.w, s.sides?.L?.r, s.sides?.R?.w, s.sides?.R?.r, s.rpe, s.rir])
+  const nums = s => JSON.stringify([
+    Boolean(s.done), Boolean(s.sides?.L?.done), Boolean(s.sides?.R?.done),
+    s.w, s.r, s.sec, s.sides?.L?.w, s.sides?.L?.r, s.sides?.R?.w, s.sides?.R?.r, s.rpe, s.rir,
+  ])
+  const hadDone = p => Boolean(p?.done || p?.sides?.L?.done || p?.sides?.R?.done)
   next.entries.forEach((e, i) => (e?.sets || []).forEach((s, j) => {
-    if (!s?.done) return
+    if (!s) return
     const hit = sidOk(s.sid) ? rowBySid(prev, s.sid) : (prev.entries[i]?.id === e.id ? [i, j] : null)
     const p = hit ? prev.entries[hit[0]]?.sets?.[hit[1]] : null
-    if (p?.done && p !== s && nums(p) !== nums(s)) out.push([i, j])
+    if (p && p !== s && hadDone(p) && nums(p) !== nums(s)) out.push([i, j])
   }))
   return out
 }
@@ -379,7 +386,7 @@ function watchEntry (stored, H, S) {
  * routines, each with its exercises built exactly as starting it on the phone builds them
  * (buildCombinedEntries, as sheets.jsx beginWorkout does).
  */
-export function buildReady (S, today = todayISO()) {
+export function buildReady (S, today = todayISO(), { huawei = false } = {}) {
   let H = null
   try { H = sessionHistory(S) } catch { H = null }
   // One routine that cannot be built is left out, not the whole list with it.
@@ -392,8 +399,8 @@ export function buildReady (S, today = todayISO()) {
         routineIds: routineIds.map(String),
         name: String(deriveSessionName(routines.map(r => r.name)) || ''),
         // with their muscles, so a workout the watch starts offline fills its Muscles page too
-        entries: entries.filter(e => e && e.id != null).map(e => ({ ...watchEntry(e, H, S), ...musclesFor(e) })),
-        ...muscleNames(entries),
+        entries: entries.filter(e => e && e.id != null).map(e => ({ ...watchEntry(e, H, S), ...(huawei ? {} : musclesFor(e)) })),
+        ...(huawei ? {} : muscleNames(entries)),
         // Apple Health's workout type on the watch: a run is a run (#799)
         ...(healthType ? { healthType } : {}),
       }
@@ -465,9 +472,9 @@ export function buildSnapshot(S, { timer = null, ready = null, activeAt = null, 
       // When the rest was last changed on purpose (phone clock): a watch follows only a change
       // newer than its own newest, so a Skip here (rest null, this newer) ends the watch's too.
       ...(num(restAt) > 0 ? { restAt: num(restAt) } : {}),
-      entries: A.entries.filter(e => e && e.id != null).map(e => ({ ...watchEntry(e, H, S), ...musclesFor(e) })),
+      entries: A.entries.filter(e => e && e.id != null).map(e => ({ ...watchEntry(e, H, S), ...(huawei ? {} : musclesFor(e)) })),
       // The names of those muscles in the app's language, for the watch's Muscles page.
-      ...muscleNames(A.entries),
+      ...(huawei ? {} : muscleNames(A.entries)),
       // Apple Health's workout type on the watch: a run is a run (#799)
       ...(healthType ? { healthType } : {}),
       // The last thing done in it on the phone (#904): the watch's forgotten-workout clock
@@ -821,13 +828,34 @@ function applyEach (events, getState, now = Date.now()) {
         const idx = entryIndexOf(A, ev), count = num(ev.count)
         if (idx >= 0 && Number.isInteger(count) && count > 0 && count <= 60) handlers.addSets(idx, count)
       } else if (ev.type === 'restChange' && ours) {
-        if (!handlers?.restChange) { appHandlers?.openWorkout?.(); break }
+        const at = num(ev.at) || now
         const r = ev.rest
-        if (r && num(r.total) > 0 && num(r.total) <= 900 && (r.paused ? num(r.left) > 0 && r.left <= 900 : num(r.endsAt) > 0)) handlers.restChange(r)
+        if (!A.editingWorkoutId && (!num(ev.at) || at > restAtFor(A.id))
+            && r && num(r.total) > 0 && num(r.total) <= 900 && (r.paused ? num(r.left) > 0 && r.left <= 900 : num(r.endsAt) > 0)) {
+          if (handlers?.restChange) handlers.restChange(r)
+          else if (uiRef?.getState()?.followWatchRest) uiRef.getState().followWatchRest(r)
+          else { appHandlers?.openWorkout?.(); break }
+          writeRestClock({ wid: A.id, at: Math.max(at, 1), shape: restShape(uiRef?.getState?.()?.timer ?? r) })
+        }
       } else if (ev.type === 'navigate' && ours) {
-        if (!handlers?.navigate) { appHandlers?.openWorkout?.(); break }
-        const idx = entryIndexOf(A, ev)
-        if (idx >= 0) handlers.navigate(idx, ev.restSkip === true)
+        if (!A.editingWorkoutId) {
+          const idx = entryIndexOf(A, ev)
+          const skip = ev.restSkip === true
+          const at = num(ev.at) || now
+          const navOk = idx >= 0 && (!num(ev.at) || at >= phoneWorkedAt(A))
+          const skipOk = skip && (!num(ev.at) || at > restAtFor(A.id))
+          if (navOk || skipOk) {
+            if (handlers?.navigate) {
+              handlers.navigate(navOk ? idx : null, skipOk)
+            } else if (appHandlers?.edit && (!skipOk || uiRef?.getState()?.stopRest)) {
+              if (navOk) appHandlers.edit(s => { if (!s.active || s.active.editingWorkoutId || !s.active.entries?.[idx]) return false; s.active.cur = idx; return true })
+              if (skipOk) uiRef.getState().stopRest()
+            } else {
+              appHandlers?.openWorkout?.(); break
+            }
+            if (skipOk) writeRestClock({ wid: A.id, at: Math.max(at, 1), shape: restShape(uiRef?.getState?.()?.timer ?? null) })
+          }
+        }
       } else if ((ev.type === 'addSet' || ev.type === 'removeSet') && ours) {
         // The watch's set menu (#1139, #1185), by the set's id (#1162).
         if (!appHandlers?.edit) break
@@ -921,6 +949,8 @@ export function bindWatchAppActions (h) {
 /* ---------- the native plugin ---------- */
 
 let pluginP = null
+let nativeBridgeP = null
+let pluginTest = false
 // Inside an object: a Capacitor plugin proxy answers `then`, so a promise must never resolve with
 // the bare proxy (lib/rest-alert.js, the Coach hang #42).
 // The iPhone's (Apple Watch) or the Android phone's (Wear OS); the web has none.
@@ -932,6 +962,13 @@ const watchPlugin = () => pluginP || (pluginP = (async () => {
   const { registerPlugin } = await import('@capacitor/core')
   const huawei = platform === 'android'
   return { WatchBridge: registerPlugin(huawei ? 'HuaweiWatch' : 'WatchBridge'), huawei }
+})().catch(() => null))
+const nativeWatchBridge = () => nativeBridgeP || (nativeBridgeP = (async () => {
+  if (!MOBILE) return null
+  const platform = await nativePlatform()
+  if (!WATCH_PLATFORMS.includes(platform)) return null
+  const { registerPlugin } = await import('@capacitor/core')
+  return { WatchBridge: registerPlugin('WatchBridge') }
 })().catch(() => null))
 
 let getStateRef = null
@@ -1198,7 +1235,7 @@ async function runLink (p, { useStore, useUI }, { health = true, clips: withClip
     const key = [S.routines, S.week, S.dayPlan, S.queue, S.workouts, S.exWeights, S.unit, todayISO()]
     if (!readyKey || key.some((v, i) => v !== readyKey[i])) {
       readyKey = key
-      try { ready = buildReady(S) } catch { ready = null }
+      try { ready = buildReady(S, todayISO(), { huawei }) } catch { ready = null }
     }
     return ready
   }
@@ -1206,7 +1243,7 @@ async function runLink (p, { useStore, useUI }, { health = true, clips: withClip
   // change. Without one nothing below runs at all: no snapshot, no clips, no bridge call per tick.
   // The phone's own link can also reach a Garmin (status `garmin`, docs/GARMIN.md): that watch gets
   // the cut-down snapshot (lib/garmin-snapshot.js) alongside, made here so Java and Swift don't.
-  let linked = false, garmin = false
+  let linked = false, garmin = false, configured = false
   // A Garmin's `acked` list is short (GARMIN_ACKED_MAX, its messages are small), and a workout
   // logged with the phone away comes back as dozens of events within a second or two. The ids
   // applied since the last snapshot wait here and are named oldest first, a list per snapshot,
@@ -1223,8 +1260,9 @@ async function runLink (p, { useStore, useUI }, { health = true, clips: withClip
     const was = linked
     try {
       const st = await p.WatchBridge.status(); linked = !!(st && st.paired && st.installed); garmin = withGarmin && linked && !!st.garmin
+      configured = !!(st && (st.configured === true || st.paired || st.installed))
       if (st?.watchBoot && st.watchBoot !== watchBoot) { watchBoot = st.watchBoot; lastSent = lastClips = null }
-    } catch { linked = false; garmin = false }
+    } catch { linked = false; garmin = false; configured = false }
     if (withGarmin) writeGarminLink(garmin)
     // A watch that is new here (the app just installed on it, or reinstalled): it has nothing yet,
     // so the snapshot goes again even when it is the same as the last one sent.
@@ -1263,7 +1301,7 @@ async function runLink (p, { useStore, useUI }, { health = true, clips: withClip
         const f = readForgottenState(snap.active.id)
         if (f.leftAt) snap.active.leftGymAt = f.leftAt
       }
-      if (prefs.enabled && isOn(S, 'motivation')) snap.streak = streakFor(S)
+      if (!huawei && prefs.enabled && isOn(S, 'motivation')) snap.streak = streakFor(S)
       // Discarded here: the watch drops its Apple Health workout instead of saving it (#776).
       const discarded = discardedFor(Date.now(), S)
       if (discarded.length) snap.discarded = discarded
@@ -1365,7 +1403,7 @@ async function runLink (p, { useStore, useUI }, { health = true, clips: withClip
     // The running workout ended or changed here: a start from the watch that waited for it applies now.
     if (prev.S?.active?.id && s.S?.active?.id !== prev.S.active.id) drainWatchEvents()
     // A workout started on the phone: the watch app opens with it (HealthKit's startWatchApp).
-    if (!s.tourSandbox && isOn(s.S, 'watch') && (huawei || linked) && shouldOpenOnWatch(prev.S?.active, s.S?.active)) Promise.resolve().then(() => p.WatchBridge.openOnWatch({ type: plannedType(s.S.active.entries) || undefined })).catch(() => {})
+    if (!s.tourSandbox && isOn(s.S, 'watch') && (huawei ? configured : linked) && shouldOpenOnWatch(prev.S?.active, s.S?.active)) Promise.resolve().then(() => p.WatchBridge.openOnWatch({ type: plannedType(s.S.active.entries) || undefined })).catch(() => {})
     // Every row of the running workout gets its id before the watch hears of it (#1162), in a
     // change of its own that nobody counts as an edit. Not the tour's practice workout.
     const st = useStore.getState()
@@ -1430,8 +1468,8 @@ async function runLink (p, { useStore, useUI }, { health = true, clips: withClip
 }
 
 // Test seams.
-export function _setWatchPluginForTest (plugin, getState) { pluginP = Promise.resolve(plugin ? { WatchBridge: plugin } : null); getStateRef = getState || null }
-export function _resetWatchSync () { restClock = null; uiRef = null; extraLinks.clear(); ackListeners.clear(); startedOnWatch.clear(); claimedByWatch.clear(); handlers = null; appHandlers = null; pluginP = null; getStateRef = null; draining = null; drainAgain = false; rerunSoon = false; clearTimeout(rerunTm); rerunTm = null; failedTries.clear(); editedHere = { wid: null, at: 0 }; openedHere = { wid: null, at: 0 }; applyingWatch = false }
+export function _setWatchPluginForTest (plugin, getState) { pluginTest = true; pluginP = Promise.resolve(plugin ? { WatchBridge: plugin } : null); getStateRef = getState || null }
+export function _resetWatchSync () { restClock = null; uiRef = null; extraLinks.clear(); ackListeners.clear(); startedOnWatch.clear(); claimedByWatch.clear(); handlers = null; appHandlers = null; pluginTest = false; pluginP = null; nativeBridgeP = null; getStateRef = null; draining = null; drainAgain = false; rerunSoon = false; clearTimeout(rerunTm); rerunTm = null; failedTries.clear(); editedHere = { wid: null, at: 0 }; openedHere = { wid: null, at: 0 }; applyingWatch = false }
 
 /**
  * Writes `fields` (heart rate) onto one set: in the running session when it is that workout, else in
@@ -1569,7 +1607,7 @@ function lateRow (w, exId, setIdx, sid = null) {
  */
 export async function garminCall (name, args = {}) {
   if (!['garminStatus', 'garminPick', 'garminStore'].includes(name)) return null
-  const p = await watchPlugin()
+  const p = pluginTest ? await watchPlugin() : await nativeWatchBridge()
   if (!p) return null
   try { return (await p.WatchBridge[name](args)) || null } catch { return null }
 }
@@ -1581,8 +1619,8 @@ export async function garminCall (name, args = {}) {
  */
 export async function wearStatus () {
   const none = { supported: false, paired: false, installed: false, reachable: false, watches: [] }
-  const p = await watchPlugin()
-  if (!p || p.huawei) return none
+  const p = pluginTest ? await watchPlugin() : await nativeWatchBridge()
+  if (!p) return none
   try {
     const st = await p.WatchBridge.status()
     const w = st?.wear && typeof st.wear === 'object' ? st.wear : (st?.garmin ? null : st)

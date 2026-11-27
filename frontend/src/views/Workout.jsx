@@ -1625,7 +1625,15 @@ function ActiveWorkout() {
       // previous set's own side when it had one, else split the row's total evenly.
       e.sets.push(isPerSide({ ...(e.target || {}), id: e.id })
         ? (l && isSideSet(l)
-          ? makeSideSet({ w: l.sides.L.w, r: (l.sides.L.r || 0) * 2 })
+          ? {
+            ...makeSideSet(row),
+            w: Math.max(l.sides.L.w || 0, l.sides.R.w || 0),
+            r: (l.sides.L.r || 0) + (l.sides.R.r || 0),
+            sides: {
+              L: { w: l.sides.L.w, r: l.sides.L.r, done: false },
+              R: { w: l.sides.R.w, r: l.sides.R.r, done: false },
+            },
+          }
           : makeSideSet(row))
         : row)
     }
@@ -2467,7 +2475,9 @@ function ActiveWorkout() {
     },
     restChange: rest => useUI.getState().followWatchRest(rest),
     navigate: (idx, skipRest) => {
-      update(s => { if (s.active && !s.active.editingWorkoutId && s.active.entries?.[idx]) s.active.cur = idx })
+      if (idx != null) {
+        update(s => { if (s.active && !s.active.editingWorkoutId && s.active.entries?.[idx]) s.active.cur = idx })
+      }
       if (skipRest) useUI.getState().stopRest()
     },
     finish: opts => { if (!useStore.getState().S.active?.editingWorkoutId) finishWorkoutNow(opts) },

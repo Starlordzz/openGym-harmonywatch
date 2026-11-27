@@ -201,4 +201,24 @@ describe('sets of every kind from the watch', () => {
     act(() => { applyEvents([{ id: 'h', type: 'setDone', wid: 'w-watch', exId: 'plank', entryIdx: 0, setIdx: 0, sec: 52, at: 30 }], () => useStore.getState()) })
     expect(useStore.getState().S.active.entries[0].sets[0]).toMatchObject({ sec: 52, done: true })
   })
+
+  it('followWatchRest starts a rest timer when phone timer is null, and unilateral Add set preserves distinct L/R targets', () => {
+    expect(useUI.getState().timer).toBeNull()
+    const endsAt = Date.now() + 75_000
+    act(() => useUI.getState().followWatchRest({ endsAt, total: 90, paused: false }))
+    expect(useUI.getState().timer).toMatchObject({ endsAt, total: 90, left: 75, paused: false })
+
+    load([{
+      id: 'split',
+      target: { sets: 1, reps: 14, weight: 20, side: true },
+      sets: [{ w: 24, r: 14, done: false, sides: { L: { w: 20, r: 8, done: false }, R: { w: 24, r: 6, done: false } } }],
+    }])
+    const addBtn = container.querySelector('button.wk-add')
+    expect(addBtn).not.toBeNull()
+    act(() => addBtn.click())
+    const sets = useStore.getState().S.active.entries[0].sets
+    expect(sets).toHaveLength(2)
+    expect(sets[1].sides.L).toMatchObject({ w: 20, r: 8, done: false })
+    expect(sets[1].sides.R).toMatchObject({ w: 24, r: 6, done: false })
+  })
 })
