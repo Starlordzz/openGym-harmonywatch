@@ -1,12 +1,11 @@
 import { initialState, restoreState, applySnapshot, acknowledge } from './session.js'
-import { mergeHeart, stats } from './heart.js'
-import { clipPlan, acceptFile, clearClips, isClipUri, clipReady } from './clips.js'
+import { clipPlan, acceptFile, clearClips, isClipUri, clipReady, activeClipUris } from './clips.js'
 import { packets, assembler } from './wire.js'
 import { setRest } from './rest-control.js'
 
 // One serialized storage writer; radio never sees an event before its durable state.
 export function createRuntime(platform, changed, failure) {
-  var storage = platform.storage, vibrator = platform.vibrator, sensor = platform.sensor
+  var storage = platform.storage, vibrator = platform.vibrator
   var client = platform.client, peer = platform.peer
   var setTimeout = platform.setTimeout, clearTimeout = platform.clearTimeout
   var setInterval = platform.setInterval, clearInterval = platform.clearInterval
@@ -14,8 +13,9 @@ export function createRuntime(platform, changed, failure) {
   var state = initialState(), receive = assembler(), writing = false
   var boot = 'boot-' + Date.now() + '-' + Math.random().toString(16).slice(2)
   var remove = platform.remove || function() {}
-  var saves = [], queue = [], sending = false, timer, stopped = false, hr = [], heartOn = false, heartSince = 0, loaded = false, registered = false, registering = false
-  var sendTimer, retryTimer, readWatchdog, cancelReady, screenOn = false, lastSend = '-', hrNote = '', hrSeq = 0
+  var listFiles = platform.list || null
+  var saves = [], queue = [], sending = false, timer, stopped = false, loaded = false, registered = false, registering = false
+  var sendTimer, retryTimer, readWatchdog, cancelReady, screenOn = false, lastSend = '-'
   /*f*/
   // U13 forensics, second stream: the app side outlives the page, so its events (SDK readiness,
   // receiver registration, the 15 s tick, stop and unregister) go to their own key with the page
@@ -47,11 +47,6 @@ export function createRuntime(platform, changed, failure) {
   // Installation detection is unnecessary for this protocol and crosses another native boundary.
   var lastHeard = 0, lastOk = 0, traffic = false, lastHello = 0
   function report(e, fatal) { if (!stopped) failure(String(e && e.message || e), fatal) }
-  function failHeart(code, text) {
-    heartOn = false
-    hrNote = (code == null ? '' : code) + ': ' + String(text || '').slice(0, 64)
-    report('心率 ' + hrNote)
-  }
   function online() { return traffic && now() - Math.max(lastHeard, lastOk) < 90000 }
   function mark() {
     if (stopped) return
@@ -59,6 +54,8 @@ export function createRuntime(platform, changed, failure) {
     if (state.online !== v) { state.online = v; changed(state) }
   }
   function save(done) {
+    clearTimeout(retryTimer)
+    retryTimer = null
     var item = saves.length > (writing ? 1 : 0) ? saves[saves.length - 1] : null
     if (!item) { item = { done: [] }; saves.push(item) }
     if (done) item.done.push(done)
@@ -66,6 +63,8 @@ export function createRuntime(platform, changed, failure) {
   }
   function writeNext() {
     if (writing || !saves.length) return
+    clearTimeout(retryTimer)
+    retryTimer = null
     writing = true
     var item = saves[0]
     storage.set({ key: 'opengym-fit-v1', value: JSON.stringify(state),
@@ -108,7 +107,7 @@ export function createRuntime(platform, changed, failure) {
     /*f*/ tnote('Q1') /*endf*/
     if (platform.available === false || !registered || !loaded || stopped || writing || saves.length || queue.length || sending) { /*f*/ tnote('Q2'); /*endf*/ return }
     if (!lastHello || now() - lastHello > 60000) { lastHello = now(); send({ kind: 'hello', boot: boot }) }
-    if (state.outbox.length) send({ kind: 'events', events: state.outbox.slice(0, 10) })
+    if (state.outbox.length) send({ kind: 'events', events: state.outbox.slice(0, 20) })
     /*f*/ tnote('Q2') /*endf*/
   }
   function buzz(mode, force) {
@@ -135,34 +134,36 @@ export function createRuntime(platform, changed, failure) {
         else if (isClipUri(raw.name)) remove(raw.name)
         return
       }
-      var result = receive(String(raw), Date.now())
+      var result = receive(String(raw), now())
       if (!result) return
       var p = result.payload
       var stale = p.session && p.session === state.phoneSession && p.rev < state.restRev
       if (p.session && !stale) { state.phoneSession = p.session; state.restRev = p.rev }
       if (p.kind === 'restState') {
         if (state.workout && state.workout.id === p.wid && !stale && !state.outbox.some(function(e) { return e.type === 'restChange' })) {
-          setRest(state, p.rest); save()
+          var rest = p.rest ? JSON.parse(JSON.stringify(p.rest)) : null
+          if (rest && !rest.paused && rest.endsAt > 0 && state.clockOff) rest.endsAt += state.clockOff
+          var prAt = typeof p.restAt === 'number' && p.restAt > 0 ? p.restAt + (state.clockOff || 0) : 0
+          if (!prAt || prAt > (state.restAt || 0)) {
+            if (prAt) state.restAt = prAt
+            setRest(state, rest); save()
+          }
         }
       } else if (p.kind === 'helloRequest') {
         lastHello = 0; flush()
       } else if (p.kind === 'snapshot' || p.kind === 'workoutEnd') {
-        var before = state.workout, hadSummary = state.summary
+        var before = state.workout
         if (p.kind === 'workoutEnd') {
           if (!before || before.id !== p.wid) return
           state.startedHere = null
+          state.startId = null
           p.snapshot = { v: 1, active: null, ready: state.ready, discarded: p.discard ? [p.wid] : [] }
         }
         if (stale && before && p.snapshot.active && p.snapshot.active.id === before.id) p.snapshot.active.rest = before.rest
-        var next = applySnapshot(state, p.snapshot)
+        var next = applySnapshot(state, p.snapshot, now())
         var retired = !next.workout || before && next.workout.id !== before.id ? { clips: state.clips } : null
         next.clips = retired ? {} : state.clips || {}
         state = next
-        mergeHeart(state, before, hr, Date.now())
-        if (state.summary && !hadSummary) {
-          var hs = stats(hr, Date.now() - state.summary.seconds * 1000, Date.now())
-          if (hs) { state.summary.hrAvg = hs.avg; state.summary.hrMax = hs.max }
-        }
         var received = state.workout && (!before || before.id !== state.workout.id) && state.workout.id
         // Detach visible image and stop rest/heart UI before native file cleanup or slow writes.
         if (retired) {
@@ -186,7 +187,19 @@ export function createRuntime(platform, changed, failure) {
       // settles. Otherwise a late read can replace and then overwrite freshly recorded events.
       function start() {
         if (started || stopped) return
-        started = true; loaded = true; changed(state)
+        started = true; loaded = true
+        if (!state.workout && state.clips && Object.keys(state.clips).length) state.clips = {}
+        changed(state)
+        if (listFiles) {
+          listFiles('internal://app', function(entries) {
+            if (stopped || !Array.isArray(entries)) return
+            var keep = state.workout ? activeClipUris(state) : {}
+            entries.forEach(function(entry) {
+              var uri = typeof entry === 'string' ? entry : entry && entry.uri
+              if (uri && isClipUri(uri) && !keep[uri]) remove(uri)
+            })
+          })
+        }
         /*f*/ tnote('L1') /*endf*/
         if (platform.available === false) { report('通信 SDK 尚未配置，此构建仅用于离线界面验证'); return }
         function connect() {
@@ -236,34 +249,6 @@ export function createRuntime(platform, changed, failure) {
           fail: function(data, code) { /*f*/ tnote('Z' + (on ? '1' : '0') + 'F' + code); /*endf*/ console.warn('keepScreenOn: ' + code) } })
       } catch (e) { /*f*/ tnote('Z' + (on ? '1' : '0') + 'T'); /*endf*/ console.warn('keepScreenOn unavailable') }
     },
-    heartStart: function() {
-      if (stopped || heartOn) return
-      if (!sensor) { failHeart('PAUSED', 'HA4 recovery'); return }
-      var seq = ++hrSeq
-      heartOn = true; heartSince = now(); hrNote = 'SENSOR'
-      try { sensor.subscribeHeartRate({ success: function(v) {
-        if (stopped || !heartOn || seq !== hrSeq) return
-        if (v.heartRate >= 25 && v.heartRate <= 250) hr.push({ at: now(), value: v.heartRate })
-        hr = hr.slice(-600)
-      }, fail: function(data, code) {
-        if (stopped || seq !== hrSeq) return
-        failHeart(code, data)
-      } }) }
-      catch (e) { failHeart(e && e.code || 'JS', e && e.message || e) }
-    },
-    heartStop: function(keep) { stopHeart(); if (!keep) hr = [] },
-    heartState: function() { return !heartOn ? 'unavailable' : now() - (hr.length ? hr[hr.length - 1].at : heartSince) > 15000 ? 'noData' : 'measuring' },
-    heartError: function(detail) { return detail ? hrNote : hrNote.split(':')[0] },
-    samples: function() { return hr.slice() },
-    heart: function(since) {
-      var at = now(), values = hr.filter(function(v) { return v.at >= since && v.at <= at })
-      if (!values.length) return null
-      // Lite's sensor normally calls back every five seconds. Never label a stalled stream current.
-      if (at - values[values.length - 1].at > 15000) return null
-      var result = stats(values, since, at)
-      result.current = values[values.length - 1].value
-      return result
-    },
     /*f*/
     // U13 forensics trace: a tiny second storage key, written on every mark so a freeze keeps the
     // steps that ran. Never part of the shipping build (see scripts/harmony/strip-forensics.mjs).
@@ -302,17 +287,10 @@ export function createRuntime(platform, changed, failure) {
       stopped = true; clearInterval(timer)
       clearTimeout(sendTimer); clearTimeout(retryTimer); clearTimeout(readWatchdog)
       if (cancelReady) cancelReady()
-      stopHeart()
       if (registered || registering) unregister()
       queue = []
       /*f*/ tnote('T2') /*endf*/
     }
-  }
-  function stopHeart() {
-    hrSeq++
-    if (!heartOn) return
-    heartOn = false
-    try { sensor.unsubscribeHeartRate() } catch (e) { report(e) }
   }
   function unregister() {
     registered = false; registering = false

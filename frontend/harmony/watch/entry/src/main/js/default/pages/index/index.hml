@@ -12,10 +12,9 @@
 
   <!-- confirmations, one panel at a time (Lite has no dialogs) -->
   <div class="screen" if="{{!alarmOn && confirm}}">
-    <text class="h2">{{words.finishQ}}</text>
-    <input class="wide accent" type="button" value="{{words.save}}" onclick="save" />
+    <text class="h2">{{words.discard}}</text>
     <input class="wide" type="button" value="{{words.discard}}" onclick="confirmDiscard" />
-    <input class="wide" type="button" value="{{words.cancel}}" onclick="cancelDiscard" />
+    <input class="wide accent" type="button" value="{{words.cancel}}" onclick="cancelDiscard" />
   </div>
   <div class="screen" if="{{!alarmOn && !confirm && skipConfirm}}">
     <text class="h2">{{words.skipQ}}</text>
@@ -139,24 +138,24 @@
           </div>
           <text class="extras" if="{{!!extras}}">{{extras}}</text>
         </div>
-        <div class="roundWrap doneWrap">
+        <div class="roundWrap doneWrap" if="{{!cardio}}">
           <image class="round" src="{{timed ? '/common/icons/button-play.png' : '/common/icons/button-check.png'}}" onclick="done" onlongpress="askSkip" />
           <text class="cap buttonCap">{{timed ? words.startHold : words.done}}</text>
         </div>
         <div class="sideRail">
           <text class="pageCount">{{pageNo}} / {{pageCount}}</text>
           <div class="actionBtn" onclick="finishPage"><text class="actionText">{{words.finish}}</text></div>
-          <div class="actionBtn" onclick="addSet"><text class="actionText">{{words.addSet}}</text></div>
+          <div class="actionBtn" if="{{!cardio}}" onclick="addSet"><text class="actionText">{{words.addSet}}</text></div>
         </div>
       </div>
       <div class="dots">
-        <div class="dotbox" for="{{dots}}" onclick="pickDot($idx)">
+        <div class="dotbox" for="{{dots}}" style="width: {{$item.box}}px" onclick="pickDot($item.index)">
           <div class="dot" style="width: {{$item.size}}px; height: {{$item.size}}px; border-radius: {{$item.size}}px; background-color: {{$item.fill}}; opacity: {{$item.opacity}}; border-width: {{$item.border}}px; border-color: {{$item.borderColor}}"></div>
         </div>
       </div>
       <div class="row" if="{{noSet}}">
         <input class="link" type="button" value="{{words.finish}}" onclick="finishPage" />
-        <input class="link" type="button" value="{{words.addSet}}" onclick="addSet" />
+        <input class="link" if="{{!cardio}}" type="button" value="{{words.addSet}}" onclick="addSet" />
       </div>
     </div>
 
@@ -217,7 +216,7 @@
     <div class="screen" if="{{screen === 'finish'}}">
       <text class="h2 finishTitle">{{workoutName}}</text>
       <div class="roundWrap finishWrap">
-        <image class="round finishRound" src="/common/icons/button-flag.png" onclick="discard" />
+        <image class="round finishRound" src="/common/icons/button-flag.png" onclick="save" />
         <text class="cap buttonCap">{{words.finish}}</text>
       </div>
       <text class="note small">{{setsLine}}</text>

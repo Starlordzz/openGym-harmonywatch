@@ -9,8 +9,8 @@ import { fileURLToPath } from 'node:url'
 // Two HAPs from one page template: entry stays the 408x480 rect build and the round module only
 // adds the 466 circle CSS, compressed idle list height, and build-time FIT box constants.
 const template = new URL('../watch/entry/src/main/js/default/', import.meta.url)
-const rectFit = 'var FIT = { ww: 104, wh: 72, uc: 88, rw: 160, rh: 72, sw: 272, sh: 82, ew: 280, eh: 132 }'
-const roundFit = 'var FIT = { ww: 88, wh: 56, uc: 74, rw: 136, rh: 56, sw: 240, sh: 60, ew: 220, eh: 104 }'
+const rectFit = 'var FIT = { ww: 104, wh: 72, uc: 88, um: 140, rw: 160, rh: 72, sw: 272, sh: 82, ew: 280, eh: 132, dw: 340 }'
+const roundFit = 'var FIT = { ww: 88, wh: 56, uc: 74, um: 118, rw: 136, rh: 56, sw: 240, sh: 60, ew: 220, eh: 104, dw: 144 }'
 
 async function scaffold(dir, name, window) {
   const main = join(dir, name, 'src/main')
@@ -52,9 +52,13 @@ test('the round module stages the same page with circle CSS, list height, and FI
   assert.match(roundCss, /\.page \{ width: 466px; height: 466px; \}/)
   assert.match(roundCss, /\.restArc \{[^}]*center-x: 102px; center-y: 102px; radius: 88px;/)
 
+  const templateHml = await readFile(new URL('pages/index/index.hml', template), 'utf8')
   const roundHml = await readFile(join(round, 'pages/index/index.hml'), 'utf8')
+  const entryHml = await readFile(join(entry, 'pages/index/index.hml'), 'utf8')
   assert.match(roundHml, /style="height: \{\{todayName \? 64 : 150\}\}px"/)
-  assert.equal(await readFile(join(entry, 'pages/index/index.hml'), 'utf8'), await readFile(new URL('pages/index/index.hml', template), 'utf8'))
+  assert.equal(entryHml, templateHml.replace(/ onlongpress="toggleProbe"/g, ''))
+  assert.equal(entryHml.includes('toggleProbe'), false)
+  assert.equal(roundHml.includes('toggleProbe'), false)
   assert.equal(await readFile(join(entry, 'pages/index/index.css'), 'utf8'), await readFile(new URL('pages/index/index.css', template), 'utf8'))
 
   const entryJs = await readFile(join(entry, 'pages/index/index.js'), 'utf8')

@@ -429,13 +429,16 @@ export const useUI = create((set, get) => ({
     runRest(set, get)
   },
   followWatchRest(rest) {
+    if (!rest) return
     const tm = get().timer
-    if (!tm || !rest) return
     stopRestTicking(); disarmRestAlert(); cancelPushRestTimer()
+    pageHiddenAt = null
     const left = rest.paused ? rest.left : Math.max(0, Math.ceil((rest.endsAt - Date.now()) / 1000))
-    set({ timer: { ...tm, ...rest, left, paused: !!rest.paused, ready: !rest.paused && !left } })
-    if (rest.paused) holdRestAlert(left, rest.total)
-    else if (left) { bookRestEnd(rest.endsAt, rest.total, tm.kind); runRest(set, get) }
+    const kind = tm?.kind || 'work'
+    const total = rest.total || tm?.total || left || 90
+    set({ timer: { ...(tm || {}), ...rest, kind, total, left, paused: !!rest.paused, ready: !rest.paused && !left } })
+    if (rest.paused) holdRestAlert(left, total)
+    else if (left) { bookRestEnd(rest.endsAt, total, kind); runRest(set, get) }
   },
   addRest(sec) {
     const tm = get().timer

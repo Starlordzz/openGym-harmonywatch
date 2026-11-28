@@ -4,7 +4,7 @@ import { setIndex, sideUp } from '../../common/model.js'
 import { addSet } from '../../common/add-set.js'
 
 // Staged per screen shape by scripts/harmony/prepare.mjs (entry rect 408x480 vs round circle 466x466).
-var FIT = { ww: 104, wh: 72, uc: 88, rw: 160, rh: 72, sw: 272, sh: 82, ew: 280, eh: 132 }
+var FIT = { ww: 104, wh: 72, uc: 88, um: 140, rw: 160, rh: 72, sw: 272, sh: 82, ew: 280, eh: 132, dw: 340 }
 
 // One page, one state at a time: the same precedence as the Apple Watch app's RootView. The state,
 // the radio and every mutation live in app.js (getApp()); this file only draws and dispatches.
@@ -108,7 +108,8 @@ export default {
     var s = this.session, now = Date.now(), debug = this.screen === 'debug'
     if (!s) return
     this.words = this.app.words(s.settings.lang)
-    this.unit = s.unit || 'kg'
+    this.profileUnit = s.unit || 'kg'
+    this.unit = this.profileUnit
     this.pending = s.outbox.length ? this.words.savedLater : ''
     // Apple's rule: what is queued is only "offline" while the phone is not answering.
     this.offline = s.outbox.length && s.online === false ? this.words.savedLater : ''
@@ -118,16 +119,20 @@ export default {
       this.confirm = this.skipConfirm = this.asking = this.manualFinish = false
       if (debug) { this.openDebug(); return }
       if (this.screen === 'weigh' || this.screen === 'countdown') return
-      if (s.summary) { this.summaryView(s.summary); this.screen = 'summary'; return }
+      if (s.summary) { this.summaryView(s.summary, this.profileUnit); this.screen = 'summary'; return }
       this.idleView(s)
       return
     }
     if (this.workoutId !== s.workout.id) {
-      this.workoutId = s.workout.id; this.screen = 'exercise'; this.picked = -1; this.live = null
+      this.workoutId = s.workout.id; this.screen = 'exercise'; this.picked = -1; this.live = null; this.snapSig = ''
       this.confirm = this.skipConfirm = this.asking = this.manualFinish = false
     }
     if (debug) { this.openDebug(); return }
-    if (this.screen === 'edit') { this.exerciseView(s, now); return }
+    if (this.screen === 'edit') {
+      this.exerciseView(s, now)
+      if (this.noSet || this.cardio || (this.editField === 'effort' && !this.effortName)) this.screen = 'exercise'
+      return
+    }
     if (this.manualFinish) { this.asking = false; this.finishView(s); return }
     if (this.asking) { this.askingView(s); return }
     var r = s.workout.rest, restEnd = r && (r.paused || r.endsAt > now)
@@ -152,12 +157,13 @@ export default {
     var si = setIndex(s, ei, this.picked)
     var e = s.workout.entries[ei]
     this.ei = ei; this.si = si
+    this.unit = e.unit || this.profileUnit || s.unit || 'kg'
     this.exName = e.name; this.pageNo = ei + 1; this.pageCount = s.workout.entries.length
     if (si < 0) {
       // Apple keeps the page and lets a dot bring a skipped set back.
-      this.noSet = true
+      this.noSet = true; this.cardio = e.mode === 'cardio'
       this.warmup = this.left = this.right = this.superset = false
-      this.dots = dots(e, -1, s.skipped, ei)
+      this.dots = dots(e, -1, s.skipped, ei, FIT.dw)
       var left = e.sets.some(function(r) { return !r.done })
       this.noSetIcon = '/common/icons/' + (left ? 'retry' : 'check') + '.png'
       this.noSetText = left ? this.words.tapDot : this.words.allDone
@@ -168,22 +174,30 @@ export default {
     var tags = tagsOf(e, row)
     this.warmup = tags.warmup; this.left = tags.left; this.right = tags.right; this.superset = tags.superset
     var key = s.workout.id + '#' + ei + '#' + si + '#' + (sideUp(row) || '')
-    if (key !== this.editKey) { this.editKey = key; this.live = null; this.effort = null }
+    var baseNums = numbers(e, row, {})
+    var snapSig = [baseNums.weight, baseNums.reps, baseNums.seconds, baseNums.added].join('|')
+    if (key !== this.editKey) { this.editKey = key; this.snapSig = snapSig; this.live = null; this.effort = null }
+    else if (snapSig !== this.snapSig) { this.snapSig = snapSig; this.live = null }
     var n = numbers(e, row, this.live || {})
     this.cardio = n.cardio; this.timed = n.timed; this.bodyweight = n.bodyweight
     this.weight = n.weight; this.added = n.added; this.reps = n.reps; this.seconds = n.seconds
     this.weightFont = numberFont(n.weight, 68, FIT.ww, FIT.wh)
-    this.unitLeft = FIT.uc + Math.ceil(numberWidth(n.weight, this.weightFont) / 2)
+    this.unitLeft = Math.min(FIT.um, FIT.uc + Math.ceil(numberWidth(n.weight, this.weightFont) / 2))
     this.repsFont = numberFont(n.reps, n.bodyweight ? 84 : 68, FIT.rw, FIT.rh)
     this.secondsFont = numberFont(n.seconds, 84, FIT.sw, FIT.sh)
     this.effortName = s.settings.effort ? effortName(s.settings.effort) : ''
     this.effortText = this.effort == null ? '–' : formatNumber(this.effort)
     this.effortColor = s.settings.effort ? effortColor(s.settings.effort, this.effort) : '#ffffff'
     this.last = !s.settings.show || s.settings.show.last !== false ? (e.last ? fill(this.words.last, [e.last]) : '') : ''
-    this.dots = dots(e, si, s.skipped, ei)
-    this.extras = s.settings.show && s.settings.show.elapsed ? clock((now - s.workout.start) / 1000) : ''
+    this.dots = dots(e, si, s.skipped, ei, FIT.dw)
+    this.extras = this.elapsedText(s, now)
     this.showNext = !s.settings.show || s.settings.show.next !== false
     return true
+  },
+  elapsedText(s, now) {
+    if (!s.workout || !s.settings.show || !s.settings.show.elapsed) return ''
+    var at = s.workout.pausedAt > 0 ? Math.min(now, s.workout.pausedAt) : now
+    return clock((at - s.workout.start) / 1000)
   },
   restView(s) {
     var r = s.workout.rest, left = r.paused ? r.left : (r.endsAt - Date.now()) / 1000, total = r.total || s.restDurationSec || s.workout.restSec
@@ -202,13 +216,15 @@ export default {
   },
   finishView(s) {
     this.screen = 'finish'
+    this.exName = ''
+    this.clipSrc = ''
     this.workoutName = s.workout ? s.workout.name : ''
     this.setsLine = setsOf(this.words.ofSets, progress(s))
   },
-  summaryView(sum) {
+  summaryView(sum, profileUnit) {
     this.savedTitle = sum.endedOnPhone ? this.words.endedPhone : this.words.saved
     this.summaryName = sum.name
-    this.stats = summaryStats(sum, this.words, this.unit)
+    this.stats = summaryStats(sum, this.words, profileUnit || this.profileUnit || this.unit)
     this.records = (sum.recordNames || []).map(function(n) { return { name: n } })
   },
   askingView(s) {
@@ -231,20 +247,20 @@ export default {
     var ends = s.hold ? s.hold.endsAt : s.workout.rest && !s.workout.rest.paused && s.workout.rest.endsAt
     if (ends && ends <= now) {
       if (s.hold) { this.complete(true); return }
-      this.startRestAlarm(); this.app.closeRestAt(now); return
+      this.app.closeRestAt(now); this.startRestAlarm(); return
     }
     var state = this.screen === 'debug' || this.manualFinish || this.confirm || this.skipConfirm ? '' : this.app.idleAt(now)
     this.asking = state === 'ask'
     if (state === 'end') {
       var at = s.workout.start
       s.workout.entries.forEach(function(e) { e.sets.forEach(function(row) { at = Math.max(at, row.at || 0) }) })
-      this.app.finishWorkout(at, false)
+      this.app.finishWorkout(at, false, true)
       return
     }
     if (this.screen === 'rest') this.restView(s)
     else if (this.screen === 'hold' && s.hold) this.holdView(s.hold, now)
     else if (this.screen === 'exercise' || this.screen === 'edit') {
-      this.extras = s.settings.show && s.settings.show.elapsed ? clock((now - s.workout.start) / 1000) : ''
+      this.extras = this.elapsedText(s, now)
     }
   },
 
@@ -254,7 +270,7 @@ export default {
   startRoutine(routine) {
     this.picked = -1
     this.choice = routine
-    this.bw = this.session.settings.lastBw || (this.unit === 'lb' ? 160 : 70)
+    this.bw = this.session.settings.lastBw || ((this.profileUnit || this.unit) === 'lb' ? 160 : 70)
     this.bwActive = 'whole'
     this.weighParts()
     if (this.session.settings.weighIn === false) this.countdown()
@@ -263,11 +279,12 @@ export default {
   openDebug() {
     // The forensic view must never be the thing that throws: with no session yet, show the empty
     // picture. This is the 2 s press on the idle screen (T12).
+    if (this.screen !== 'debug') this.prevScreen = this.screen
     var s = this.session || { outbox: [] }
     this.debugLines = this.app.debugLines(s, this)
     this.screen = 'debug'
   },
-  closeDebug() { this.screen = 'idle'; this.sync() },
+  closeDebug() { this.screen = this.prevScreen || 'idle'; this.prevScreen = ''; this.sync() },
   /*f*/
   // 2 s press on the debug title: flip the screen-on probe, then redraw the panel in place.
   toggleProbe() { this.app.toggleProbe(this) },
@@ -311,7 +328,6 @@ export default {
     var s = this.session
     if (!s || !s.workout || !s.workout.entries[this.ei]) return
     var e = s.workout.entries[this.ei]
-    if (!this.live) this.live = { weight: Number(this.weight) || 0, reps: Number(this.reps) || 0, seconds: Number(this.seconds) || 30 }
     this.editField = field
     this.editTitle = field === 'weight' ? (this.bodyweight ? this.words.addedWeight : this.words.weight)
       : field === 'reps' ? this.words.reps : field === 'seconds' ? this.words.hold : this.effortName
@@ -328,8 +344,13 @@ export default {
     this.fitEdit(); this.screen = 'edit'
   },
   fitEdit() { this.editFont = numberFont(this.editValue, 108, FIT.ew, FIT.eh) },
-  editStepBy(delta) { this.app.editNumber(this, delta, formatNumber, effortValue, effortColor); this.fitEdit() },
-  editFineBy(delta) { if (this.editField === 'weight') this.app.editNumber(this, delta, formatNumber, effortValue, effortColor, 0.1); this.fitEdit() },
+  ensureLive() {
+    if (!this.live && this.editField !== 'effort') {
+      this.live = { weight: Number(this.weight) || 0, reps: Number(this.reps) || 0, seconds: Number(this.seconds) || 30 }
+    }
+  },
+  editStepBy(delta) { this.ensureLive(); this.app.editNumber(this, delta, formatNumber, effortValue, effortColor); this.fitEdit() },
+  editFineBy(delta) { if (this.editField === 'weight') { this.ensureLive(); this.app.editNumber(this, delta, formatNumber, effortValue, effortColor, 0.1); this.fitEdit() } },
   editDone() { this.screen = 'exercise'; this.sync() },
 
   // ---- a set ----------------------------------------------------------------------------------
@@ -410,7 +431,7 @@ export default {
   closeSummary() { this.app.clearSummary() },
 
   // ---- 20 minutes without a set ---------------------------------------------------------------
-  keepGoing() { this.asking = false; this.app.snooze() },
+  keepGoing() { this.asking = false; this.app.snooze(true) },
   askFinish() { this.asking = false; this.finishPage() },
 
   addSet() {

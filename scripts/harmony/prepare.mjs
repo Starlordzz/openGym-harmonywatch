@@ -10,7 +10,7 @@ import { keepForensics, stripForensics } from './strip-forensics.mjs'
 const args = process.argv.slice(2)
 const get = name => { const i = args.indexOf(name); return i < 0 ? null : args[i + 1] }
 if (!get('--project')) {
-  console.error('Usage: node scripts/harmony/prepare.mjs --project <Lite project> [--round-project <round module>] [--bundle <watch bundle>] [--offline] [--forensics] [--sdk <official SDK directory> --phone-package <Android applicationId> --phone-fingerprint <SHA256>]')
+  console.error('Usage: node scripts/harmony/prepare.mjs --project <Lite project> [--round-project <round module>] [--bundle <watch bundle>] [--offline] [--forensics] [--placeholder] [--sdk <official SDK directory> --phone-package <Android applicationId> --phone-fingerprint <SHA256>]')
   process.exit(1)
 }
 const project = resolve(get('--project'))
@@ -21,13 +21,14 @@ const sdk = args.includes('--offline') ? null : get('--sdk') ? resolve(get('--sd
 const roundCssFile = join(template, 'js/default/pages/index/round.css')
 const rectListHeight = 'style="height: {{todayName ? 76 : 220}}px"'
 const roundListHeight = 'style="height: {{todayName ? 64 : 150}}px"'
-const rectFitBox = 'var FIT = { ww: 104, wh: 72, uc: 88, rw: 160, rh: 72, sw: 272, sh: 82, ew: 280, eh: 132 }'
-const roundFitBox = 'var FIT = { ww: 88, wh: 56, uc: 74, rw: 136, rh: 56, sw: 240, sh: 60, ew: 220, eh: 104 }'
+const rectFitBox = 'var FIT = { ww: 104, wh: 72, uc: 88, um: 140, rw: 160, rh: 72, sw: 272, sh: 82, ew: 280, eh: 132, dw: 340 }'
+const roundFitBox = 'var FIT = { ww: 88, wh: 56, uc: 74, um: 118, rw: 136, rh: 56, sw: 240, sh: 60, ew: 220, eh: 104, dw: 144 }'
+const placeholder = args.includes('--placeholder')
 let identity = {}
-try {
-  identity = JSON.parse(await readFile(join(root, 'harmonywatch/phone-debug-identity.json'), 'utf8'))
-} catch {
+if (placeholder) {
   try { identity = JSON.parse(await readFile(join(root, 'harmonywatch/phone-debug-identity.example.json'), 'utf8')) } catch {}
+} else {
+  try { identity = JSON.parse(await readFile(join(root, 'harmonywatch/phone-debug-identity.json'), 'utf8')) } catch {}
 }
 if (project.startsWith(join(root, 'frontend/harmony/watch'))) throw Error('Use a separate DevEco-generated project')
 if (roundProject && (roundProject === join(project, 'entry') || roundProject.startsWith(join(root, 'frontend/harmony/watch')))) throw Error('Use a separate module directory for --round-project')
@@ -37,9 +38,13 @@ if (!config.module?.deviceType?.includes('liteWearable')) throw Error('Target pr
 const bundle = get('--bundle') || config.app.bundleName
 const validPackage = v => /^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z0-9_]+)+$/.test(v || '')
 if (!validPackage(bundle)) throw Error('Invalid watch bundle')
-const phonePackage = get('--phone-package') || identity.phoneApplicationId, phoneFingerprint = (get('--phone-fingerprint') || identity.phoneCertificateSha256 || '').replaceAll(':', '').toUpperCase()
+const phonePackage = get('--phone-package') || identity.phoneApplicationId
+const rawFingerprint = (get('--phone-fingerprint') || identity.phoneCertificateSha256 || '').replaceAll(':', '').toUpperCase()
+const phoneFingerprint = placeholder && !rawFingerprint ? '0'.repeat(64) : rawFingerprint
+const isPlaceholderIdentity = phonePackage === 'example.opengym.phone' || /^0+$/.test(phoneFingerprint)
 if (sdk) {
   if (!validPackage(phonePackage) || !/^[A-F0-9]{64}$/.test(phoneFingerprint)) throw Error('Provide actual phone package and certificate fingerprint with the SDK')
+  if (!placeholder && isPlaceholderIdentity) throw Error('Refusing placeholder phone identity without --placeholder')
   await stat(join(sdk, 'wearengine.js'))
 }
 for (const dir of [project, ...(roundProject ? [roundProject] : [])]) {
@@ -100,6 +105,10 @@ async function stage(moduleDir, options) {
   await rm(join(destination, 'pages/index/round.css'), { force: true })
   // One template, two builds (scripts/harmony/strip-forensics.mjs): --forensics keeps the U13
   // exit-trace instrumentation, the normal build strips it back to the shipping bytes.
+  if (!forensics) {
+    const hmlPath = join(destination, 'pages/index/index.hml')
+    await writeFile(hmlPath, (await readFile(hmlPath, 'utf8')).replace(/ onlongpress="toggleProbe"/g, ''))
+  }
   const staged = ['app.js', 'pages/index/index.js', ...(await readdir(join(destination, 'common'))).filter(f => f.endsWith('.js')).map(f => 'common/' + f)]
   for (const file of staged) {
     const path = join(destination, file)

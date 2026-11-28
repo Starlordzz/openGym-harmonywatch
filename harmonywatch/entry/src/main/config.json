@@ -3,8 +3,8 @@
     "bundleName": "host.msknet.opengym.fit",
     "vendor": "openGym",
     "version": {
-      "code": 1004005,
-      "name": "1.4.5"
+      "code": 1004006,
+      "name": "1.4.6"
     }
   },
   "deviceConfig": {},

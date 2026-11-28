@@ -3,17 +3,9 @@
 import { runtime } from './common/runtime.js'
 import { wordsFor } from './common/i18n.js'
 import { start, tick, skip, finish, summary, idle, event } from './common/session.js'
-import { localTick, afterTick, closeRest, stats } from './common/heart.js'
 import { clipAt } from './common/clips.js'
 import { adjustNumber } from './common/editor.js'
 import { changeRest } from './common/rest-control.js'
-
-// watchOS takes the summary's heart rate from the HealthKit workout; here it comes from the
-// sensor samples of the session itself.
-function attachHr(summary, samples, from, to) {
-  var h = stats(samples, from, to)
-  if (h) { summary.hrAvg = h.avg; summary.hrMax = h.max }
-}
 
 export default {
   // getApp() only returns the app when its data object exists (app_data_module.cpp).
@@ -62,25 +54,24 @@ export default {
 
   startWorkout(routine, bw) { this.rt.change(function(s) { start(s, routine, Date.now(), bw) }) },
   tickSet(ei, si, values, at) {
-    var done = false, rt = this.rt
-    rt.change(function(s) {
-      var h = localTick(s, rt.samples(), at)
-      if (h) values.hr = h
+    var done = false
+    this.rt.change(function(s) {
       done = tick(s, ei, si, values, at)
-      if (done) afterTick(s, ei, si, at)
     })
     return done
   },
-  skipSet(ei, si) { this.rt.change(function(s) { if (s.workout) skip(s, ei, si) }) },
+  skipSet(ei, si) { var now = Date.now(); this.rt.change(function(s) { if (s.workout) skip(s, ei, si, now) }) },
   startHold(ei, si, values, ms) {
     var now = Date.now()
     this.rt.change(function(s) { if (!s.workout) return; s.hold = { start: now, endsAt: now + ms, ei: ei, si: si, values: values } })
   },
   clearHold() { this.rt.change(function(s) { s.hold = null }) },
-  closeRestAt(at) { var rt = this.rt; this.rt.change(function(s) {
+  closeRestAt(at) { this.rt.change(function(s) {
     if (!s.workout) return
     if (s.workout.rest) s.closedRestAt = Math.max(s.closedRestAt || 0, s.workout.rest.endsAt)
-    closeRest(s, rt.samples(), at); s.workout.rest = null
+    s.workout.rest = null
+    s.restAt = Math.max(s.restAt || 0, at)
+    s.activity = Math.max(s.activity || 0, at)
     var e = s.workout.entries[s.entryIndex]
     if (e) event(s, 'navigate', { wid: s.workout.id, exId: e.id, entryIdx: s.entryIndex, restSkip: true }, at)
   }) },
@@ -89,22 +80,23 @@ export default {
     this.rt.change(function(s) { ended = changeRest(s, ms, pause, at) })
     if (ended) this.closeRestAt(at)
   },
-  finishWorkout(at, discard) {
-    var rt = this.rt
+  finishWorkout(at, discard, isIdle) {
     this.rt.change(function(s) {
       if (!s.workout) return
-      var start = s.workout.start
-      closeRest(s, rt.samples(), at)
-      finish(s, at, discard)
-      if (s.summary) attachHr(s.summary, rt.samples(), start, at)
+      finish(s, at, discard, isIdle)
     })
   },
-  showEntry(ei) { this.rt.change(function(s) {
+  showEntry(ei) { var now = Date.now(); this.rt.change(function(s) {
     if (!s.workout || !s.workout.entries[ei]) return
     s.entryIndex = ei
-    event(s, 'navigate', { wid: s.workout.id, exId: s.workout.entries[ei].id, entryIdx: ei }, Date.now())
+    s.activity = Math.max(s.activity || 0, now)
+    event(s, 'navigate', { wid: s.workout.id, exId: s.workout.entries[ei].id, entryIdx: ei }, now)
   }) },
   recordEvent(s, type, fields, at) { return event(s, type, fields, at) },
-  snooze() { this.rt.change(function(s) { s.snooze = Date.now() }) },
+  snooze(reportStillHere) { var now = Date.now(); this.rt.change(function(s) {
+    s.snooze = now
+    s.activity = Math.max(s.activity || 0, now)
+    if (reportStillHere && s.workout) event(s, 'stillHere', { wid: s.workout.id }, now)
+  }) },
   clearSummary() { this.rt.change(function(s) { s.summary = null }) }
 }

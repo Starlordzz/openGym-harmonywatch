@@ -11,8 +11,9 @@ export function addSet(s, ei, at, emit) {
   var base = e.sets.length
   if (e.mode === 'time' && e.perSide) { row.side = 'L'; e.sets.push(row); row = JSON.parse(JSON.stringify(row)); row.side = 'R' }
   e.sets.push(row)
+  var ev = emit(s, 'addSet', { wid: s.workout.id, exId: e.id, entryIdx: ei, count: e.sets.length, base: base }, at)
   s.additions = s.additions || {}
-  s.additions[ei] = { id: e.id, count: e.sets.length }
+  s.additions[ei] = { id: e.id, count: e.sets.length, eventId: ev && ev.id }
   if (s.entryIndex >= s.workout.entries.length) s.entryIndex = ei
-  emit(s, 'addSet', { wid: s.workout.id, exId: e.id, entryIdx: ei, count: e.sets.length, base: base }, at)
+  s.activity = Math.max(s.activity || 0, at)
 }

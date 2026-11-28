@@ -77,18 +77,18 @@ npm run dev
 
 网页开发服务可单独运行；华为手表通信通过 Android 原生桥接。连接自己的服务见[自托管指南](docs/SELF_HOSTING.md)，Android 和手表构建见[开发指南](docs/HARMONY_FIT.md)及[脚本索引](scripts/harmony/README.md)。
 
-1.4.5 源码版的 Android APK 和 Lite Wearable HAP 可按[自签名打包指南](docs/harmony/SELF_SIGNING_ZH.md)在本机生成。
+1.4.6 源码版的 Android APK 和 Lite Wearable HAP 可按[自签名打包指南](docs/harmony/SELF_SIGNING_ZH.md)在本机生成。
 
 ### 给 Agent 的打包提示词
 
 ```text
-请读 docs/harmony/AGENT_PACKAGING_ZH.md，使用 OPENGYM_PACKAGING_CONFIG 指向的本机配置，完成 fork v1.4.5 的 Android APK 和华为 Lite Wearable HAP 自签打包。按指南完成非交互构建与验签，将已验证的包、SHA256SUMS 和对应源码提交记录交付到配置的本机输出目录。
+请读 docs/harmony/AGENT_PACKAGING_ZH.md，使用 OPENGYM_PACKAGING_CONFIG 指向的本机配置，完成 fork v1.4.6 的 Android APK 和华为 Lite Wearable HAP 自签打包。按指南完成非交互构建与验签，将已验证的包、SHA256SUMS 和对应源码提交记录交付到配置的本机输出目录。
 ```
 
 完整提示词、配置样例和验收条件见 [Agent 自签打包](docs/harmony/AGENT_PACKAGING_ZH.md)。首次账号授权与设备登记由用户在本机完成，私钥、密码、调试 Profile 和设备资料通过本机文件提供。
 
 ```bash
-# 手表纯逻辑、协议、存储与交互回归（当前 146 项）
+# 手表纯逻辑、协议、存储与交互回归（当前 156 项）
 node --test frontend/harmony/tests/*.test.js
 # 公钥身份推导检查
 node --test scripts/harmony/watch-peer-identity.test.mjs

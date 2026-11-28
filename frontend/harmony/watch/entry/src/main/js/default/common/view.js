@@ -24,7 +24,7 @@ export function numbers(entry, row, live) {
   }
 }
 
-export function dots(entry, current, skipped, ei) { return setDots(entry, current, skipped || [], ei) }
+export function dots(entry, current, skipped, ei, span) { return setDots(entry, current, skipped || [], ei, span) }
 
 // Training summary: time, sets and volume. Legacy heart fields remain in stored records.
 export function summaryStats(sum, words, unit) {

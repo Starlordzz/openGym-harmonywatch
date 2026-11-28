@@ -19,6 +19,7 @@ import java.util.*;
 /** Explicit opt-in. Events stay durable until JS has saved them and calls ack. */
 @CapacitorPlugin(name = "HuaweiWatch")
 public class HuaweiWatchPlugin extends Plugin {
+    private static final int MAX_EVENTS = 500;
     private final Handler main = new Handler(Looper.getMainLooper());
     private P2pClient client;
     private Device device;
@@ -37,6 +38,7 @@ public class HuaweiWatchPlugin extends Plugin {
     private String communicationError = "";
     private final Map<String, Transfer> transfers = new HashMap<>();
     private final Map<String, PluginCall> snapshots = new HashMap<>();
+    private final Map<String, Runnable> snapshotTimeouts = new HashMap<>();
     private final ArrayDeque<Outbound> outgoing = new ArrayDeque<>();
     private boolean sending;
     private WatchFrames frames;
@@ -45,6 +47,7 @@ public class HuaweiWatchPlugin extends Plugin {
     private final String phoneSession = UUID.randomUUID().toString();
     private long stateRevision;
     private PluginCall activeClipCall;
+    private Runnable clipTimeout;
     private final Set<File> frameDirectories = new HashSet<>();
     private final Set<File> retiredFrameDirectories = new HashSet<>();
     private static final class Outbound {
@@ -118,10 +121,19 @@ public class HuaweiWatchPlugin extends Plugin {
     private void discoverAuthorized(PluginCall call) {
         HiWear.getDeviceClient(getActivity()).getBondedDevices().addOnSuccessListener(devices -> main.post(() -> {
             ArrayList<Device> connected = new ArrayList<>();
-            for (Device d : devices) if (d.isConnected()) connected.add(d);
-            if (connected.size() != 1) { discoveryFailed(call, new Exception("Connect exactly one compatible watch in Huawei Health, then retry")); return; }
+            ArrayList<String> uuids = new ArrayList<>();
+            ArrayList<Integer> caps = new ArrayList<>();
+            for (Device d : devices) {
+                if (d != null && d.isConnected()) {
+                    connected.add(d);
+                    uuids.add(d.getUuid() == null ? "" : d.getUuid());
+                    caps.add(d.getP2pCapability());
+                }
+            }
+            int picked = WatchPeerIdentity.selectConnectedIndex(uuids, caps, prefs.getString("lastDeviceUuid", ""));
+            if (picked < 0) { discoveryFailed(call, new Exception("Connect a compatible watch in Huawei Health, then retry")); return; }
             boolean replaceReceiver = receiverRegistered;
-            receiverRegistered = false; device = connected.get(0); installed = false;
+            receiverRegistered = false; device = connected.get(picked); installed = false;
             Runnable register = () -> {
                 client.setPeerPkgName(prefs.getString("package", ""));
                 client.setPeerFingerPrint(prefs.getString("fingerprint", ""));
@@ -208,52 +220,99 @@ public class HuaweiWatchPlugin extends Plugin {
     @PluginMethod public void sendSnapshot(PluginCall call) {
         main.post(() -> {
             if (device == null || !installed) { call.reject("Open openGym on the connected watch"); return; }
+            String id = UUID.randomUUID().toString();
             try {
-                String id = UUID.randomUUID().toString();
                 JSONObject snapshot = new JSONObject(call.getString("json", ""));
                 snapshots.put(id, call);
+                Runnable timeout = () -> {
+                    snapshotTimeouts.remove(id);
+                    PluginCall pending = snapshots.remove(id);
+                    if (pending != null) pending.reject("Watch snapshot acknowledgement timed out");
+                };
+                snapshotTimeouts.put(id, timeout);
+                main.postDelayed(timeout, 60000);
                 enqueue(stamped(new JSONObject().put("kind", "snapshot").put("snapshot", snapshot)), id, true);
-                main.postDelayed(() -> { PluginCall pending = snapshots.remove(id); if (pending != null) pending.reject("Watch snapshot acknowledgement timed out"); }, 60000);
-            } catch (Exception e) { call.reject("Cannot send snapshot", e); }
+            } catch (Exception e) {
+                Runnable timeout = snapshotTimeouts.remove(id);
+                if (timeout != null) main.removeCallbacks(timeout);
+                snapshots.remove(id);
+                call.reject("Cannot send snapshot", e);
+            }
         });
+    }
+    private void resolveClipCall(PluginCall call, JSObject result) {
+        if (call != null && activeClipCall == call) {
+            activeClipCall = null;
+            if (clipTimeout != null) { main.removeCallbacks(clipTimeout); clipTimeout = null; }
+            call.resolve(result);
+        }
+    }
+    private void rejectClipCall(PluginCall call, String message, Exception e) {
+        if (call != null && activeClipCall == call) {
+            activeClipCall = null;
+            if (clipTimeout != null) { main.removeCallbacks(clipTimeout); clipTimeout = null; }
+            if (e != null) call.reject(message, e);
+            else call.reject(message);
+        }
     }
     @PluginMethod public void sendClips(PluginCall call) {
         main.post(() -> {
             if (device == null || !installed) { call.reject("Watch not connected"); return; }
-            if (activeClipCall != null) activeClipCall.reject("Animation transfer replaced");
+            if (activeClipCall != null) rejectClipCall(activeClipCall, "Animation transfer replaced", null);
             activeClipCall = call;
-            main.postDelayed(() -> { if (activeClipCall == call) { clipGeneration++; activeClipCall = null; call.reject("Animation transfer timed out"); } }, 180000);
             int generation = ++clipGeneration;
-            try { sendClipAt(call, call.getArray("clips", new JSArray()), 0, generation); }
-            catch (Exception e) { call.reject("Invalid animation request", e); }
+            clipTimeout = () -> {
+                if (activeClipCall == call) {
+                    clipGeneration++;
+                    rejectClipCall(call, "Animation transfer timed out", null);
+                }
+            };
+            main.postDelayed(clipTimeout, 180000);
+            try {
+                JSArray clips = call.getArray("clips", new JSArray());
+                if (call.getString("wid", "").isEmpty()) { rejectClipCall(call, "Built-in animation asset required", null); return; }
+                sendClipAt(call, clips, 0, generation);
+            } catch (Exception e) { rejectClipCall(call, "Invalid animation request", e); }
         });
     }
+    private void advanceClip(PluginCall call, JSArray clips, int nextIndex, int generation) {
+        try { sendClipAt(call, clips, nextIndex, generation); }
+        catch (Exception e) { rejectClipCall(call, "Cannot transfer animation", e); }
+    }
     private void sendClipAt(PluginCall call, JSArray clips, int index, int generation) throws JSONException {
-        if (generation != clipGeneration) { call.reject("Animation transfer cancelled"); return; }
-        if (index >= clips.length()) { JSObject out = new JSObject(); out.put("sent", true); activeClipCall = null; call.resolve(out); return; }
-        JSONObject clip = clips.getJSONObject(index);
-        String wid = call.getString("wid", ""), exId = clip.getString("exId"), path = clip.optString("path", "");
-        if (wid.isEmpty() || path.isEmpty()) { call.reject("Built-in animation asset required"); return; }
+        if (generation != clipGeneration || activeClipCall != call) { rejectClipCall(call, "Animation transfer cancelled", null); return; }
+        if (index >= clips.length()) { JSObject out = new JSObject(); out.put("sent", true); resolveClipCall(call, out); return; }
+        JSONObject clip = clips.optJSONObject(index);
+        String wid = call.getString("wid", "");
+        String exId = clip == null ? "" : clip.optString("exId", ""), path = clip == null ? "" : clip.optString("path", "");
+        if (exId.isEmpty() || path.isEmpty()) { sendClipAt(call, clips, index + 1, generation); return; }
         String token = "og-" + UUID.randomUUID().toString().replace("-", "");
         File directory = new File(getContext().getCacheDir(), token);
         frameDirectories.add(directory);
-        frames.render(path, directory, files -> {
-            if (generation != clipGeneration) { deleteFrames(directory); call.reject("Animation transfer cancelled"); return; }
+        frames.render(path, directory, () -> generation != clipGeneration || activeClipCall != call, files -> {
+            if (generation != clipGeneration || activeClipCall != call) { deleteFrames(directory); return; }
+            if (files.isEmpty()) { deleteFrames(directory); advanceClip(call, clips, index + 1, generation); return; }
             try {
                 JSONArray names = new JSONArray(); for (File file : files) names.put(file.getName());
-                enqueue(new JSONObject().put("kind", "clip").put("wid", wid).put("exId", exId).put("files", names).put("interval", 125), token);
+                enqueue(new JSONObject().put("kind", "clip").put("wid", wid).put("exId", exId).put("files", names).put("interval", 250), token);
                 for (int i = 0; i < files.size(); i++) {
                     final boolean last = i == files.size() - 1;
                     outgoing.add(new Outbound(new Message.Builder().setPayload(files.get(i)).build(), () -> {
-                        if (generation != clipGeneration) return;
+                        if (generation != clipGeneration || activeClipCall != call) return;
                         if (!last) return;
                         deleteFrames(directory);
-                        try { sendClipAt(call, clips, index + 1, generation); } catch (Exception e) { call.reject("Cannot transfer animation", e); }
+                        advanceClip(call, clips, index + 1, generation);
                     }, generation));
                 }
                 pump();
-            } catch (Exception e) { deleteFrames(directory); call.reject("Cannot transfer animation", e); }
-        }, e -> { deleteFrames(directory); call.reject("Cannot decode animation: " + e.getMessage(), e); });
+            } catch (Exception e) {
+                deleteFrames(directory);
+                if (generation == clipGeneration && activeClipCall == call) advanceClip(call, clips, index + 1, generation);
+            }
+        }, e -> {
+            deleteFrames(directory);
+            if (generation == clipGeneration && activeClipCall == call) advanceClip(call, clips, index + 1, generation);
+        });
     }
     private void deleteFrames(File directory) {
         File[] files = directory.listFiles(); if (files != null) for (File f : files) f.delete(); directory.delete(); frameDirectories.remove(directory); retiredFrameDirectories.remove(directory);
@@ -262,7 +321,7 @@ public class HuaweiWatchPlugin extends Plugin {
         clipGeneration++;
         retiredFrameDirectories.addAll(frameDirectories);
         WatchSendQueue.removePending(outgoing, packet -> packet.generation >= 0, sending);
-        if (activeClipCall != null) { activeClipCall.reject("Animation transfer cancelled"); activeClipCall = null; }
+        rejectClipCall(activeClipCall, "Animation transfer cancelled", null);
         if (!sending || outgoing.isEmpty() || outgoing.peek().generation < 0)
             for (File dir : new ArrayList<>(retiredFrameDirectories)) deleteFrames(dir);
     }
@@ -280,12 +339,22 @@ public class HuaweiWatchPlugin extends Plugin {
     }
     @PluginMethod public void openOnWatch(PluginCall call) {
         main.post(() -> {
-            if (device == null || !device.isConnected() || !receiverRegistered) { call.reject("Watch not connected"); return; }
+            if (prefs.getString("package", "").isEmpty() || device == null || !device.isConnected() || !receiverRegistered) {
+                call.reject("Watch not connected"); return;
+            }
             try {
                 client.ping(device, code -> main.post(() -> {
                     lastPingCode = code; notifyListeners("watchState", link());
                     if (code != 201 && code != 202) { call.reject("Cannot open watch app: " + code); return; }
-                    lastHelloRequest = 0; requestHello();
+                    if (code == 202) {
+                        lastHelloRequest = 0; requestHello();
+                    } else {
+                        main.postDelayed(() -> {
+                            if (device != null && device.isConnected() && receiverRegistered) {
+                                lastHelloRequest = 0; requestHello();
+                            }
+                        }, 1200);
+                    }
                     JSObject result = new JSObject(); result.put("requested", true); result.put("code", code); call.resolve(result);
                 })).addOnFailureListener(e -> main.post(() -> call.reject("Cannot open watch app", e)));
             } catch (Exception e) { call.reject("Cannot open watch app", e); }
@@ -295,8 +364,11 @@ public class HuaweiWatchPlugin extends Plugin {
         main.post(() -> {
             if (device == null || !installed) { call.reject("Watch not connected"); return; }
             try {
-                JSONObject payload = stamped(new JSONObject().put("kind", "restState").put("wid", call.getString("wid", ""))
-                        .put("rest", call.getObject("rest") == null ? JSONObject.NULL : call.getObject("rest")));
+                JSONObject body = new JSONObject().put("kind", "restState").put("wid", call.getString("wid", ""))
+                        .put("rest", call.getObject("rest") == null ? JSONObject.NULL : call.getObject("rest"));
+                long restAt = call.getData() == null ? 0L : call.getData().optLong("restAt", 0L);
+                if (restAt > 0L) body.put("restAt", restAt);
+                JSONObject payload = stamped(body);
                 enqueue(payload, UUID.randomUUID().toString(), true);
                 JSObject out = new JSObject(); out.put("queued", true); call.resolve(out);
             } catch (Exception e) { call.reject("Cannot send rest state", e); }
@@ -321,16 +393,31 @@ public class HuaweiWatchPlugin extends Plugin {
         Outbound packet = outgoing.peek();
         Message message = packet.message;
         final boolean[] settled = {false};
+        final Runnable[] sendTimeoutRef = new Runnable[1];
         java.util.function.Consumer<Boolean> end = ok -> main.post(() -> {
             if (settled[0]) return; settled[0] = true; sending = false;
+            if (sendTimeoutRef[0] != null) main.removeCallbacks(sendTimeoutRef[0]);
             if (ok) {
                 outgoing.poll();
                 if (packet.generation >= 0 && packet.generation != clipGeneration) { for (File dir : new ArrayList<>(retiredFrameDirectories)) deleteFrames(dir); }
                 else if (packet.delivered != null) packet.delivered.run();
                 pump();
-            } else { outgoing.clear(); for (File dir : new ArrayList<>(frameDirectories)) deleteFrames(dir); if (activeClipCall != null) { activeClipCall.reject("Animation transport interrupted"); activeClipCall = null; clipGeneration++; } installed = false; notifyListeners("watchState", link()); }
+            } else {
+                outgoing.clear();
+                for (File dir : new ArrayList<>(frameDirectories)) deleteFrames(dir);
+                if (activeClipCall != null) { clipGeneration++; rejectClipCall(activeClipCall, "Animation transport interrupted", null); }
+                for (Map.Entry<String, PluginCall> entry : new ArrayList<>(snapshots.entrySet())) {
+                    Runnable t = snapshotTimeouts.remove(entry.getKey());
+                    if (t != null) main.removeCallbacks(t);
+                    entry.getValue().reject("Watch connection interrupted");
+                }
+                snapshots.clear();
+                installed = false;
+                notifyListeners("watchState", link());
+            }
         });
-        main.postDelayed(() -> { if (!settled[0]) { communicationError = "Wear Engine send timed out"; end.accept(false); } }, 10000);
+        sendTimeoutRef[0] = () -> { if (!settled[0]) { communicationError = "Wear Engine send timed out"; end.accept(false); } };
+        main.postDelayed(sendTimeoutRef[0], 10000);
         client.send(device, message, new SendCallback() {
             @Override public void onSendResult(int code) { main.post(() -> {
                 if (settled[0]) return;
@@ -361,26 +448,39 @@ public class HuaweiWatchPlugin extends Plugin {
             String kind = payload.getString("kind");
             if (kind.equals("hello")) {
                 boolean was = installed; installed = true;
+                if (device != null && device.getUuid() != null && !device.getUuid().isEmpty()) {
+                    prefs.edit().putString("lastDeviceUuid", device.getUuid()).apply();
+                }
                 String boot = payload.optString("boot", ""); boolean restarted = !boot.equals(watchBoot); watchBoot = boot;
                 if (!was || restarted) notifyListeners("watchState", link());
             } else if (kind.equals("snapshotAck")) {
-                PluginCall call = snapshots.remove(payload.getString("id"));
+                String ackId = payload.getString("id");
+                Runnable timeout = snapshotTimeouts.remove(ackId);
+                if (timeout != null) main.removeCallbacks(timeout);
+                PluginCall call = snapshots.remove(ackId);
                 if (call != null) { JSObject out = new JSObject(); out.put("sent", true); call.resolve(out); }
-
             } else if (kind.equals("events")) {
                 JSONArray queue = events(), incoming = payload.getJSONArray("events");
                 Set<String> seen = new HashSet<>();
                 for (int j = 0; j < queue.length(); j++) seen.add(queue.getJSONObject(j).getString("id"));
-                for (int j = 0; j < incoming.length(); j++) { JSONObject ev = incoming.getJSONObject(j); if (seen.add(ev.getString("id"))) queue.put(ev); }
+                for (int j = 0; j < incoming.length(); j++) {
+                    JSONObject ev = incoming.getJSONObject(j);
+                    String evId = ev.optString("id", ""), evType = ev.optString("type", "");
+                    if (!evId.isEmpty() && !evType.isEmpty() && seen.add(evId)) queue.put(ev);
+                }
+                while (queue.length() > MAX_EVENTS) queue.remove(0);
                 if (!prefs.edit().putString("events", queue.toString()).commit()) throw new Exception("Cannot persist watch events");
                 notifyListeners("watchEvent", new JSObject());
             }
         } catch (Exception e) { JSObject error = new JSObject(); error.put("error", e.getMessage()); notifyListeners("watchError", error); }
     }
     @Override protected void handleOnDestroy() {
-        clipGeneration++; if (activeClipCall != null) { activeClipCall.reject("Watch bridge closed"); activeClipCall = null; } if (frames != null) frames.close();
+        clipGeneration++;
+        rejectClipCall(activeClipCall, "Watch bridge closed", null);
+        if (frames != null) frames.close();
         if (client != null) client.unregisterReceiver(receiver);
         main.removeCallbacksAndMessages(null);
+        snapshotTimeouts.clear();
         for (PluginCall call : snapshots.values()) call.reject("Watch bridge closed");
         snapshots.clear(); super.handleOnDestroy();
     }

@@ -94,7 +94,7 @@ export default function HuaweiWatchSettings() {
         {link.communicationError && ` · ${link.communicationError}`}
       </p>}
       {link?.deviceName && <p className="sect-f">当前设备：{link.deviceName} · 通信能力{link.p2pCapability === 0 ? '支持' : link.p2pCapability === 1 ? '不支持' : '未知'}</p>}
-      <p className="sect-f">本项目为适配华为手表（圆表、方表等形态）的 openGym 改进分支，配套 Android 客户端使用（不再支持 iPhone / Apple Watch）。当前为开发版本，训练同步和动作动画需真机验证。热量和华为运动健康写入暂未启用。</p>
+      <p className="sect-f">基于 Duarte Santos 的 <a href="https://github.com/DuarteSantos8/openGym" target="_blank" rel="noreferrer">openGym</a> 项目开发；本版本为第三方华为手表 / HarmonyOS 适配（覆盖圆表、方表等 HUAWEI WATCH / FIT 形态），配套 Android 客户端使用（不再支持 iPhone / Apple Watch）。当前为开发版本，训练同步和动作动画需真机验证，热量和华为运动健康写入暂未启用。</p>
     </div>
   </>
 }

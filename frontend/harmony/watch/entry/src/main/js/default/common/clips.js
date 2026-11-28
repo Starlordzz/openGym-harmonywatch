@@ -48,6 +48,15 @@ export function clipAt(s, exId, time) {
 export function isClipUri(uri) {
   return typeof uri === 'string' && uri.indexOf(CLIP_URI) === 0 && isClipName(uri.slice(CLIP_URI.length))
 }
+export function activeClipUris(s) {
+  var out = {}
+  Object.keys((s && s.clips) || {}).forEach(function(k) {
+    var c = s.clips[k]
+    Object.keys((c && c.paths) || {}).forEach(function(n) { out[c.paths[n]] = true })
+    if (c && c.previous) Object.keys(c.previous.paths || {}).forEach(function(n) { out[c.previous.paths[n]] = true })
+  })
+  return out
+}
 export function clearClips(s, remove) {
   Object.keys(s.clips || {}).forEach(function(k) {
     var c = s.clips[k]; Object.keys(c.paths).forEach(function(n) { remove(c.paths[n]) })

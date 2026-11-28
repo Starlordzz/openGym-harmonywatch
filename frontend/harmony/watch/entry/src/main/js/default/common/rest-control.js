@@ -12,6 +12,8 @@ export function changeRest(s, ms, pause, at) {
   var paused = pause ? !r.paused : !!r.paused
   r = { endsAt: paused ? 0 : at + left, paused: paused, left: Math.ceil(left / 1000), total: Math.max(r.total || s.restDurationSec || s.workout.restSec, Math.ceil(left / 1000)) }
   setRest(s, r)
+  s.restAt = Math.max(s.restAt || 0, at)
+  s.activity = Math.max(s.activity || 0, at)
   event(s, 'restChange', { wid: s.workout.id, rest: r }, at)
   return false
 }

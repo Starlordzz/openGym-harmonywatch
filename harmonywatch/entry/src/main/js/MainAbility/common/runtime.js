@@ -9,10 +9,16 @@ import { createRuntime } from './controller.js'
 import { stateStorage } from './state-storage.js'
 import { fileCleaner } from './file-cleaner.js'
 
+function listFiles(uri, done) {
+  if (!file || typeof file.list !== 'function') { done([]); return }
+  try { file.list({ uri: uri, success: function(r) { done(r && r.fileList || []) }, fail: function() { done([]) } }) }
+  catch (e) { done([]) }
+}
+
 export function runtime(changed, failure) {
   var client = new P2pClient()
   return createRuntime({ ready: function(done, fail) { return waitForSdk(client, setTimeout, done, fail, clearTimeout) }, storage: stateStorage(storage, file), vibrator: vibrator, brightness: brightness,
-    remove: fileCleaner(file, setTimeout),
+    remove: fileCleaner(file, setTimeout), list: listFiles,
     client: client, peer: peer, Message: Message, Builder: Builder,
     setTimeout: setTimeout, clearTimeout: clearTimeout, setInterval: setInterval, clearInterval: clearInterval }, changed, failure)
 }

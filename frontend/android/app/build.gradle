@@ -17,8 +17,8 @@ android {
         buildConfigField "String", "WATCH_BUNDLE", groovy.json.JsonOutput.toJson(project.findProperty("watchBundleName") ?: "")
         buildConfigField "String", "WATCH_PEER_FINGERPRINT", groovy.json.JsonOutput.toJson(project.findProperty("watchPeerFingerprint") ?: "")
         buildConfigField "String", "WATCH_CERTIFICATE_SHA256", groovy.json.JsonOutput.toJson(project.findProperty("watchCertificateSha256") ?: "")
-        versionCode 46
-        versionName "1.4.5"
+        versionCode 47
+        versionName "1.4.6"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -119,7 +119,8 @@ if (project.hasProperty('harmonyAssetsDirectory')) {
 }
 
 dependencies {
-    implementation "com.huawei.hms:wearengine:5.0.3.304"
+    sideloadImplementation "com.huawei.hms:wearengine:5.0.3.304"
+    playImplementation "com.huawei.hms:wearengine:5.0.3.304"
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"

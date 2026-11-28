@@ -88,17 +88,20 @@ test('show/hide/destroy request one screen release rather than repeat native cal
   assert.deepEqual(f.screenRequests, [true, false])
 })
 
-test('a failing sensor cleanup cannot skip P2P cleanup or accept late heart samples', () => {
-  let receiver, sample, unregistered = 0
+test('stop unregisters P2P cleanup cleanly even if unregister throws, with no HR sensor methods', () => {
+  let receiver, unregistered = 0, notified = 0
   const rt = createRuntime({ storage: { get(o) { o.success('') }, set(o) { o.success() } },
-    sensor: { subscribeHeartRate(o) { sample = o.success }, unsubscribeHeartRate() { throw Error('native failure') } },
     vibrator: { vibrate() {} }, client: { setPeerPkgName() {}, setPeerFingerPrint() {},
-      registerReceiver(o) { receiver = o }, unregisterReceiver() { unregistered++ }, ping() {} }, peer: {},
-    setTimeout() {}, clearTimeout() {}, setInterval() {}, clearInterval() {} }, () => {}, () => {})
-  rt.load(); rt.heartStart()
+      registerReceiver(o) { receiver = o }, unregisterReceiver() { unregistered++; throw Error('native failure') }, ping() {} }, peer: {},
+    Builder: class { setDescription(text) { this.text = text } }, Message: class {},
+    setTimeout() {}, clearTimeout() {}, setInterval() {}, clearInterval() {} }, () => { notified++ }, () => {})
+  assert.equal(rt.heartStart, undefined)
+  rt.load(); receiver.onSuccess()
+  const before = notified
   assert.doesNotThrow(() => rt.stop())
-  receiver.onSuccess(); sample({ heartRate: 120 })
-  assert.ok(unregistered > 0); assert.deepEqual(rt.samples(), [])
+  assert.ok(unregistered > 0)
+  assert.doesNotThrow(() => receiver.onReceiveMessage('{"v":1,"id":"x","n":1,"i":0,"data":"{}"}'))
+  assert.equal(notified, before)
 })
 
 test('the debug entry and write guard survive a session that has not arrived', t => {

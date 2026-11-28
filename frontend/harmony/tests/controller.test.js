@@ -117,22 +117,53 @@ test('a ping result is install state, not reachability', () => {
   assert.equal(f.state.online, false)
   f.runtime.stop()
 })
-test('a workout the phone ends keeps the heart rate the watch measured', () => {
-  const f = fixture(); f.runtime.load(); f.runtime.heartStart()
-  f.receive({ kind: 'snapshot', snapshot: { v: 1, active: { id: 'wp', name: 'Push', unit: 'kg', restSec: 90, start: 1000, entries: [] } } })
-  f.sample(120, 9000); f.sample(140, 9600)
+test('a workout the phone ends keeps a local summary without watch HR sensor methods', () => {
+  const f = fixture(); f.runtime.load()
+  assert.equal(f.runtime.heartStart, undefined)
+  f.receive({ kind: 'snapshot', snapshot: { v: 1, active: { id: 'wp', name: 'Push', unit: 'kg', restSec: 90, start: 1000, entries: [{ id: 'a', name: 'Bench', mode: 'reps', sets: [{ w: 60, r: 8, done: true, warmup: false }] }] } } })
   f.time(10000)
   f.receive({ kind: 'snapshot', snapshot: { v: 1, active: null } })
   assert.ok(f.state.summary)
   assert.equal(f.state.summary.endedOnPhone, true)
-  assert.equal(f.state.summary.hrAvg, 130)
-  assert.equal(f.state.summary.hrMax, 140)
+  assert.equal(f.state.summary.sets, 1)
   f.runtime.stop()
 })
-test('heart rate display expires after sampling stops and does not invent missed samples', () => {
-  const f = fixture(); f.runtime.load(); f.runtime.heartStart()
-  f.sample(120, 10000); assert.deepEqual(f.runtime.heart(0), { avg: 120, max: 120, current: 120 })
-  f.time(30000); assert.equal(f.runtime.heart(0), null)
-  assert.deepEqual(f.runtime.samples(), [{ at: 10000, value: 120 }])
+test('restState shifts endsAt by clockOff, flushes up to 20 events, and sweeps orphan clips on boot', () => {
+  const removed = [], sentBatches = [], decode = assembler()
+  const timers = []
+  let receiver, state, now = 20000
+  const saved = { outbox: Array.from({ length: 25 }, (_, i) => ({ id: 'e' + i, type: 'weighIn', w: 70, at: 1000 + i })),
+    workout: { id: 'w1', name: 'A', unit: 'kg', restSec: 90, start: 10000, entries: [{ id: 'ex1', sets: [] }], rest: null },
+    clips: { ex1: { wid: 'w1', names: ['og-aaaa-0.png'], paths: { 'og-aaaa-0.png': 'internal://app/og-aaaa-0.png' } } } }
+  const rt = createRuntime({
+    storage: { get(o) { o.success(JSON.stringify(saved)) }, set(o) { o.success() } },
+    now: () => now,
+    list(uri, cb) { cb([{ uri: 'internal://app/og-aaaa-0.png' }, { uri: 'internal://app/og-dead00-0.png' }, { uri: 'internal://app/og-state0' }, { uri: 'internal://app/og-ready0' }]) },
+    remove(uri) { removed.push(uri) },
+    vibrator: { vibrate() {} },
+    client: { setPeerPkgName() {}, setPeerFingerPrint() {}, registerReceiver(o) { receiver = o; o.onSuccess() }, unregisterReceiver() {},
+      send(m, cb) { const d = decode(m.builder.text, now); if (d && d.payload.kind === 'events') sentBatches.push(d.payload.events.length); cb.onSendResult({ code: 207 }) } },
+    peer: { phonePackage: 'test', phoneFingerprint: 'a' },
+    Builder: class { setDescription(text) { this.text = text } }, Message: class {},
+    setTimeout(fn) { timers.push(fn); return fn }, clearTimeout() {}, setInterval() {}, clearInterval() {}
+  }, s => { state = s }, () => {})
+  rt.load()
+  assert.deepEqual(removed, ['internal://app/og-dead00-0.png'])
+  assert.equal(sentBatches[0], 20)
+  // clockOff = 20000 - 15000 = 5000; restState endsAt 40000 -> 45000 on watch clock
+  for (const p of packets({ kind: 'snapshot', snapshot: { v: 1, now: 15000, active: saved.workout } }, 's1')) receiver.onReceiveMessage(p)
+  for (const p of packets({ kind: 'restState', wid: 'w1', rest: { endsAt: 40000, total: 90 } }, 'r1')) receiver.onReceiveMessage(p)
+  assert.equal(state.workout.rest.endsAt, 45000)
+  rt.stop()
+})
+test('save cancels any pending retryTimer so a subsequent change does not replay a stale retry', () => {
+  const f = fixture(); f.runtime.load()
+  f.fail(true)
+  f.runtime.change(s => event(s, 'weighIn', { w: 70 }, 1000))
+  f.fail(false)
+  f.runtime.change(s => event(s, 'weighIn', { w: 71 }, 2000))
+  const writesAfterRecovery = f.written.length
+  f.retry()
+  assert.equal(f.written.length, writesAfterRecovery)
   f.runtime.stop()
 })
