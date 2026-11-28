@@ -1,86 +1,128 @@
 /* Round 466x466 Lite canvas.
-   Carefully adapted to the physical 233 px radius circular AMOLED display:
-   1. Inscribed square safe zone: 329x329 px centered at (233, 233).
-   2. Vertical chord padding: top padding 32px, bottom padding 36px to prevent bezel clipping.
-   3. Concentric pill styling: smooth border-radius on all tap targets to harmonize with circular frame.
-   4. Tapered columns: 260px at top/bottom extremes, up to 320px in the equatorial center. */
+   Adapted to the physical 233 px radius circular display using explicit ACELite CSS properties
+   (no shorthand multi-value margin/padding).
+   - Inscribed square safe zone: 329x329 px centered at (233, 233).
+   - Top/bottom chord clearance: explicit vertical padding and tapered widths (<= 260 px at top/bottom,
+     up to 316 px in the equatorial band).
+   - Concentric pill border-radius on tap targets. */
 
 .page { width: 466px; height: 466px; }
 .body { width: 466px; height: 466px; }
-.screen { width: 466px; height: 466px; padding: 32px 20px 36px 20px; }
-.exerciseScreen { padding: 30px 16px 26px 16px; }
-.restScreen { padding: 24px 16px 28px 16px; }
+.screen { width: 466px; height: 466px; padding-top: 28px; padding-right: 20px; padding-bottom: 28px; padding-left: 20px; }
+.exerciseScreen { padding-top: 28px; padding-right: 16px; padding-bottom: 24px; padding-left: 16px; }
+.restScreen { padding-top: 24px; padding-right: 16px; padding-bottom: 24px; padding-left: 16px; }
 
 /* Global Typography & Containers */
-.col { width: 310px; height: 280px; }
-.logo { width: 260px; height: 40px; font-size: 30px; margin-top: 10px; }
-.h2 { width: 280px; height: 68px; font-size: 28px; margin-bottom: 4px; }
-.todayTitle { width: 270px; height: 40px; font-size: 24px; }
-.note { width: 280px; font-size: 22px; }
+.col { width: 310px; height: 296px; }
+.row { width: 300px; height: 60px; }
+.logo { width: 220px; height: 36px; font-size: 28px; }
+.h2 { width: 260px; height: 64px; font-size: 26px; margin-bottom: 4px; }
+.todayTitle { width: 270px; height: 36px; font-size: 24px; }
+.note { width: 280px; height: 60px; font-size: 22px; }
+.small { height: 26px; font-size: 20px; }
+.cap { width: 220px; height: 26px; font-size: 20px; }
+.buttonCap { width: 104px; height: 24px; font-size: 18px; }
 .idleHint { width: 270px; height: 110px; }
-.statusNote { width: 260px; height: 42px; font-size: 20px; }
+.statusNote { width: 240px; height: 36px; font-size: 18px; }
+.planHint { width: 280px; height: 26px; font-size: 18px; }
 
-/* Buttons & Pill Targets (Concentric Circular Aesthetic) */
-.wide { width: 260px; height: 52px; border-radius: 26px; font-size: 24px; margin-top: 6px; }
-.half { width: 126px; height: 48px; border-radius: 24px; font-size: 20px; margin: 0 4px; }
-.restSkip { width: 220px; height: 48px; border-radius: 24px; font-size: 22px; }
-.rowbtn { width: 280px; height: 46px; border-radius: 23px; font-size: 24px; }
-.edgeBtn { width: 76px; height: 50px; border-radius: 25px; font-size: 24px; margin: 0 4px; }
-.actionBtn { width: 88px; height: 54px; border-radius: 20px; }
-.actionText { width: 88px; height: 50px; font-size: 20px; }
-.chip { width: 160px; height: 40px; border-radius: 20px; }
-.chiptext { width: 150px; font-size: 20px; }
+/* Buttons & Pill Targets */
+.round { width: 92px; height: 92px; }
+.roundWrap { width: 112px; height: 118px; }
+.startWrap { height: 118px; }
+.startRound { width: 88px; height: 88px; }
+.wide { width: 250px; height: 50px; border-radius: 25px; font-size: 22px; margin-top: 6px; }
+.half { width: 124px; height: 46px; border-radius: 23px; font-size: 20px; margin-left: 4px; margin-right: 4px; }
+.restSkip { width: 210px; height: 46px; border-radius: 23px; font-size: 20px; margin-top: 0px; }
+.rowbtn { width: 272px; height: 44px; border-radius: 22px; font-size: 22px; }
+.edgeBtn { width: 78px; height: 50px; border-radius: 25px; font-size: 22px; margin-left: 4px; margin-right: 4px; }
+.link { width: 140px; height: 38px; font-size: 20px; }
+.backButton { width: 150px; height: 38px; }
+.backIcon { width: 26px; height: 26px; }
+.backText { width: 96px; height: 30px; font-size: 20px; }
+.actionBtn { width: 92px; height: 52px; border-radius: 18px; margin-top: 4px; }
+.actionText { width: 88px; height: 48px; font-size: 18px; }
+.chip { width: 150px; height: 40px; border-radius: 20px; }
+.chiptext { width: 140px; height: 26px; font-size: 18px; }
 
-/* Lists & Menus (Constrained to avoid lateral bezel clipping) */
-.routineList { width: 290px; }
-.routineItem { width: 290px; }
-.debugList { width: 310px; height: 280px; }
-.debugRow { width: 310px; }
-.summaryTitle { width: 260px; font-size: 28px; margin-top: 10px; }
-.summaryName { width: 260px; font-size: 22px; }
-.summaryList { width: 300px; height: 220px; }
-.summaryItem { width: 300px; }
-.summaryStatus { width: 300px; }
-.stat { width: 290px; height: 48px; padding-left: 8px; padding-right: 12px; }
-.statLabel { width: 100px; font-size: 20px; }
-.statValue { width: 170px; font-size: 30px; text-align: right; }
+/* Lists, Debug & Summary */
+.routineList { width: 280px; }
+.routineItem { width: 280px; height: 48px; }
+.debugList { width: 300px; height: 300px; }
+.debugRow { width: 300px; height: 28px; }
+.summaryTitle { width: 250px; height: 40px; font-size: 26px; }
+.summaryName { width: 260px; height: 34px; font-size: 20px; }
+.summaryList { width: 300px; height: 210px; }
+.summaryItem { width: 300px; height: 44px; }
+.summaryStatus { width: 300px; height: 44px; }
+.stat { width: 300px; height: 46px; padding-left: 12px; padding-right: 12px; }
+.statLabel { width: 88px; height: 28px; font-size: 20px; }
+.statValue { width: 180px; height: 40px; font-size: 30px; text-align: right; }
 
-/* Exercise Screen Layout (Top Tapered, Equatorial Primary, Bottom Inset Dots) */
-.head { width: 260px; height: 46px; justify-content: center; }
-.name { width: 230px; height: 44px; font-size: 24px; text-align: center; }
+/* Countdown & Hold Rings */
+.ringWrap { width: 260px; height: 260px; }
+.ring { width: 260px; height: 260px; center-x: 130px; center-y: 130px; radius: 114px; stroke-width: 10px; }
+.ringText { width: 204px; height: 204px; top: 28px; left: 28px; }
+.ringCap { width: 170px; height: 34px; font-size: 20px; }
+.ringDigits { width: 200px; height: 80px; font-size: 64px; }
+.ringNote { width: 190px; height: 42px; font-size: 18px; }
+.bigDigits { width: 200px; height: 112px; font-size: 96px; }
+
+/* Weigh-In & Number Editor */
+.weighRow { width: 290px; height: 84px; }
+.part { height: 76px; font-size: 60px; padding-top: 4px; padding-right: 4px; padding-bottom: 4px; padding-left: 4px; }
+.wholePart { width: 136px; }
+.tenthPart { width: 52px; }
+.sep { width: 20px; height: 76px; font-size: 60px; }
+.editValue { width: 280px; height: 110px; }
+.bignum { width: 220px; height: 104px; font-size: 84px; }
+.unit { width: 44px; height: 34px; font-size: 22px; }
+
+/* Exercise Screen Layout */
+.head { width: 240px; height: 44px; justify-content: center; }
+.name { width: 210px; height: 40px; font-size: 22px; text-align: center; }
+.headerStatus { width: 24px; height: 40px; }
 .tags { width: 260px; height: 24px; }
-.tag { height: 22px; font-size: 18px; border-radius: 11px; padding-left: 8px; padding-right: 8px; }
-.primary { width: 310px; height: 180px; }
-.mediaRail { width: 104px; height: 180px; }
-.sideRail { width: 88px; height: 180px; }
-.doneWrap { width: 104px; }
-.clip { width: 104px; height: 104px; border-radius: 16px; }
-.tiles { width: 310px; height: 84px; }
-.tile { width: 148px; height: 80px; border-radius: 18px; }
+.tag { height: 22px; font-size: 16px; border-radius: 11px; padding-left: 8px; padding-right: 8px; }
+.tiles { width: 316px; height: 84px; margin-top: 4px; }
+.tile { width: 150px; height: 84px; border-radius: 18px; margin-left: 4px; margin-right: 4px; }
 .tileWide { width: 300px; height: 88px; border-radius: 18px; }
-.numLine { width: 140px; height: 56px; }
-.largeLine { width: 280px; height: 68px; }
-.tnum { width: 136px; height: 56px; font-size: 48px; }
-.largeNumber { width: 250px; height: 68px; font-size: 72px; }
-.tunit { font-size: 20px; }
-.tlabel { font-size: 18px; }
-.dots { width: 180px; height: 20px; margin-top: 6px; }
-.dotbox { width: 18px; height: 18px; margin: 0 1px; }
+.numLine { width: 144px; height: 56px; margin-bottom: 2px; }
+.largeLine { width: 280px; height: 60px; margin-bottom: 2px; }
+.tnum { width: 136px; height: 56px; font-size: 46px; }
+.weightNumber { width: 144px; height: 56px; }
+.weightUnit { width: 26px; height: 26px; top: 18px; margin-left: 0px; font-size: 18px; }
+.largeNumber { width: 240px; height: 60px; font-size: 50px; }
+.tunit { width: 28px; height: 28px; font-size: 20px; }
+.tlabel { width: 144px; height: 24px; font-size: 18px; }
+.primary { width: 316px; height: 176px; }
+.mediaRail { width: 100px; height: 176px; }
+.sideRail { width: 92px; height: 176px; }
+.doneWrap { width: 104px; height: 124px; }
+.clip { width: 92px; height: 92px; border-radius: 14px; }
+.effort { width: 68px; height: 54px; border-radius: 18px; }
+.effortName { width: 68px; height: 20px; font-size: 16px; }
+.effortValue { width: 68px; height: 30px; font-size: 26px; }
+.extras { width: 92px; height: 22px; font-size: 18px; }
+.pageCount { width: 88px; height: 24px; font-size: 18px; }
+.noSet { width: 280px; height: 176px; }
+.emptyIcon { width: 72px; height: 72px; }
+.dots { width: 180px; height: 20px; margin-top: 4px; }
+.dotbox { width: 18px; height: 18px; margin-left: 1px; margin-right: 1px; }
 .dot { width: 8px; height: 8px; border-radius: 4px; }
 
-/* Rest Screen Layout (Harmonized 210px Arc + Inset Pill Controls) */
-.restWrap { width: 210px; height: 210px; }
-.restArc { width: 210px; height: 210px; center-x: 105px; center-y: 105px; radius: 91px; stroke-width: 10px; }
-.restText { width: 180px; height: 180px; top: 15px; left: 15px; }
-.restDigits { width: 180px; font-size: 64px; }
-.restCap { width: 180px; font-size: 20px; }
-.restRow { height: 52px; width: 280px; justify-content: center; }
-.restNext { width: 260px; height: 32px; font-size: 18px; }
-.restOffline { width: 250px; height: 24px; font-size: 18px; }
+/* Rest Screen Layout */
+.restWrap { width: 204px; height: 204px; }
+.restArc { width: 204px; height: 204px; center-x: 102px; center-y: 102px; radius: 88px; stroke-width: 10px; }
+.restText { width: 174px; height: 174px; top: 15px; left: 15px; }
+.restDigits { width: 174px; height: 76px; font-size: 60px; }
+.restRow { width: 270px; height: 54px; justify-content: center; }
+.restNext { width: 280px; height: 30px; font-size: 18px; }
+.restOffline { width: 260px; height: 24px; font-size: 18px; }
 
-/* Finish Screen Layout (Tapered Action Row to avoid bottom cut) */
-.finishTitle { width: 260px; height: 44px; font-size: 26px; }
-.finishWrap { height: 96px; }
-.finishRound { width: 72px; height: 72px; }
-.finishActions { width: 270px; height: 54px; justify-content: center; }
-.finishLinks { height: 36px; }
+/* Finish Screen Layout */
+.finishTitle { width: 240px; height: 40px; font-size: 24px; }
+.finishWrap { height: 94px; }
+.finishRound { width: 68px; height: 68px; }
+.finishActions { width: 268px; height: 52px; justify-content: center; }
+.finishLinks { height: 38px; }

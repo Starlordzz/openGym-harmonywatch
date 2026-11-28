@@ -3,6 +3,9 @@ import { tagsOf, numbers, dots, progress, setsOf, summaryStats } from '../../com
 import { setIndex, sideUp } from '../../common/model.js'
 import { addSet } from '../../common/add-set.js'
 
+// Staged per screen shape by scripts/harmony/prepare.mjs (entry rect 408x480 vs round circle 466x466).
+var FIT = { ww: 104, wh: 72, uc: 88, rw: 160, rh: 72, sw: 272, sh: 82, ew: 280, eh: 132 }
+
 // One page, one state at a time: the same precedence as the Apple Watch app's RootView. The state,
 // the radio and every mutation live in app.js (getApp()); this file only draws and dispatches.
 export default {
@@ -169,10 +172,10 @@ export default {
     var n = numbers(e, row, this.live || {})
     this.cardio = n.cardio; this.timed = n.timed; this.bodyweight = n.bodyweight
     this.weight = n.weight; this.added = n.added; this.reps = n.reps; this.seconds = n.seconds
-    this.weightFont = numberFont(n.weight, 68, 104, 72)
-    this.unitLeft = 88 + Math.ceil(numberWidth(n.weight, this.weightFont) / 2)
-    this.repsFont = numberFont(n.reps, n.bodyweight ? 84 : 68, 160, 72)
-    this.secondsFont = numberFont(n.seconds, 84, 272, 82)
+    this.weightFont = numberFont(n.weight, 68, FIT.ww, FIT.wh)
+    this.unitLeft = FIT.uc + Math.ceil(numberWidth(n.weight, this.weightFont) / 2)
+    this.repsFont = numberFont(n.reps, n.bodyweight ? 84 : 68, FIT.rw, FIT.rh)
+    this.secondsFont = numberFont(n.seconds, 84, FIT.sw, FIT.sh)
     this.effortName = s.settings.effort ? effortName(s.settings.effort) : ''
     this.effortText = this.effort == null ? '–' : formatNumber(this.effort)
     this.effortColor = s.settings.effort ? effortColor(s.settings.effort, this.effort) : '#ffffff'
@@ -324,7 +327,7 @@ export default {
     }
     this.fitEdit(); this.screen = 'edit'
   },
-  fitEdit() { this.editFont = numberFont(this.editValue, 108, 280, 132) },
+  fitEdit() { this.editFont = numberFont(this.editValue, 108, FIT.ew, FIT.eh) },
   editStepBy(delta) { this.app.editNumber(this, delta, formatNumber, effortValue, effortColor); this.fitEdit() },
   editFineBy(delta) { if (this.editField === 'weight') this.app.editNumber(this, delta, formatNumber, effortValue, effortColor, 0.1); this.fitEdit() },
   editDone() { this.screen = 'exercise'; this.sync() },

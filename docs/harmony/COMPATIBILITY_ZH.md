@@ -12,7 +12,7 @@
 | 圆形华为手表 | 适配目标；圆屏安全区域、触控及表冠交互、运行时与接口兼容待适配验证 |
 | 采用其他应用运行时的华为手表 | 需要核对应用模型、Wear Engine 能力与签名安装流程，再决定复用层和平台适配器 |
 
-当前手表界面按形态分成两个 HAP 模块：`entry` 为 408×480 方表（`distroFilter.screenShape = rect`），`round` 为 466×466 圆表（`circle`）。两者共用同一套 HML/JS，圆表仅追加 `round.css` 并压缩空闲列表高度；AppGallery 按屏幕形态分发。圆表的真机安装与触控边缘效果尚待验证，其他分辨率仍依赖固定布局的实际表现。
+当前手表界面按形态分成两个 HAP 模块：`entry` 为 408×480 方表（`distroFilter.screenShape = rect`），`round` 为 466×466 圆表（`circle`）。两者共用同一套 HML/JS，圆表在暂存阶段追加 `round.css`、压缩空闲列表高度并替换数字拟合盒尺寸 `FIT`；AppGallery 按屏幕形态分发。圆表的真机安装与触控边缘效果尚待验证，其他分辨率仍依赖固定布局的实际表现。
 
 当前构建使用 `compatibleSdkVersion 5.0.0(12)`，对应 GT 5 / FIT 4 一代的 Lite Wearable API 12 运行时；编译仍使用本机 SDK 26，生成的 Lite `config.json` 中 `app.apiVersion.compatible = 50000012`。FIT 5 Pro 实机验证版本为 HarmonyOS 7.0.0.017，其他型号按表内状态分别记录。
 

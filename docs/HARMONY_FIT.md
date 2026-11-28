@@ -32,8 +32,8 @@ and recovery. Background findings remain in 后台能力调查（本地材料：
 ## Architecture and source ownership
 
 - `harmonywatch/`: the actual DevEco-generated FA JS Lite Wearable project. Its generated
-  `MainAbility` entry, SDK 26.0.0 target and 6.1.1(24) compatibility are retained. This project uses
-  `host.msknet.opengym.fit`. No ArkTS phone/watch runtime is substituted.
+  `MainAbility` entry, SDK 26.0.0 target and 5.0.0(12) compatibility (`build-profile.example.json5`)
+  are retained. This project uses `host.msknet.opengym.fit`. No ArkTS phone/watch runtime is substituted.
 - `frontend/harmony/watch/entry/src/main/js/default/`: canonical portable core, HML/CSS and
   platform adapter sources. Edit here and stage with `scripts/harmony/prepare.mjs`; generated
   `MainAbility` copies must stay synchronized. The pure core has Node tests in `frontend/harmony/tests`.
@@ -83,8 +83,9 @@ node scripts/harmony/prepare.mjs --project harmonywatch --round-project harmonyw
 ```
 
 `entry` is the 408×480 rectangular HAP and `round` is the 466×466 circular HAP. Both stage the same
-page sources; the circle appends `pages/index/round.css` and shortens the idle list through HML
-staging, so no runtime JS is added. Each `config.json` declares
+page sources; the circle appends `pages/index/round.css`, shortens the idle list through HML
+staging, and substitutes the build-time numeric `FIT` box constants in `index.js`, so no runtime
+shape-branch JS is added. Each `config.json` declares
 `module.distroFilter.screenShape` (`rect` or `circle`) without `screenWindow`, letting AppGallery
 distribute every resolution of each shape. The helper builds both modules by default and writes
 `entry/build/default/outputs/default/entry-default-unsigned.hap` and

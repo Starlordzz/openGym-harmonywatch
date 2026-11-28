@@ -21,6 +21,8 @@ const sdk = args.includes('--offline') ? null : get('--sdk') ? resolve(get('--sd
 const roundCssFile = join(template, 'js/default/pages/index/round.css')
 const rectListHeight = 'style="height: {{todayName ? 76 : 220}}px"'
 const roundListHeight = 'style="height: {{todayName ? 64 : 150}}px"'
+const rectFitBox = 'var FIT = { ww: 104, wh: 72, uc: 88, rw: 160, rh: 72, sw: 272, sh: 82, ew: 280, eh: 132 }'
+const roundFitBox = 'var FIT = { ww: 88, wh: 56, uc: 74, rw: 136, rh: 56, sw: 240, sh: 60, ew: 220, eh: 104 }'
 let identity = {}
 try {
   identity = JSON.parse(await readFile(join(root, 'harmonywatch/phone-debug-identity.json'), 'utf8'))
@@ -81,7 +83,7 @@ async function stage(moduleDir, options) {
   await cp(join(template, 'js/default'), destination, { recursive: true })
   await rm(join(destination, 'common/rest-relay.js'), { force: true })
   if (options.round) {
-    // Shape differences stay in staged CSS/HML: the page bundle has no room for runtime layout JS.
+    // Shape differences stay in staged CSS/HML and build-time fit constants: no runtime shape branches.
     const cssFile = join(destination, 'pages/index/index.css')
     const base = await readFile(cssFile, 'utf8')
     await writeFile(cssFile, base + (base.endsWith('\n') ? '\n' : '\n\n') + await readFile(roundCssFile, 'utf8'))
@@ -89,6 +91,10 @@ async function stage(moduleDir, options) {
     const hml = await readFile(hmlFile, 'utf8')
     if (hml.split(rectListHeight).length !== 2) throw Error('Cannot locate the idle list height in index.hml')
     await writeFile(hmlFile, hml.replace(rectListHeight, roundListHeight))
+    const jsFile = join(destination, 'pages/index/index.js')
+    const pageJs = await readFile(jsFile, 'utf8')
+    if (pageJs.split(rectFitBox).length !== 2) throw Error('Cannot locate the numeric fit box constants in index.js')
+    await writeFile(jsFile, pageJs.replace(rectFitBox, roundFitBox))
   }
   // round.css is a build-time override; it must not appear in a staged module tree.
   await rm(join(destination, 'pages/index/round.css'), { force: true })

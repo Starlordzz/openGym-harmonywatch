@@ -7,8 +7,10 @@ import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
 // Two HAPs from one page template: entry stays the 408x480 rect build and the round module only
-// adds the 466 circle CSS plus the compressed idle list. No runtime JS may differ.
+// adds the 466 circle CSS, compressed idle list height, and build-time FIT box constants.
 const template = new URL('../watch/entry/src/main/js/default/', import.meta.url)
+const rectFit = 'var FIT = { ww: 104, wh: 72, uc: 88, rw: 160, rh: 72, sw: 272, sh: 82, ew: 280, eh: 132 }'
+const roundFit = 'var FIT = { ww: 88, wh: 56, uc: 74, rw: 136, rh: 56, sw: 240, sh: 60, ew: 220, eh: 104 }'
 
 async function scaffold(dir, name, window) {
   const main = join(dir, name, 'src/main')
@@ -23,7 +25,7 @@ async function scaffold(dir, name, window) {
   await writeFile(join(main, 'resources/base/element/string.json'), JSON.stringify({ string: [{ name: 'app_name', value: '' }] }))
 }
 
-test('the round module stages the same page with only the circle CSS and list override', async t => {
+test('the round module stages the same page with circle CSS, list height, and FIT box constants', async t => {
   const dir = await mkdtemp(join(tmpdir(), 'opengym-round-'))
   t.after(() => rm(dir, { recursive: true, force: true }))
   await scaffold(dir, 'entry', { designWidth: 408, autoDesignWidth: false })
@@ -48,12 +50,20 @@ test('the round module stages the same page with only the circle CSS and list ov
   const roundCss = await readFile(join(round, 'pages/index/index.css'), 'utf8')
   assert.equal(roundCss, await readFile(join(entry, 'pages/index/index.css'), 'utf8') + '\n' + override)
   assert.match(roundCss, /\.page \{ width: 466px; height: 466px; \}/)
-  assert.match(roundCss, /\.restArc \{[^}]*center-x: 105px; center-y: 105px; radius: 91px;/)
+  assert.match(roundCss, /\.restArc \{[^}]*center-x: 102px; center-y: 102px; radius: 88px;/)
 
   const roundHml = await readFile(join(round, 'pages/index/index.hml'), 'utf8')
   assert.match(roundHml, /style="height: \{\{todayName \? 64 : 150\}\}px"/)
   assert.equal(await readFile(join(entry, 'pages/index/index.hml'), 'utf8'), await readFile(new URL('pages/index/index.hml', template), 'utf8'))
   assert.equal(await readFile(join(entry, 'pages/index/index.css'), 'utf8'), await readFile(new URL('pages/index/index.css', template), 'utf8'))
+
+  const entryJs = await readFile(join(entry, 'pages/index/index.js'), 'utf8')
+  const roundJs = await readFile(join(round, 'pages/index/index.js'), 'utf8')
+  assert.ok(entryJs.includes(rectFit))
+  assert.ok(roundJs.includes(roundFit))
+  assert.equal(roundJs, entryJs.replace(rectFit, roundFit))
+  assert.equal(await readFile(join(round, 'app.js'), 'utf8'), await readFile(join(entry, 'app.js'), 'utf8'))
+
   await assert.rejects(stat(join(round, 'pages/index/round.css')), /ENOENT/)
   await assert.rejects(stat(join(entry, 'pages/index/round.css')), /ENOENT/)
 })

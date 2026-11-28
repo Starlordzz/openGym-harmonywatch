@@ -2,7 +2,7 @@
 
 ## 未发布
 
-- 新增圆表 HAP：`round` 模块为 466×466 圆屏，`entry` 保留 408×480 方屏；两者共用 HML/JS，圆屏差异仅来自 `pages/index/round.css` 与空闲列表高度。两个模块分别声明 `module.distroFilter.screenShape`（`rect` / `circle`），由 AppGallery 按屏幕形态分发。`prepare.mjs --round-project` 与 `build-local.ps1 -Module` 同步支持。
+- 新增圆表 HAP：`round` 模块为 466×466 圆屏，`entry` 保留 408×480 方屏；两者共用 HML/JS，圆屏差异来自暂存阶段的 `pages/index/round.css`、空闲列表高度与数字拟合尺寸 `FIT`。两个模块分别声明 `module.distroFilter.screenShape`（`rect` / `circle`），由 AppGallery 按屏幕形态分发。`prepare.mjs --round-project` 与 `build-local.ps1 -Module` 同步支持。
 
 ## v1.4.5 (2026-11-21)
 

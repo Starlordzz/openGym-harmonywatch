@@ -37,9 +37,9 @@
    - 任意高度 $y$ 处的物理可见弦长为 $W(y) = 2 \times \sqrt{233^2 - (y - 233)^2}$。
    - $y \le 30$ 或 $y \ge 436$ 时可用宽度降至 228 px 以下，矩形直角元素在顶部或底部会发生严重截断。
 2. **布局避让与内缩规则**：
-   - **顶部避让**：页面顶部内边距设为 30~32 px，标题与标签限宽 260 px 并居中对齐，杜绝表圈削角。
-   - **底部避让**：页面底部内边距设为 26~36 px，底部跳过按钮限宽 220 px，双操作按钮（Save/Discard）限宽 270 px，进度点限宽 180 px。
-   - **列表数值防切**：结算列表项数值向内留出 12 px 边距，防止数字末尾触碰圆弧边框。
+   - **顶部避让**：页面顶部内边距设为 24~28 px，训练页标题与操作区限宽 240 px（标签 260 px）并居中对齐，杜绝表圈削角。
+   - **底部避让**：页面底部内边距设为 24~28 px，底部跳过按钮限宽 210 px，双操作按钮（Save/Discard）容器限宽 268 px，进度点限宽 180 px。
+   - **列表数值防切**：结算列表项数值向内留出 12 px 左右内边距，防止数字末尾触碰圆弧边框。
 3. **视觉圆角与同心协调**：
    - 所有按钮、快调胶囊与触控卡片采用大圆角胶囊造型（`border-radius: 20px ~ 26px`），消除方表情境下的硬直角，与物理圆盘同心呼应。
 
@@ -60,6 +60,7 @@
 | `harmonywatch/round/` | 圆表 Entry 模块，产物 `round-default-unsigned.hap` |
 | `harmonywatch/build-profile.example.json5` | 两个模块的产品与构建配置 |
 | `harmonywatch/phone-debug-identity.json` | 本机手机包名与证书 SHA-256，Git 忽略 |
+| `harmonywatch/watch-debug-identity.json` | 本机手表包名与叶证书 SHA-256，Git 忽略（示例见 `watch-debug-identity.example.json`） |
 | `scripts/harmony/prepare.mjs` | 模板暂存、形态差异、权限与 peer 身份写入 |
 | `scripts/harmony/build-local.ps1` | 两模块构建、48 KB 检查、BIN/HAP 封装 |
 
@@ -75,7 +76,7 @@
 
 1. 只改 `frontend/harmony/watch/entry/src/main/js/default/` 下的模板；不改 `harmonywatch/*/src/main/js/` 的暂存产物。
 2. 方表样式保持现状；圆表差异写入 `round.css`，只覆盖尺寸、内边距和圆内安全列，颜色与字号层级继承基线。
-3. 页面内无法用 CSS 覆盖的常量（当前只有首页计划列表高度）按形态在暂存阶段替换字符串；新增此类常量前先评估能否改成 CSS。
+3. 页面内无法用 CSS 覆盖的常量（首页计划列表高度及数字框拟合尺寸 `FIT`）按形态在暂存阶段替换字符串；新增此类常量前先评估能否改成 CSS。
 4. 禁止新增正则字面量、`class` 数据绑定、无高度容器；这些在 Lite 引擎中会静默失败。
 5. 验收：`cd frontend/harmony && npm test` 全通过（模板条件、布局回归、通信与存储用例）。
 
@@ -96,7 +97,7 @@ node scripts/harmony/prepare.mjs \
 
 - 不带 `--offline`：使用模板内官方 Wear Engine SDK，写入 `supportLists` 与 `common/peer.js`，产物可用于真机通信。
 - 带 `--offline`：仅用于无身份/无 SDK 的界面构建，无线电显式禁用。
-- 验收：输出两行 `Staged ... (entry, rect)` 与 `(round, circle)`；`diff -r` 两模块页面树应只差 `index.css`、`index.hml` 和 `config.json`。
+- 验收：输出两行 `Staged ... (entry, rect)` 与 `(round, circle)`；`diff -r` 两模块页面树应只差 `index.css`、`index.hml`、`index.js`（仅 `FIT` 常量行）和 `config.json`。
 
 ### P4 构建
 
@@ -137,7 +138,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 
 | 风险 | 处理 |
 |---|---|
-| 圆边裁切 | 所有宽度改为 340 px 内安全列；顶部标题 300 px、分页点 240 px；真机/预览确认 |
+| 圆边裁切 | 所有宽度收窄到圆内安全列（顶底 240~260 px、赤道 310~316 px，分页点 180 px）；真机/预览确认 |
 | 页面包超 48 KB | 形态差异只进 CSS/HML 暂存；新增文案优先删语言包，不加运行时分支 |
 | 旧设备 API 缺能力 | 只用 API 12 及以下接口；新增接口按 `sdkApiVersion`/`canIUse` 判断 |
 | 手机身份变化 | `supportLists` 绑定手机包名+证书 SHA-256；换签名后重新暂存并重装手表 HAP |

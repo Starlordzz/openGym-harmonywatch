@@ -15,7 +15,7 @@
 | 校验 | `check-size.mjs`、`check-bundles.mjs`、`check-lite-config.mjs` | 48 KB、资源与权限检查 |
 | 校验 | `optimize-lite-bundles.mjs`、`check-lite-equivalence.mjs` | 编译和打包 JS 同步优化，保留 eval 的 ViewModel 返回值，比较语言与休息显示；`check-lite-radio.mjs` 验证编译产物异步 SDK 初始化、接收注册和 hello 发送；`check-lite-heart.mjs` 验证编译产物已移除原生心率和权限入口 |
 | 校验 | `verify-lite-bin.py`、`verify-hap.py` | 固定叶证书、Profile、分块摘要及容器检查 |
-| 诊断 | `capture-preview.mjs`、`prepare-start-preview.mjs`、`prepare-ui-preview.mjs`、`check-rest-motion.ps1` | 原生预览、合成离线休息/训练/结束场景与圆环弧端检查 |
+| 诊断 | `capture-preview.mjs`、`prepare-start-preview.mjs`、`prepare-ui-preview.mjs`、`check-rest-motion.ps1` | 原生预览（支持 `--module entry\|round`）、合成 `idle`/离线休息/训练/结束场景与圆环弧端检查 |
 | 诊断 | `prepare-exit-probe.mjs`、`prepare-link-probe.mjs` | 退出和通信对照构建，结果记录在进度文档 |
 
 Android 脚本需要 JDK 21、Android SDK 与 Gradle 缓存；手表脚本使用 DevEco Studio 自带工具。参数和环境变量见各脚本开头。签名私钥、密码、调试 Profile、设备身份 JSON 均留本地，复制示例配置后填入自己的值。

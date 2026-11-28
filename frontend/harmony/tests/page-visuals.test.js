@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { mount } from './helpers/watch.js'
 import { fileCleaner } from '../watch/entry/src/main/js/default/common/file-cleaner.js'
-import { numberWidth } from '../watch/entry/src/main/js/default/common/format.js'
+import { numberFont, numberWidth } from '../watch/entry/src/main/js/default/common/format.js'
 
 test('animation cleanup waits for each native delete callback and spaces subsequent requests', () => {
   const requests = [], tasks = []
@@ -23,4 +23,17 @@ test('the numeric edit screen refits long values after each adjustment', t => {
   f.vm.editStepBy(1)
   assert.equal(f.vm.editValue, '123456790')
   assert.ok(numberWidth(f.vm.editValue, f.vm.editFont) <= 280)
+})
+test('round FIT box constants keep weight, unit, reps, hold, and edit values inside round.css boxes', () => {
+  const roundFit = { ww: 88, wh: 56, uc: 74, rw: 136, rh: 56, sw: 240, sh: 60, ew: 220, eh: 104 }
+  for (const w of ['0', '20', '102.5', '1000.25']) {
+    const wf = numberFont(w, 68, roundFit.ww, roundFit.wh)
+    const unitLeft = roundFit.uc + Math.ceil(numberWidth(w, wf) / 2)
+    assert.ok(wf * 1.2 <= roundFit.wh, w)
+    assert.ok(numberWidth(w, wf) <= roundFit.ww, w)
+    assert.ok(unitLeft + 26 <= 144, w)
+  }
+  assert.ok(numberWidth('123456789', numberFont('123456789', 68, roundFit.rw, roundFit.rh)) <= roundFit.rw)
+  assert.ok(numberFont('30', 84, roundFit.sw, roundFit.sh) * 1.2 <= roundFit.sh)
+  assert.ok(numberFont('10', 108, roundFit.ew, roundFit.eh) * 1.2 <= roundFit.eh)
 })

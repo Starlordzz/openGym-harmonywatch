@@ -10,16 +10,21 @@ import { fileURLToPath } from 'node:url'
 const args = process.argv.slice(2)
 const option = name => { const i = args.indexOf(name); return i < 0 ? null : args[i + 1] }
 if (args.includes('--help')) {
-  console.log('Windows Node: capture-preview.mjs --deveco <DevEco directory> [--project <Lite project>] [--bundle <compiled MainAbility or .demo>] [--out <capture directory>] [--duration <3500–30000 ms>]')
+  console.log('Windows Node: capture-preview.mjs --deveco <DevEco directory> [--project <Lite project>] [--module entry|round] [--bundle <compiled MainAbility or .demo>] [--out <capture directory>] [--duration <3500–30000 ms>]')
   process.exit(0)
 }
 if (process.platform !== 'win32') throw Error('Run with Windows Node (DevEco tools/node/node.exe), including when called from WSL')
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const deveco = option('--deveco')
 if (!deveco) throw Error('--deveco is required')
+const moduleName = option('--module') || 'entry'
+if (!['entry', 'round'].includes(moduleName)) throw Error('Unknown module (expected entry or round)')
+const shape = option('--shape') || (moduleName === 'round' ? 'circle' : 'rect')
+const width = Number(option('--width')) || (shape === 'circle' ? 466 : 408)
+const height = Number(option('--height')) || (shape === 'circle' ? 466 : 480)
 const sdk = join(resolve(deveco), 'sdk/default/hms/previewer/liteWearable')
 const project = resolve(option('--project') || join(root, 'harmonywatch'))
-const bundle = resolve(option('--bundle') || join(project, 'entry/build/default/intermediates/loader_out_lite/default/js/MainAbility'))
+const bundle = resolve(option('--bundle') || join(project, moduleName, 'build/default/intermediates/loader_out_lite/default/js/MainAbility'))
 const out = resolve(option('--out') || join(project, 'artifacts/preview-capture'))
 const simulator = join(sdk, 'bin/Simulator.exe')
 const config = join(project, '.idea/previewer/liteWearable/liteWearableSettingConfig_rd.json')
@@ -57,10 +62,10 @@ try {
   const port = portServer.address().port
   await new Promise(resolve => portServer.close(resolve))
   const simulatorArgs = ['-refresh', 'full', '-projectID', '86761050', '-ts', name + '_trace',
-    '-j', bundle, '-s', name, '-cpm', 'false', '-device', 'liteWearable', '-shape', 'rect', '-sd', '160',
+    '-j', bundle, '-s', name, '-cpm', 'false', '-device', 'liteWearable', '-shape', shape, '-sd', '160',
     '-pjId', sid + sid.slice(0, 24), '-bn', 'host.msknet.opengym.fit', '-sid', sid,
-    '-or', '408', '480', '-cr', '408', '480', '-hs', '524288', '-f', config,
-    '-n', 'entry', '-url', 'pages/index/index', '-ilt', 'false', '-lws', String(port)]
+    '-or', String(width), String(height), '-cr', String(width), String(height), '-hs', '524288', '-f', config,
+    '-n', moduleName, '-url', 'pages/index/index', '-ilt', 'false', '-lws', String(port)]
   // The engine resolves ../config/SourceHanSansSC-Regular.otf against its working directory.
   child = spawn(simulator, simulatorArgs, { cwd: join(sdk, 'bin'), windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] })
   child.stdout.on('data', b => { log += b.toString() })
@@ -114,7 +119,7 @@ try {
 const result = { capturedAt: new Date().toISOString(), bundle, frames, pixels,
   fontError: log.includes('Open font path failed'), evalError: log.includes('Eval JS file failed'),
   jsException: /\[JS (?:Error|Exception)\]/.test(log) }
-result.passed = !!pixels && pixels.width === 408 && pixels.height === 480 && pixels.visiblePixels > 100 && !result.fontError && !result.evalError && !result.jsException
+result.passed = !!pixels && pixels.width === width && pixels.height === height && pixels.visiblePixels > 100 && !result.fontError && !result.evalError && !result.jsException
 writeFileSync(join(out, 'result.json'), JSON.stringify(result, null, 2) + '\n')
 console.log(JSON.stringify(result, null, 2))
 if (!result.passed) process.exitCode = 1
